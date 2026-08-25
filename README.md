@@ -1,477 +1,535 @@
-\# **Expert Decision Replay Platform**
+# 🧠 Expert Decision Replay Platform
 
+> A platform for capturing, managing, reviewing, and replaying expert decision-making processes.
 
+![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?logo=vite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-Authentication-000000?logo=jsonwebtokens&logoColor=white)
 
-\## Overview
+---
 
+## 🚀 Project Overview
 
+The **Expert Decision Replay Platform** is designed to provide a structured environment for capturing, managing, reviewing, and eventually replaying expert decision-making processes.
 
-The Expert Decision Replay Platform is a system designed to capture, manage, and replay expert decision-making processes.
+The platform is being developed incrementally through multiple milestones.
 
+**Milestone 1 focuses on the foundation of the platform:**
 
+- User management
+- Role management
+- Team management
+- PostgreSQL database
+- User registration
+- User login
+- JWT authentication
+- Protected API endpoints
+- React frontend
+- Authenticated dashboard
 
-The goal of the platform is to provide a structured environment where decisions can be recorded, reviewed, and analyzed for better understanding and future decision-making.
+---
 
+# ⚡ Quick Start
 
+## Prerequisites
 
-\---
+Make sure the following are installed:
 
+- Python
+- Node.js
+- PostgreSQL
+- pgAdmin
+- Git
 
+---
 
-\## Project Status
+## 1. Clone the Repository
 
+```bash
+git clone https://github.com/springboardmentor873-a11y/Expert-Decision-Replay-Platform.git
+cd Expert-Decision-Replay-Platform
+Start the Backend
 
-
-\### Milestone 1 — Authentication \& User Management
-
-
-
-\*\*Completed\*\*
-
-
-
-Milestone 1 establishes the basic backend, database, authentication, and frontend foundation of the platform.
-
-
-
-\### Completed Features
-
-
-
-\- FastAPI backend
-
-\- PostgreSQL database
-
-\- User registration
-
-\- User login
-
-\- JWT authentication
-
-\- Protected `/me` endpoint
-
-\- Role and team management structure
-
-\- React frontend using Vite
-
-\- Login interface
-
-\- Authenticated dashboard
-
-\- User information display
-
-\- Logout functionality
-
-
-
-\---
-
-
-
-\## System Architecture
-
-
-
-```text
-
-React Frontend
-
-&#x20;     |
-
-&#x20;     | HTTP Requests
-
-&#x20;     v
-
-FastAPI Backend
-
-&#x20;     |
-
-&#x20;     | Database Queries
-
-&#x20;     v
-
-PostgreSQL Database
-
-
-
-Authentication Flow 
-
-
-
-User
-
-&#x20; |
-
-&#x20; v
-
-Login Page
-
-&#x20; |
-
-&#x20; v
-
-POST /login
-
-&#x20; |
-
-&#x20; v
-
-FastAPI
-
-&#x20; |
-
-&#x20; v
-
-JWT Token
-
-&#x20; |
-
-&#x20; v
-
-React stores token
-
-&#x20; |
-
-&#x20; v
-
-GET /me
-
-&#x20; |
-
-&#x20; v
-
-JWT Verification
-
-&#x20; |
-
-&#x20; v
-
-User Information
-
-&#x20; |
-
-&#x20; v
-
-Dashboard
-
-
-
-**Technology Stack**
-
-**Frontend**
-
-* React
-* Vite
-* JavaScript
-
-**Backend**
-
-* Python
-* FastAPI
-* Uvicorn
-* JWT Authentication
-
-**Database**
-
-* PostgreSQL
-* pgAdmin
-
-**Development Tools**
-
-* Visual Studio Code
-* Git
-* GitHub
-
-
-
-**Database Relationships**
-
-Roles
-
-&#x20; |
-
-&#x20; | role\_id
-
-&#x20; v
-
-Users
-
-&#x20; |
-
-&#x20; | team\_id
-
-&#x20; v
-
-Teams
-
-
-
-Users
-
-&#x20; |
-
-&#x20; | user\_id
-
-&#x20; v
-
-User Profiles
-
-
-
-**Project structure**
-
-
-
-Expert-Decision-Replay-Platform/
-
-│
-
-├── Backend/
-
-│   ├── database/
-
-│   ├── models/
-
-│   ├── Schemas/
-
-│   ├── security/
-
-│   └── main.py
-
-│
-
-├── frontend/
-
-│   ├── public/
-
-│   └── src/
-
-│       ├── App.jsx
-
-│       ├── dashboard.jsx
-
-│       ├── main.jsx
-
-│       └── ...
-
-│
-
-├── .gitignore
-
-└── README.md
-
-
-
-
-
-**Running the Project**
-
-Backend
-
-
-
-Navigate to the backend directory:
-
-
+Navigate to the backend:
 
 cd Backend
 
+Activate the Python virtual environment:
 
+Windows PowerShell
+.venv\Scripts\Activate.ps1
 
-Start the FastAPI server:
-
-
+Start FastAPI:
 
 python -m uvicorn main:app --reload
 
-
-
 The backend will run at:
 
-
-
 http://127.0.0.1:8000
+3. Open API Documentation
 
+FastAPI automatically provides interactive API documentation.
 
-
-FastAPI documentation is available at:
-
-
+Open:
 
 http://127.0.0.1:8000/docs
 
+From Swagger UI you can test the available API endpoints.
 
+4. Start the Frontend
 
-**Frontend**
+Open a new terminal.
 
-
-
-Open another terminal and navigate to the frontend:
-
-
+Navigate to the frontend:
 
 cd frontend
 
-
-
 Install dependencies:
-
-
 
 npm install
 
-
-
 Start the development server:
-
-
 
 npm run dev
 
-The frontend will run at:
-
-
+The frontend will be available at:
 
 http://localhost:5173
+✨ Milestone 1 Features
+Feature	Status
+PostgreSQL Database	✅ Completed
+Roles	✅ Completed
+Teams	✅ Completed
+Users	✅ Completed
+User Registration	✅ Completed
+User Login	✅ Completed
+JWT Authentication	✅ Completed
+Protected /me Endpoint	✅ Completed
+React Frontend	✅ Completed
+Login UI	✅ Completed
+Authenticated Dashboard	✅ Completed
+Logout	✅ Completed
+🔐 Authentication Flow
 
+The authentication system follows this flow:
 
+                 ┌──────────────┐
+                 │     User     │
+                 └──────┬───────┘
+                        │
+                        ▼
+                ┌───────────────┐
+                │  React Login  │
+                │     Page      │
+                └───────┬───────┘
+                        │
+                        │ POST /login
+                        ▼
+                ┌───────────────┐
+                │    FastAPI    │
+                │    Backend    │
+                └───────┬───────┘
+                        │
+                        │ Verify credentials
+                        ▼
+                ┌───────────────┐
+                │   PostgreSQL  │
+                │    Database   │
+                └───────┬───────┘
+                        │
+                        │ Valid user
+                        ▼
+                ┌───────────────┐
+                │   JWT Token   │
+                └───────┬───────┘
+                        │
+                        ▼
+                ┌───────────────┐
+                │ React stores  │
+                │     token     │
+                └───────┬───────┘
+                        │
+                        │ GET /me
+                        │ Authorization: Bearer <token>
+                        ▼
+                ┌───────────────┐
+                │ JWT Validation│
+                └───────┬───────┘
+                        │
+                        ▼
+                ┌───────────────┐
+                │   Dashboard   │
+                └───────────────┘
+🏗 System Architecture
+┌─────────────────────────────────────────────┐
+│                 React Frontend              │
+│                                             │
+│   Login Page  ────────►  Dashboard          │
+│                                             │
+│             http://localhost:5173           │
+└──────────────────────┬──────────────────────┘
+                       │
+                       │ HTTP / REST API
+                       ▼
+┌─────────────────────────────────────────────┐
+│               FastAPI Backend               │
+│                                             │
+│  /register                                  │
+│  /login                                     │
+│  /me                                        │
+│                                             │
+│             http://127.0.0.1:8000           │
+└──────────────────────┬──────────────────────┘
+                       │
+                       │ SQL / ORM
+                       ▼
+┌─────────────────────────────────────────────┐
+│                PostgreSQL                   │
+│                                             │
+│  roles                                      │
+│  teams                                      │
+│  users                                      │
+│  user_profiles                              │
+└─────────────────────────────────────────────┘
+🗄 Database Structure
 
+Milestone 1 contains four main database tables.
 
+                    ┌──────────────┐
+                    │    roles     │
+                    └──────┬───────┘
+                           │
+                        role_id
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │    users     │
+                    └──────┬───────┘
+                           │
+                        team_id
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │    teams     │
+                    └──────────────┘
 
-**Milestone 1 Authentication Flow**
+                    ┌──────────────┐
+                    │    users     │
+                    └──────┬───────┘
+                           │
+                        user_id
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │user_profiles │
+                    └──────────────┘
+👤 Roles
 
-* A user registers through the backend.
-* The user's information is stored in PostgreSQL.
-* The user enters their email and password on the React login page.
-* React sends the login request to FastAPI.
-* FastAPI verifies the user's credentials.
-* FastAPI generates a JWT token.
-* React stores the JWT token in local storage.
-* React sends the token to the protected /me endpoint.
-* FastAPI verifies the JWT token.
-* The authenticated user's information is returned.
-* The user's information is displayed on the dashboard.
-* Logout removes the stored token and returns the user to the login page.
+The platform currently defines four roles:
 
+Role	Description
+Employee	Standard platform user
+Reviewer	Reviews submitted information
+Manager	Provides management-level oversight
+Administrator	Administrative platform role
 
+Detailed role-based permissions will be implemented in later milestones.
 
-**API Endpoints Implemented**
+👥 Teams
 
+The teams table stores the teams within the organization.
 
+Users can optionally be associated with a team using:
 
-Register
+users.team_id → teams.team_id
+👤 Users
 
+The users table stores:
+
+User ID
+Name
+Email
+Password hash
+Role ID
+Team ID
+
+Relationships:
+
+users.role_id → roles.role_id
+
+users.team_id → teams.team_id
+🪪 User Profiles
+
+The user_profiles table stores additional user information:
+
+Phone
+Department
+Designation
+Profile image
+
+Relationship:
+
+user_profiles.user_id → users.user_id
+
+The profile uses ON DELETE CASCADE, so a user's profile is removed when the associated user is deleted.
+
+📡 API Reference
+Authentication
+Register User
 POST /register
 
+Creates a new user.
 
+Example request:
 
-Creates a new user in the database.
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "test123",
+  "role_id": 1,
+  "team_id": null
+}
 
+Example response:
 
-
+{
+  "message": "User registered successfully",
+  "user_id": 3,
+  "name": "Test User",
+  "email": "test@example.com",
+  "role_id": 1,
+  "team_id": null
+}
 Login
-
 POST /login
 
+Authenticates a user and returns a JWT access token.
 
-
-Authenticates the user and returns a JWT token.
-
-
+The token is then used to access protected endpoints.
 
 Current User
-
 GET /me
 
+Protected endpoint.
 
+Requires:
 
-A protected endpoint that verifies the JWT token and returns the authenticated user's information.
+Authorization: Bearer <JWT_TOKEN>
 
+Example response:
 
+{
+  "message": "Authenticated successfully",
+  "id": 4,
+  "name": "Secure User",
+  "email": "secure@example.com",
+  "role_id": 1,
+  "team_id": null
+}
+🖥 Frontend
 
-**Testing**
+The frontend is built using React + Vite.
 
+Login Page
 
+The login page allows users to enter:
+
+Email
+Password
+
+The credentials are sent to the FastAPI backend.
+
+React
+  │
+  │ POST /login
+  ▼
+FastAPI
+  │
+  │ JWT
+  ▼
+React
+📊 Authenticated Dashboard
+
+After successful authentication, the dashboard displays information about the logged-in user.
+
+Currently displayed information includes:
+
+Name
+Email
+User ID
+Role ID
+Team ID
+
+The dashboard also provides a logout button.
+
+🗂 Project Structure
+Expert-Decision-Replay-Platform/
+│
+├── Backend/
+│   │
+│   ├── database/
+│   │   ├── __init__.py
+│   │   └── database.py
+│   │
+│   ├── models/
+│   │   ├── _init_.py
+│   │   ├── role.py
+│   │   ├── team.py
+│   │   └── user.py
+│   │
+│   ├── Schemas/
+│   │   ├── __init__.py
+│   │   ├── team.py
+│   │   └── user.py
+│   │
+│   ├── security/
+│   │   ├── _init_.py
+│   │   ├── auth.py
+│   │   ├── jwt.py
+│   │   └── password.py
+│   │
+│   └── main.py
+│
+├── frontend/
+│   │
+│   ├── public/
+│   │
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   ├── dashboard.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   │
+│   ├── package.json
+│   ├── package-lock.json
+│   └── vite.config.js
+│
+├── .gitignore
+└── README.md
+🛠 Development
+Backend
+
+The backend uses:
+
+Python
+FastAPI
+Uvicorn
+JWT authentication
+PostgreSQL
+
+Run the development server:
+
+python -m uvicorn main:app --reload
+Frontend
+
+The frontend uses:
+
+React
+Vite
+JavaScript
+
+Run the development server:
+
+npm run dev
+🧪 Testing
 
 Milestone 1 was tested using:
 
-
-
 FastAPI Swagger UI
-
-PostgreSQL / pgAdmin
-
+PostgreSQL
+pgAdmin
 React frontend
+JWT authentication
+Tested Flow
+Registration
+     ↓
+Database
+     ↓
+Login
+     ↓
+JWT Token
+     ↓
+Protected /me
+     ↓
+Dashboard
+     ↓
+Logout
 
-JWT authentication flow
+All of these core Milestone 1 flows have been successfully tested.
 
-
-
-The registration, login, authentication, dashboard, and logout flows were successfully tested.
-
-
-
-**Future Development**
-
-
-
-Future milestones will build the core functionality of the Expert Decision Replay Platform on top of the authentication foundation.
-
-
-
-**Planned development includes:**
-
-
-
-* Expert decision management
-* Decision recording
-* Decision replay
-* Review workflows
-* Team-based functionality
-* Decision analysis
-* Additional platform features
+📈 Project Progress
+Milestone 1
+Authentication & User Management
+████████████████████ 100% ✅
 
 
-
-**Project Progress**
-
-Milestone 1 — Authentication \& User Management    \[COMPLETED]
-
+Milestone 2
+Core Decision Platform
+░░░░░░░░░░░░░░░░░░░░ 0%
 
 
-Milestone 2 — Core Platform Functionality          \[UPCOMING]
+Milestone 3
+Decision Replay & Review
+░░░░░░░░░░░░░░░░░░░░ 0%
 
 
+Milestone 4
+Analysis & Final Integration
+░░░░░░░░░░░░░░░░░░░░ 0%
+🔮 Future Development
 
-Milestone 3 — Decision Replay \& Review             \[UPCOMING]
+Future milestones will build the core Expert Decision Replay functionality on top of the Milestone 1 foundation.
 
+Planned areas include:
 
+Decision creation
+Decision storage
+Expert decision records
+Decision review
+Decision replay
+Team-based workflows
+Decision analysis
+Additional user permissions
+Platform integration
+🔒 Security
 
-Milestone 4 — Analysis \& Final Integration         \[UPCOMING]
+The platform uses JWT-based authentication for protected endpoints.
 
+Passwords are not stored directly as plain text. The backend uses password hashing before storing credentials.
 
+Sensitive configuration values should be stored using environment variables and should not be committed to GitHub.
 
+📚 API Documentation
 
+When the backend is running, interactive API documentation is available at:
 
-**Authors**
+http://127.0.0.1:8000/docs
 
+This can be used to test the backend endpoints directly through Swagger UI.
 
+👨‍💻 Development Workflow
 
-Expert Decision Replay Platform Project
+The project is maintained using Git and GitHub.
 
+Milestone-based commits are used to track development progress.
 
+Example:
 
-
-
-After saving it, run these \*\*three commands\*\*:
-
-
-
-```powershell
-
-git add README.md
-
-git commit -m "Add project README"
-
-git push
-
+Milestone 1
+     │
+     ▼
+Authentication + User Management
+     │
+     ▼
+Git Commit
+     │
+     ▼
+GitHub
+     │
+     ▼
+Milestone 2
