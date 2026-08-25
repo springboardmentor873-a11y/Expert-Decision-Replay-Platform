@@ -4,92 +4,80 @@ function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="logo">DecisionVault</div>
+        <h2>Decivault</h2>
 
         <nav>
-          <a className="active">Overview</a>
+          <a className="active">Dashboard</a>
           <a>Decisions</a>
-          <a>Reviews</a>
-          <a>Knowledge</a>
+          <a>Approvals</a>
+          <a>Discussions</a>
+          <a>Reports</a>
         </nav>
 
-        <div className="bottom-nav">
+        <div className="sidebar-bottom">
           <a>Settings</a>
+          <a>Logout</a>
         </div>
       </aside>
 
-      <main className="content">
-        <header className="topbar">
+      <main className="main">
+        <header className="header">
           <div>
-            <p className="eyebrow">Workspace</p>
-            <h1>Overview</h1>
+            <h1>Dashboard</h1>
+            <p>Welcome back!</p>
           </div>
 
-          <div className="user">
-            <div className="user-avatar">A</div>
-            <span>Alex Morgan</span>
+          <div className="profile">
+            <span>Employee</span>
+            <div className="avatar">E</div>
           </div>
         </header>
 
-        <section className="intro">
-          <div>
-            <h2>Good evening, Alex.</h2>
-            <p>
-              Keep track of decisions, reviews and organizational knowledge.
-            </p>
-          </div>
-
-          <button className="primary-btn">New decision</button>
-        </section>
-
         <section className="stats">
-          <div>
-            <span>Total decisions</span>
-            <strong>12</strong>
+          <div className="stat-card">
+            <h3>12</h3>
+            <p>My Decisions</p>
           </div>
 
-          <div>
-            <span>Under review</span>
-            <strong>3</strong>
+          <div className="stat-card">
+            <h3>3</h3>
+            <p>Pending Reviews</p>
           </div>
 
-          <div>
-            <span>Approved</span>
-            <strong>8</strong>
+          <div className="stat-card">
+            <h3>8</h3>
+            <p>Approved</p>
           </div>
         </section>
 
-        <section className="decisions">
-          <div className="section-title">
-            <h2>Recent decisions</h2>
-            <button className="text-btn">View all →</button>
+        <section className="recent">
+          <div className="section-header">
+            <h2>Recent Decisions</h2>
+            <button>+ New Decision</button>
           </div>
 
-          <div className="decision-row">
+          <div className="decision">
             <div>
-              <h3>Database architecture</h3>
-              <p>Engineering · Updated 2 hours ago</p>
+              <h3>Database Migration</h3>
+              <p>Choosing a database for the new platform</p>
             </div>
-
-            <span>Draft</span>
+            <span className="status draft">Draft</span>
           </div>
 
-          <div className="decision-row">
+          <div className="decision">
             <div>
-              <h3>Cloud infrastructure</h3>
-              <p>Engineering · Updated yesterday</p>
+              <h3>Cloud Provider Selection</h3>
+              <p>Evaluating AWS and Azure</p>
             </div>
-
-            <span className="review-status">Under review</span>
+            <span className="status review">Under Review</span>
           </div>
 
-          <div className="decision-row">
+          <div className="decision">
             <div>
-              <h3>Authentication strategy</h3>
-              <p>Security · Updated 3 days ago</p>
+              <h3>Authentication System</h3>
+              <p>Selecting the authentication approach</p>
             </div>
-
-            <span className="approved-status">Approved</span>
+            <span className="status approved">Approved</span>
           </div>
         </section>
       </main>
