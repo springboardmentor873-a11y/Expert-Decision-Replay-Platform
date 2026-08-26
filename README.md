@@ -1,215 +1,510 @@
+Absolutely. Replace your current `README.md` with this whole thing:
+
+````markdown
 # DecisionVault
 
-> An expert decision replay platform designed to capture, organize, and replay the reasoning behind important decisions.
+DecisionVault is a decision management and knowledge repository application designed to help teams document, review, approve, and learn from important decisions.
 
-DecisionVault is a backend-focused project that aims to preserve not only the outcome of a decision, but also the **context, reasoning, evidence, and process** that led to it. The goal is to make expert decision-making easier to understand, revisit, and learn from.
+## Current Status
 
-## 🚧 Project Status
+🚧 **Under Development**
 
-**In development**
+The project is currently in the early development stage, with the initial frontend and backend foundations completed.
 
-The project is currently being built incrementally, starting with the backend and core API structure.
+---
 
-## 🎯 Problem
+## Frontend
 
-Important decisions are often documented as conclusions without documenting **how the conclusion was reached**.
+The React frontend currently includes:
 
-This makes it difficult to:
+- [x] React application setup
+- [x] Login page
+- [x] Registration page
+- [ ] Connect authentication forms to backend API
+- [ ] Authentication state management
+- [ ] Protected routes
+- [ ] Dashboard
+- [ ] Decision management UI
 
-* Revisit the reasoning behind a past decision
-* Understand which evidence influenced the outcome
-* Learn from expert decision-making processes
-* Compare decisions made in different situations
-* Replay a decision later with the original context
+---
 
-## 💡 Solution
+## Backend
 
-DecisionVault is intended to provide a structured way to store and replay decisions.
+The backend is being developed using Node.js and Express.
 
-A decision can be represented through its:
+Currently implemented:
 
-* **Context** — what situation led to the decision
-* **Factors** — the important variables considered
-* **Evidence** — supporting information and inputs
-* **Reasoning** — why one option was preferred over another
-* **Outcome** — what eventually happened
-* **Replay** — the ability to revisit the decision-making process
+- [x] Node.js setup
+- [x] Express server
+- [x] Express middleware
+- [x] Express routing
+- [x] Controllers
+- [x] PostgreSQL database
+- [x] Docker PostgreSQL container
+- [x] Prisma ORM
+- [x] Initial database migration
+- [x] User model
+- [x] Prisma → PostgreSQL connection
+- [ ] Authentication API
+- [ ] Password hashing
+- [ ] JWT authentication
+- [ ] Role-based authorization
+- [ ] User management API
 
-## 🏗️ Current Architecture
+---
 
-```text
-DecisionVault
-│
-├── Backend
-│   ├── Node.js
-│   ├── Express.js
-│   ├── REST API
-│   ├── Environment configuration
-│   └── Database layer
-│
-└── Frontend
-    └── Planned
-```
+## Tech Stack
 
-### Backend Structure
+### Frontend
 
-```text
-backend/
-├── src/
-│   ├── db/
-│   │   └── db.js
-│   └── app.js
-├── server.js
-├── package.json
-├── package-lock.json
-└── .env
-```
-
-The application entry point is `server.js`, while the Express application and database-related code are organized under `src/`.
-
-## 🛠️ Tech Stack
+- React
+- JavaScript
+- CSS
 
 ### Backend
 
-* **Node.js** — JavaScript runtime
-* **Express.js** — Web framework for the API
-* **MongoDB** — Database layer
-* **dotenv** — Environment variable management
+- Node.js
+- Express.js
+- JavaScript
+- Prisma ORM
 
-### Development
+### Database
 
-* **Git & GitHub** — Version control and collaboration
-* **npm** — Package management
+- PostgreSQL
 
-## 🚀 Getting Started
+### Infrastructure
 
-### 1. Clone the repository
+- Docker
+- Docker Desktop
 
-The project is maintained using separate branches for each contributor.
+---
 
-To work with the **Karan-Saini implementation**, clone the repository and switch to the `Karan-Saini` branch:
+## Architecture
 
-```bash
-git clone https://github.com/springboardmentor873-a11y/Expert-Decision-Replay-Platform.git
-cd Expert-Decision-Replay-Platform
-git checkout Karan-Saini
+The current application architecture is:
+
+```text
+                    DecisionVault
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+           Frontend              Backend
+           React               Node + Express
+              │                     │
+              │ HTTP API            │
+              └──────────┬──────────┘
+                         │
+                     Controllers
+                         │
+                      Prisma
+                         │
+                    PostgreSQL
+                         │
+                       Docker
+````
+
+The intended backend request flow is:
+
+```text
+Client
+  │
+  │ HTTP Request
+  ▼
+Express Middleware
+  │
+  ▼
+Route
+  │
+  ▼
+Controller
+  │
+  ▼
+Service
+  │
+  ▼
+Prisma
+  │
+  ▼
+PostgreSQL
+  │
+  ▼
+Response
 ```
 
-### 2. Move into the backend
+---
+
+## Backend Structure
+
+```text
+backend/
+│
+├── prisma/
+│   ├── migrations/
+│   │   └── ...
+│   └── schema.prisma
+│
+├── src/
+│   │
+│   ├── config/
+│   │
+│   ├── controllers/
+│   │
+│   ├── db/
+│   │   └── prisma.js
+│   │
+│   ├── middleware/
+│   │
+│   ├── models/
+│   │
+│   ├── routes/
+│   │
+│   ├── services/
+│   │
+│   └── app.js
+│
+├── .env
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── prisma7.config.ts
+└── server.js
+```
+
+---
+
+## Database
+
+The initial database is PostgreSQL running inside Docker.
+
+```text
+Docker
+└── decisionvault-db
+    └── PostgreSQL
+        └── decisionvault
+```
+
+### Initial User Model
+
+The current database schema contains a `User` model:
+
+```text
+User
+├── id
+├── name
+├── email
+├── password
+└── role
+```
+
+The currently defined roles are:
+
+```text
+Employee
+Reviewer
+Manager
+Administrator
+```
+
+### Database Relationship Design
+
+The current design allows users to belong to multiple teams.
+
+```text
+User
+  │
+  │
+  ▼
+UserTeam
+  │
+  │
+  ▼
+Team
+```
+
+This represents a many-to-many relationship:
+
+```text
+User  ←→  Team
+```
+
+A user can therefore participate in multiple teams, while a team can contain multiple users.
+
+Team membership is optional.
+
+---
+
+## Prisma
+
+Prisma is used as the ORM between the Node.js backend and PostgreSQL.
+
+```text
+Node.js / Express
+        │
+        ▼
+   Prisma Client
+        │
+        ▼
+   PrismaPg Adapter
+        │
+        ▼
+      pg
+        │
+        ▼
+   PostgreSQL
+```
+
+The Prisma schema is located at:
+
+```text
+prisma/schema.prisma
+```
+
+The initial database migration has been successfully created and applied.
+
+---
+
+## Docker
+
+PostgreSQL is currently running inside a Docker container.
+
+Container:
+
+```text
+decisionvault-db
+```
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+Start the PostgreSQL container if necessary:
+
+```bash
+docker start decisionvault-db
+```
+
+Stop it with:
+
+```bash
+docker stop decisionvault-db
+```
+
+---
+
+## Environment Variables
+
+The backend uses a `.env` file for private configuration.
+
+Example:
+
+```env
+DATABASE_URL="postgresql://decisionvault:YOUR_PASSWORD@localhost:5432/decisionvault"
+```
+
+> Never commit `.env` to Git.
+
+The `.env` file should be included in `.gitignore`.
+
+---
+
+## Development Setup
+
+### Prerequisites
+
+Make sure the following are installed:
+
+* Node.js
+* npm
+* Docker Desktop
+
+### Clone the repository
+
+```bash
+git clone https://github.com/KaranSaini-Git/DecisionVault.git
+```
+
+Navigate into the backend:
 
 ```bash
 cd backend
 ```
 
-### 3. Install dependencies
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-### 4. Configure environment variables
+### Start PostgreSQL
 
-Create a `.env` file in the **repository root** and add the required configuration, for example:
+Make sure Docker Desktop is running.
 
-```env
-PORT=4000
-```
-
-Add any database or service credentials required by your local setup as additional environment variables.
-
-> **Never commit your `.env` file to GitHub.**
-
-### 5. Start the backend
-
-For development:
+Check:
 
 ```bash
-npm run dev
+docker ps
 ```
 
-Or, depending on the scripts configured in `package.json`:
+The PostgreSQL container should appear as:
+
+```text
+decisionvault-db
+```
+
+### Prisma
+
+Generate the Prisma Client:
 
 ```bash
-npm start
+npx prisma generate
 ```
 
-The server will start on the port configured in `.env`.
-
-## 🔌 API
-
-The API layer is being developed around the core concepts of the platform, such as decisions, context, evidence, reasoning, and outcomes.
-
-API documentation will be added as the endpoints are finalized.
-
-## 🌱 Planned Features
-
-* Decision creation and management
-* Structured decision context
-* Evidence and factor tracking
-* Decision reasoning capture
-* Decision replay
-* Outcome tracking
-* Expert decision analysis
-* Search and filtering
-* Authentication and authorization
-* Frontend dashboard
-
-## 🤝 Collaboration
-
-This project is developed collaboratively using GitHub branches.
-
-Each contributor works on their own branch and creates a pull request when their work is ready for review and merging.
-
-### Example workflow
+Create and apply development migrations:
 
 ```bash
-git fetch origin
-git checkout your-branch-name
-git add .
-git commit -m "Describe your change"
-git push
+npx prisma migrate dev
 ```
 
-For example, for the `Karan-Saini` branch:
+---
 
-```bash
-git fetch origin
-git checkout Karan-Saini
-git add .
-git commit -m "Add backend setup"
-git push
+## Authentication
+
+Authentication is currently under development.
+
+### Planned Authentication Flow
+
+Registration:
+
+```text
+React Registration Form
+        │
+        │ POST /api/auth/register
+        ▼
+     Express
+        │
+        ▼
+    Auth Route
+        │
+        ▼
+    Auth Controller
+        │
+        ├── Validate input
+        │
+        ├── Hash password
+        │
+        ├── Create user
+        │
+        ▼
+     Prisma
+        │
+        ▼
+    PostgreSQL
 ```
 
-## 🔐 Environment Variables
+Login:
 
-The following variables are expected to be configured locally:
+```text
+React Login Form
+        │
+        │ POST /api/auth/login
+        ▼
+     Express
+        │
+        ▼
+    Auth Controller
+        │
+        ├── Find user
+        ├── Verify password
+        ├── Generate JWT
+        │
+        ▼
+     Response
+```
 
-| Variable      | Description                     | Required                             |
-| ------------- | ------------------------------- | ------------------------------------ |
-| `PORT`        | Port used by the backend server | Yes                                  |
-| `MONGODB_URI` | MongoDB connection string       | When database integration is enabled |
+Planned authentication features:
 
-Additional variables may be added as the project develops.
+* [ ] User registration
+* [ ] Password hashing
+* [ ] Login
+* [ ] JWT generation
+* [ ] JWT verification
+* [ ] Protected routes
+* [ ] Role-based authorization
+* [ ] Logout/session handling
 
-## 📌 Roadmap
+---
 
-* [x] Initialize backend project
-* [x] Set up Express application
-* [x] Configure environment variables
-* [ ] Complete database integration
-* [ ] Build core decision APIs
-* [ ] Implement decision replay functionality
-* [ ] Add authentication
-* [ ] Build frontend
-* [ ] Connect frontend and backend
-* [ ] Add testing and API documentation
+## Development Roadmap
 
-## 👨‍💻 Contributors
+### Milestone 1 — Foundation & Authentication
 
-This project is being developed as a collaborative team project.
+* [x] React application
+* [x] Login page
+* [x] Registration page
+* [x] Node.js backend
+* [x] Express setup
+* [x] Express routing
+* [x] Controllers
+* [x] Docker setup
+* [x] PostgreSQL database
+* [x] Prisma setup
+* [x] User model
+* [x] Initial migration
+* [x] Backend → PostgreSQL connection
+* [ ] Registration API
+* [ ] Password hashing
+* [ ] Login API
+* [ ] JWT authentication
+* [ ] Role-based authorization
+* [ ] User management
 
-Each contributor maintains their work on a dedicated GitHub branch.
+### Future Development
 
-## 📄 License
+* [ ] Dashboard
+* [ ] Team management
+* [ ] Decision creation
+* [ ] Decision lifecycle
+* [ ] Decision alternatives
+* [ ] Comments
+* [ ] Approval workflow
+* [ ] Decision versioning
+* [ ] Audit logging
+* [ ] Search
+* [ ] Filtering
+* [ ] Knowledge repository
+* [ ] Notifications
+* [ ] Analytics
+* [ ] Production Docker configuration
 
-License information will be added when the project is finalized.
+---
+
+## Development Philosophy
+
+DecisionVault is being developed incrementally.
+
+The backend follows a layered architecture so that responsibilities remain separated:
+
+```text
+Routes
+   ↓
+Controllers
+   ↓
+Services
+   ↓
+Database Layer
+   ↓
+PostgreSQL
+```
+
+This structure is intended to make the application easier to maintain, test, and extend as additional DecisionVault functionality is implemented.
+
+---
+
+## Project Status
+
+**Current focus:** Backend authentication and integration with the existing React login and registration pages.
+
+🚧 DecisionVault is actively under development.
+
