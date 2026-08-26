@@ -1,5 +1,9 @@
-import express from "express"
+import express from "express";
+import router from "./routes/testRouter.js";
 
-const app = new express()
+const app = new express();
+app.use(express.json());
 
-export default app
+app.use("/", router)
+
+export default app;
