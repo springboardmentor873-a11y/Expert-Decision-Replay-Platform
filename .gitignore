@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Environment secrets
+.env
+backend/.env
+frontend/.env
+
+# Node
+node_modules/
+frontend/dist/
+
+# Databases
+*.db
+*.sqlite3
+backend/e2e_test.db
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docker
+docker-compose.override.yml
