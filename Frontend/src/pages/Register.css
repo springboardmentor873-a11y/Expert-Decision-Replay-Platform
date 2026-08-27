@@ -1,0 +1,264 @@
+* {
+  box-sizing: border-box;
+}
+
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  background:
+    radial-gradient(circle at 10% 90%, rgba(70, 130, 255, 0.18), transparent 30%),
+    linear-gradient(135deg, #f5f8ff, #eaf1ff);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* Left */
+
+.register-left {
+  width: 46%;
+  min-height: 100vh;
+  padding: 55px 7%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.register-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.register-brand-logo,
+.register-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white;
+  font-weight: 800;
+}
+
+.register-brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+}
+
+.register-brand h3 {
+  margin: 0;
+  color: #14213d;
+}
+
+.register-brand p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.register-intro {
+  max-width: 500px;
+}
+
+.register-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: #e2ebff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.register-intro h1 {
+  margin: 20px 0 18px;
+  font-size: 48px;
+  color: #14213d;
+}
+
+.register-intro > p {
+  color: #64748b;
+  font-size: 17px;
+  line-height: 1.7;
+  margin-bottom: 35px;
+}
+
+.role-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 20px 0;
+  color: #334155;
+  font-weight: 600;
+}
+
+.role-info div {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #e0eaff;
+  color: #2563eb;
+}
+
+/* Right */
+
+.register-right {
+  width: 54%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 7%;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 38px 44px;
+  background: white;
+  border: 1px solid #e5eaf4;
+  border-radius: 22px;
+  box-shadow: 0 25px 70px rgba(30, 64, 175, 0.13);
+}
+
+.register-logo {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.register-logo-icon {
+  width: 62px;
+  height: 62px;
+  margin: auto auto 12px;
+  border-radius: 17px;
+}
+
+.register-logo h1 {
+  margin: 0;
+  font-size: 23px;
+  color: #14213d;
+}
+
+.register-logo p {
+  margin: 4px 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.register-content h2 {
+  text-align: center;
+  margin: 0;
+  color: #14213d;
+  font-size: 27px;
+}
+
+.register-subtitle {
+  text-align: center;
+  color: #718096;
+  font-size: 14px;
+  margin: 7px 0 25px;
+}
+
+/* Inputs */
+
+.register-input {
+  margin-bottom: 16px;
+}
+
+.register-input label {
+  display: block;
+  margin-bottom: 7px;
+  color: #25324a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.register-input input,
+.register-input select {
+  width: 100%;
+  height: 47px;
+  padding: 0 14px;
+  border: 1px solid #d8dfeb;
+  border-radius: 10px;
+  outline: none;
+  background: white;
+  color: #172033;
+  font-size: 14px;
+}
+
+.register-input input:focus,
+.register-input select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.09);
+}
+
+.register-input select {
+  cursor: pointer;
+}
+
+/* Button */
+
+.register-button {
+  width: 100%;
+  height: 50px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.20);
+}
+
+.register-button:hover {
+  transform: translateY(-1px);
+}
+
+/* Login link */
+
+.login-link {
+  text-align: center;
+  color: #718096;
+  font-size: 14px;
+  margin: 22px 0 0;
+}
+
+.login-link a {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Mobile */
+
+@media (max-width: 950px) {
+  .register-page {
+    display: block;
+  }
+
+  .register-left,
+  .register-right {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .register-left {
+    padding: 35px 8%;
+  }
+
+  .register-intro {
+    margin-top: 50px;
+  }
+
+  .register-intro h1 {
+    font-size: 38px;
+  }
+
+  .register-right {
+    padding: 30px 8% 50px;
+  }
+}
