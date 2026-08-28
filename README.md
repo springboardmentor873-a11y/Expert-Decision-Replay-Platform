@@ -42,9 +42,9 @@ Currently implemented:
 - [x] Initial database migration
 - [x] User model
 - [x] Prisma → PostgreSQL connection
-- [ ] Authentication API
-- [ ] Password hashing
-- [ ] JWT authentication
+- [x] Authentication API
+- [x] Password hashing
+- [x] JWT authentication
 - [ ] Role-based authorization
 - [ ] User management API
 
@@ -55,14 +55,12 @@ Currently implemented:
 ### Frontend
 
 - React
-- JavaScript
 - CSS
 
 ### Backend
 
 - Node.js
 - Express.js
-- JavaScript
 - Prisma ORM
 
 ### Database
