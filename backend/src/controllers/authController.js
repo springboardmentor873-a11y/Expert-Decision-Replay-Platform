@@ -1,0 +1,49 @@
+import prisma from "../db/prisma.js";
+import bcrypt from "bcrypt";
+
+const register = async (req, res) => {
+  const { name, email, password, role } = req.body;
+
+  console.log(name, email, password, role);
+
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({
+      message: "All fields are required",
+    });
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: {
+      email: email,
+    },
+  });
+
+  if (existingUser) {
+    return res.status(409).json({
+      message: "Email already exists",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10); //Hashing password
+
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+      role
+    }
+  })
+
+  return res.status(201).json({
+    message: "User registered successfully",
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    },
+  });
+};
+
+export default register;
