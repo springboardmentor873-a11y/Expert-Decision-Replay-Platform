@@ -1,6 +1,4 @@
-Absolutely. Replace your current `README.md` with this whole thing:
 
-````markdown
 # DecisionVault
 
 DecisionVault is a decision management and knowledge repository application designed to help teams document, review, approve, and learn from important decisions.
