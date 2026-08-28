@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: edrp-postgres
+    environment:
+      POSTGRES_USER: edrp
+      POSTGRES_PASSWORD: edrp
+      POSTGRES_DB: edrp
+    ports:
+      - "5432:5432"
+    volumes:
+      - edrp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edrp -d edrp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edrp-backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://edrp:edrp@db:5432/edrp
+      SECRET_KEY: enterprise-secret-key-change-in-production-min-32-chars
+      ENVIRONMENT: development
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:80
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: edrp-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  edrp_pgdata:
