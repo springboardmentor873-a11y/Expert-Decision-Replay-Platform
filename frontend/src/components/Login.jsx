@@ -5,14 +5,35 @@ function Login({ onRegister, onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    console.log("Email:", email);
-    console.log("Password:", password);
+    try {
+      const response = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-    // For now, just go to the dashboard
-    onLogin();
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Login failed");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+
+      onLogin();
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Unable to connect to the server.");
+    }
   };
 
   return (

@@ -7,16 +7,37 @@ function Register({ onLogin }) {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("Employee");
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
 
-    console.log("Name:", name);
-    console.log("Email:", email);
-    console.log("Password:", password);
-    console.log("Role:", role);
+    try {
+      const response = await fetch("http://localhost:4000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role,
+        }),
+      });
 
-    // For now, return to login
-    onLogin();
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Registration failed");
+        return;
+      }
+
+      alert("Registration successful! Please sign in.");
+
+      onLogin();
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert("Unable to connect to the server.");
+    }
   };
 
   return (
