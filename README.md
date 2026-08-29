@@ -18,7 +18,7 @@ Instead of only storing the final outcome, DecisionVault preserves the context, 
 
 **Frontend:** React, Vite, CSS, Lucide React  
 **Backend:** Node.js, Express  
-**Database:** MongoDB  
+**Database:** PostgreSQL  
 **Authentication:** JWT
 
 ## Project Structure
