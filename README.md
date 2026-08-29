@@ -1,4 +1,3 @@
-
 # DecisionVault
 
 DecisionVault is a decision management and knowledge repository application designed to help teams document, review, approve, and learn from important decisions.
@@ -43,9 +42,9 @@ Currently implemented:
 - [x] Initial database migration
 - [x] User model
 - [x] Prisma → PostgreSQL connection
-- [ ] Authentication API
-- [ ] Password hashing
-- [ ] JWT authentication
+- [x] Authentication API
+- [x] Password hashing
+- [x] JWT authentication
 - [ ] Role-based authorization
 - [ ] User management API
 
@@ -56,14 +55,12 @@ Currently implemented:
 ### Frontend
 
 - React
-- JavaScript
 - CSS
 
 ### Backend
 
 - Node.js
 - Express.js
-- JavaScript
 - Prisma ORM
 
 ### Database
@@ -423,8 +420,8 @@ React Login Form
 
 Planned authentication features:
 
-* [ ] User registration
-* [ ] Password hashing
+* [x] User registration
+* [x] Password hashing
 * [ ] Login
 * [ ] JWT generation
 * [ ] JWT verification
@@ -451,8 +448,8 @@ Planned authentication features:
 * [x] User model
 * [x] Initial migration
 * [x] Backend → PostgreSQL connection
-* [ ] Registration API
-* [ ] Password hashing
+* [x] Registration API
+* [x] Password hashing
 * [ ] Login API
 * [ ] JWT authentication
 * [ ] Role-based authorization
@@ -505,4 +502,5 @@ This structure is intended to make the application easier to maintain, test, and
 **Current focus:** Backend authentication and integration with the existing React login and registration pages.
 
 🚧 DecisionVault is actively under development.
+
 
