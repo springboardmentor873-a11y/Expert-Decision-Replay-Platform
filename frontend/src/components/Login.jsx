@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ArrowRight, BrainCircuit, LockKeyhole } from "lucide-react";
+import {
+  ArrowRight,
+  BrainCircuit,
+  FileText,
+  LockKeyhole,
+  Users,
+} from "lucide-react";
 import "../styles/Login.css";
 
 function Login({ onRegister, onLogin }) {
@@ -29,7 +35,6 @@ function Login({ onRegister, onLogin }) {
       }
 
       localStorage.setItem("token", data.token);
-
       onLogin();
     } catch (error) {
       console.error("Login error:", error);
@@ -44,14 +49,10 @@ function Login({ onRegister, onLogin }) {
       <div className="auth-glow auth-glow-right" />
 
       <div className="auth-layout">
-        {/* ======================================
-            LEFT VISUAL
-        ====================================== */}
-
         <section className="auth-visual">
           <div className="auth-brand">
             <div className="auth-brand-icon">
-              <LockKeyhole size={17} />
+              <LockKeyhole size={19} strokeWidth={2.1} />
             </div>
 
             <span>
@@ -59,25 +60,49 @@ function Login({ onRegister, onLogin }) {
             </span>
           </div>
 
-          <div className="visual-copy">
-            <div className="visual-eyebrow">
-              <span />
-              Decision intelligence
+          <div className="auth-intro-block">
+            <div className="auth-intro">
+              <span className="visual-eyebrow">
+                <span />
+                Decision memory
+              </span>
+
+              <p>
+                Your team's reasoning,
+                <br />
+                preserved in context.
+              </p>
             </div>
 
-            <h2>
-              Remember
-              <br />
-              <span>why.</span>
-            </h2>
+            <div className="auth-metrics">
+              <div className="auth-metric">
+                <div className="metric-icon">
+                  <FileText size={17} />
+                </div>
 
-            <p>
-              Preserve the reasoning behind important decisions and make your
-              team's knowledge easier to understand.
-            </p>
+                <strong>124</strong>
+                <span>Decisions captured</span>
+              </div>
+
+              <div className="auth-metric">
+                <div className="metric-icon">
+                  <LockKeyhole size={17} />
+                </div>
+
+                <strong>89</strong>
+                <span>Approved decisions</span>
+              </div>
+
+              <div className="auth-metric">
+                <div className="metric-icon">
+                  <Users size={17} />
+                </div>
+
+                <strong>94%</strong>
+                <span>Context coverage</span>
+              </div>
+            </div>
           </div>
-
-          {/* 3D VAULT GRAPHIC */}
 
           <div className="auth-graphic">
             <div className="graphic-halo" />
@@ -96,7 +121,7 @@ function Login({ onRegister, onLogin }) {
                   <div className="graphic-ring ring-3" />
 
                   <div className="graphic-lock">
-                    <LockKeyhole size={33} />
+                    <LockKeyhole size={33} strokeWidth={1.7} />
                   </div>
                 </div>
 
@@ -106,8 +131,6 @@ function Login({ onRegister, onLogin }) {
               <div className="graphic-vault-side" />
               <div className="graphic-vault-bottom" />
             </div>
-
-            {/* floating data nodes */}
 
             <div className="graphic-node node-1">
               <BrainCircuit size={15} />
@@ -125,6 +148,24 @@ function Login({ onRegister, onLogin }) {
             </div>
           </div>
 
+          <div className="auth-bottom-copy">
+            <span className="visual-eyebrow">
+              <span />
+              Decision intelligence
+            </span>
+
+            <h2>
+              Remember
+              <br />
+              <span>why.</span>
+            </h2>
+
+            <p>
+              Preserve the reasoning behind important decisions and make your
+              team's knowledge easier to understand.
+            </p>
+          </div>
+
           <div className="visual-footer">
             <span>Secure by design</span>
             <span />
@@ -132,15 +173,11 @@ function Login({ onRegister, onLogin }) {
           </div>
         </section>
 
-        {/* ======================================
-            RIGHT LOGIN
-        ====================================== */}
-
         <section className="auth-panel">
           <div className="auth-card">
             <div className="auth-mobile-brand">
               <div className="auth-brand-icon">
-                <LockKeyhole size={16} />
+                <LockKeyhole size={17} />
               </div>
 
               <span>
@@ -175,7 +212,7 @@ function Login({ onRegister, onLogin }) {
                 <div className="form-label-row">
                   <label htmlFor="login-password">Password</label>
 
-                  <button type="button" className="forgot-button">
+                  <button type="button" className="login-forgot">
                     Forgot?
                   </button>
                 </div>

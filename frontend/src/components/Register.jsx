@@ -33,7 +33,6 @@ function Register({ onLogin }) {
       }
 
       alert("Registration successful! Please sign in.");
-
       onLogin();
     } catch (error) {
       console.error("Registration error:", error);
@@ -48,12 +47,14 @@ function Register({ onLogin }) {
       <div className="auth-glow auth-glow-right" />
 
       <div className="auth-layout">
-        {/* LEFT */}
+        {/* ======================================
+            LEFT VISUAL
+        ====================================== */}
 
         <section className="auth-visual">
           <div className="auth-brand">
             <div className="auth-brand-icon">
-              <LockKeyhole size={17} />
+              <LockKeyhole size={18} strokeWidth={2.1} />
             </div>
 
             <span>
@@ -61,25 +62,56 @@ function Register({ onLogin }) {
             </span>
           </div>
 
-          <div className="visual-copy">
-            <div className="visual-eyebrow">
-              <span />
-              Build institutional memory
+          {/* Decision Memory */}
+
+          <div className="auth-intro-block">
+            <div className="auth-intro">
+              <span className="visual-eyebrow">
+                <span />
+                Decision memory
+              </span>
+
+              <p>
+                Your team's reasoning,
+                <br />
+                preserved in context.
+              </p>
             </div>
 
-            <h2>
-              Capture
-              <br />
-              <span>why.</span>
-            </h2>
+            <div className="auth-metrics">
+              <div className="auth-metric">
+                <div className="metric-icon">
+                  <LockKeyhole size={17} />
+                </div>
 
-            <p>
-              Create a workspace where important decisions don't disappear into
-              documents, chats and forgotten conversations.
-            </p>
+                <strong>124</strong>
+
+                <span>Decisions captured</span>
+              </div>
+
+              <div className="auth-metric">
+                <div className="metric-icon">
+                  <BrainCircuit size={17} />
+                </div>
+
+                <strong>89</strong>
+
+                <span>Approved decisions</span>
+              </div>
+
+              <div className="auth-metric">
+                <div className="metric-icon">
+                  <span className="metric-symbol">%</span>
+                </div>
+
+                <strong>94%</strong>
+
+                <span>Context coverage</span>
+              </div>
+            </div>
           </div>
 
-          {/* SAME VAULT GRAPHIC */}
+          {/* Animated vault */}
 
           <div className="auth-graphic">
             <div className="graphic-halo" />
@@ -98,7 +130,7 @@ function Register({ onLogin }) {
                   <div className="graphic-ring ring-3" />
 
                   <div className="graphic-lock">
-                    <LockKeyhole size={33} />
+                    <LockKeyhole size={33} strokeWidth={1.7} />
                   </div>
                 </div>
 
@@ -125,20 +157,44 @@ function Register({ onLogin }) {
             </div>
           </div>
 
+          {/* Bottom message */}
+
+          <div className="auth-bottom-copy">
+            <span className="visual-eyebrow">
+              <span />
+              Decision intelligence
+            </span>
+
+            <h2>
+              Capture
+              <br />
+              <span>why.</span>
+            </h2>
+
+            <p>
+              Create a workspace where important decisions don't disappear into
+              documents, chats and forgotten conversations.
+            </p>
+          </div>
+
           <div className="visual-footer">
             <span>Secure by design</span>
+
             <span />
+
             <span>Decisions, preserved.</span>
           </div>
         </section>
 
-        {/* RIGHT */}
+        {/* ======================================
+            RIGHT REGISTER
+        ====================================== */}
 
         <section className="auth-panel">
           <div className="auth-card">
             <div className="auth-mobile-brand">
               <div className="auth-brand-icon">
-                <LockKeyhole size={16} />
+                <LockKeyhole size={17} />
               </div>
 
               <span>
@@ -202,6 +258,7 @@ function Register({ onLogin }) {
 
                 <select
                   id="register-role"
+                  className="register-role-select"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                 >
@@ -215,6 +272,7 @@ function Register({ onLogin }) {
 
               <button type="submit" className="auth-submit">
                 <span>Create account</span>
+
                 <ArrowRight size={16} />
               </button>
             </form>
@@ -237,6 +295,7 @@ function Register({ onLogin }) {
 
           <div className="auth-legal">
             <span>© 2026 DecisionVault</span>
+
             <span>Private workspace</span>
           </div>
         </section>

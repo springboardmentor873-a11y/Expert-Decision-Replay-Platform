@@ -321,6 +321,81 @@ function App() {
             </div>
           </section>
 
+          <section className="activity-section">
+            <div className="activity-column">
+              <div className="activity-heading">
+                <div>
+                  <span className="section-label">NEEDS ATTENTION</span>
+                  <h2>Decision activity</h2>
+                </div>
+                <span className="activity-count">3 items</span>
+              </div>
+
+              <div className="activity-list">
+                <div className="activity-row">
+                  <div className="activity-status review" />
+                  <div className="activity-info">
+                    <strong>Cloud infrastructure</strong>
+                    <span>Review required</span>
+                  </div>
+                  <span className="activity-time">Today</span>
+                </div>
+
+                <div className="activity-row">
+                  <div className="activity-status draft" />
+                  <div className="activity-info">
+                    <strong>Database architecture</strong>
+                    <span>Still in draft</span>
+                  </div>
+                  <span className="activity-time">2 days</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="activity-column">
+              <div className="activity-heading">
+                <div>
+                  <span className="section-label">UPCOMING</span>
+                  <h2>Reviews</h2>
+                </div>
+                <button className="view-all">
+                  View all
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+
+              <div className="activity-list">
+                <div className="activity-row">
+                  <div className="review-date">
+                    <strong>02</strong>
+                    <span>SEP</span>
+                  </div>
+
+                  <div className="activity-info">
+                    <strong>Authentication strategy</strong>
+                    <span>Decision review</span>
+                  </div>
+
+                  <span className="activity-time">10:30 AM</span>
+                </div>
+
+                <div className="activity-row">
+                  <div className="review-date">
+                    <strong>03</strong>
+                    <span>SEP</span>
+                  </div>
+
+                  <div className="activity-info">
+                    <strong>API architecture</strong>
+                    <span>Team review</span>
+                  </div>
+
+                  <span className="activity-time">2:00 PM</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* =====================================
               INSIGHT
           ===================================== */}
