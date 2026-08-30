@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Reports | DecisionAI</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+
+    <div class="sidebar">
+
+        <h2>DecisionAI</h2>
+
+        <a href="index.html">
+            🏠 Home
+        </a>
+
+        <a href="dashboard.html">
+            📊 Dashboard
+        </a>
+
+        <a href="entities.html">
+            🏢 Entities
+        </a>
+
+        <a href="relationships.html">
+            🔗 Relationships
+        </a>
+
+        <a href="analysis.html">
+            🧠 Analysis
+        </a>
+
+        <a href="reports.html" class="active">
+            📄 Reports
+        </a>
+
+    </div>
+
+
+
+    <!-- =========================
+         MAIN CONTENT
+    ========================== -->
+
+    <div class="main-content">
+
+
+        <!-- HEADER -->
+
+        <div class="header">
+
+            <div>
+
+                <h1>Enterprise Reports</h1>
+
+                <p>
+                    Generate and review enterprise decision intelligence reports.
+                </p>
+
+            </div>
+
+
+            <div class="user-profile">
+
+                👤 Admin
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =========================
+             REPORT GENERATOR
+        ========================== -->
+
+        <section class="report-generator">
+
+            <div class="form-card">
+
+                <h2>
+                    📄 Generate Decision Report
+                </h2>
+
+                <p>
+
+                    Select the report type and generate
+                    an enterprise intelligence summary.
+
+                </p>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Select Report Type
+                    </label>
+
+
+                    <select id="reportType">
+
+                        <option value="decision">
+                            Decision Intelligence Report
+                        </option>
+
+                        <option value="risk">
+                            Risk Analysis Report
+                        </option>
+
+                        <option value="impact">
+                            Impact Analysis Report
+                        </option>
+
+                        <option value="dependency">
+                            Dependency Analysis Report
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <button
+                    id="generateReport"
+                    class="btn-primary"
+                >
+
+                    Generate Report
+
+                </button>
+
+
+                <button
+                    id="downloadReport"
+                    class="btn-secondary"
+                >
+
+                    Download Report
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             REPORT SUMMARY CARDS
+        ========================== -->
+
+        <section class="statistics">
+
+            <h2>
+                Enterprise Summary
+            </h2>
+
+
+            <div class="stats-container">
+
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+                        🏢
+                    </div>
+
+                    <h3>
+                        25
+                    </h3>
+
+                    <p>
+                        Total Entities
+                    </p>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+                        🔗
+                    </div>
+
+                    <h3>
+                        48
+                    </h3>
+
+                    <p>
+                        Relationships
+                    </p>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+                        ⚠️
+                    </div>
+
+                    <h3>
+                        28%
+                    </h3>
+
+                    <p>
+                        Risk Score
+                    </p>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+                        🎯
+                    </div>
+
+                    <h3>
+                        85%
+                    </h3>
+
+                    <p>
+                        Decision Score
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             REPORT PREVIEW
+        ========================== -->
+
+        <section class="report-preview-section">
+
+            <div class="section-header">
+
+                <h2>
+                    📋 Report Preview
+                </h2>
+
+            </div>
+
+
+            <div
+                id="reportPreview"
+                class="report-preview"
+            >
+
+                <h2>
+                    Enterprise Decision Intelligence Report
+                </h2>
+
+
+                <p class="report-date">
+
+                    Generated Date:
+                    <span id="reportDate"></span>
+
+                </p>
+
+
+                <hr>
+
+
+                <h3>
+                    1. Executive Summary
+                </h3>
+
+
+                <p>
+
+                    The Enterprise Decision Intelligence Platform
+                    analyzes knowledge graph relationships,
+                    enterprise risks, dependencies and expected
+                    business outcomes to support better decisions.
+
+                </p>
+
+
+                <h3>
+                    2. Knowledge Graph Summary
+                </h3>
+
+
+                <ul>
+
+                    <li>
+                        Total Enterprise Entities: 25
+                    </li>
+
+                    <li>
+                        Total Relationships: 48
+                    </li>
+
+                    <li>
+                        Strong Dependencies Detected: 12
+                    </li>
+
+                </ul>
+
+
+                <h3>
+                    3. Risk Analysis
+                </h3>
+
+
+                <p>
+
+                    The current enterprise risk score is
+                    <strong>
+                        28%
+                    </strong>.
+
+                    The risk level is considered manageable,
+                    but important dependencies should continue
+                    to be monitored.
+
+                </p>
+
+
+                <h3>
+                    4. Impact Analysis
+                </h3>
+
+
+                <p>
+
+                    The expected business impact score is
+                    <strong>
+                        82%
+                    </strong>.
+
+                    The proposed decision is expected to create
+                    a positive impact on enterprise operations.
+
+                </p>
+
+
+                <h3>
+                    5. Decision Recommendation
+                </h3>
+
+
+                <p>
+
+                    The final Decision Intelligence Score is
+                    <strong>
+                        85%
+                    </strong>.
+
+                    The system recommends proceeding with the
+                    decision while monitoring critical risks and
+                    dependencies.
+
+                </p>
+
+
+                <h3>
+                    6. Conclusion
+                </h3>
+
+
+                <p>
+
+                    The enterprise shows a strong decision
+                    confidence level. Continuous monitoring and
+                    periodic analysis are recommended to maintain
+                    decision quality.
+
+                </p>
+
+
+            </div>
+
+        </section>
+
+
+
+    </div>
+
+
+
+    <script>
+
+
+        /* =========================
+           REPORT DATE
+        ========================= */
+
+        document
+            .getElementById(
+                "reportDate"
+            )
+            .innerText =
+                new Date().toLocaleDateString();
+
+
+
+        /* =========================
+           GENERATE REPORT
+        ========================= */
+
+        document
+            .getElementById(
+                "generateReport"
+            )
+            .addEventListener(
+                "click",
+                generateReport
+            );
+
+
+
+        function generateReport() {
+
+
+            const reportType =
+                document.getElementById(
+                    "reportType"
+                ).value;
+
+
+            const preview =
+                document.getElementById(
+                    "reportPreview"
+                );
+
+
+            let title = "";
+
+            let content = "";
+
+
+            if (reportType === "decision") {
+
+                title =
+                    "Enterprise Decision Intelligence Report";
+
+
+                content = `
+                    <h3>Decision Summary</h3>
+
+                    <p>
+                        The enterprise decision confidence
+                        score is <strong>85%</strong>.
+                    </p>
+
+                    <p>
+                        Recommendation:
+                        Proceed with implementation while
+                        monitoring critical risks and
+                        dependencies.
+                    </p>
+                `;
+
+            }
+
+
+            else if (reportType === "risk") {
+
+                title =
+                    "Enterprise Risk Analysis Report";
+
+
+                content = `
+                    <h3>Risk Summary</h3>
+
+                    <p>
+                        Current Risk Score:
+                        <strong>28%</strong>
+                    </p>
+
+                    <p>
+                        Risk Level:
+                        <strong>Low to Moderate</strong>
+                    </p>
+
+                    <p>
+                        Recommendation:
+                        Monitor important dependencies and
+                        review enterprise risks periodically.
+                    </p>
+                `;
+
+            }
+
+
+            else if (reportType === "impact") {
+
+                title =
+                    "Enterprise Impact Analysis Report";
+
+
+                content = `
+                    <h3>Impact Summary</h3>
+
+                    <p>
+                        Expected Business Impact:
+                        <strong>82%</strong>
+                    </p>
+
+                    <p>
+                        The proposed enterprise decision is
+                        expected to create significant
+                        positive business value.
+                    </p>
+                `;
+
+            }
+
+
+            else if (reportType === "dependency") {
+
+                title =
+                    "Enterprise Dependency Analysis Report";
+
+
+                content = `
+                    <h3>Dependency Summary</h3>
+
+                    <p>
+                        Dependency Score:
+                        <strong>65%</strong>
+                    </p>
+
+                    <p>
+                        Several enterprise components are
+                        connected and depend on each other.
+                    </p>
+
+                    <p>
+                        Recommendation:
+                        Review critical dependencies before
+                        implementing major enterprise changes.
+                    </p>
+                `;
+
+            }
+
+
+            preview.innerHTML = `
+
+                <h2>
+                    ${title}
+                </h2>
+
+                <p class="report-date">
+
+                    Generated Date:
+                    ${new Date().toLocaleDateString()}
+
+                </p>
+
+                <hr>
+
+                ${content}
+
+            `;
+
+
+            alert(
+                "Report Generated Successfully!"
+            );
+
+        }
+
+
+
+        /* =========================
+           DOWNLOAD REPORT
+        ========================= */
+
+        document
+            .getElementById(
+                "downloadReport"
+            )
+            .addEventListener(
+                "click",
+                downloadReport
+            );
+
+
+
+        function downloadReport() {
+
+
+            const reportContent =
+                document.getElementById(
+                    "reportPreview"
+                ).innerText;
+
+
+            const blob =
+                new Blob(
+
+                    [reportContent],
+
+                    {
+                        type:
+                            "text/plain"
+                    }
+
+                );
+
+
+            const link =
+                document.createElement(
+                    "a"
+                );
+
+
+            link.href =
+                URL.createObjectURL(
+                    blob
+                );
+
+
+            link.download =
+                "enterprise-decision-report.txt";
+
+
+            link.click();
+
+
+            URL.revokeObjectURL(
+                link.href
+            );
+
+        }
+
+
+    </script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Analysis | DecisionAI</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+
+    <!-- SIDEBAR -->
+
+    <div class="sidebar">
+
+        <h2>DecisionAI</h2>
+
+        <a href="index.html">🏠 Home</a>
+
+        <a href="dashboard.html">📊 Dashboard</a>
+
+        <a href="entities.html">🏢 Entities</a>
+
+        <a href="relationships.html">🔗 Relationships</a>
+
+        <a href="analysis.html" class="active">
+            🧠 Analysis
+        </a>
+
+        <a href="reports.html">📄 Reports</a>
+
+    </div>
+
+
+
+    <!-- MAIN CONTENT -->
+
+    <div class="main-content">
+
+
+        <!-- HEADER -->
+
+        <div class="header">
+
+            <div>
+
+                <h1>Enterprise Outcome Analysis</h1>
+
+                <p>
+                    Analyze enterprise risks, dependencies,
+                    impacts and decision outcomes.
+                </p>
+
+            </div>
+
+
+            <div class="user-profile">
+
+                👤 Admin
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ANALYSIS BUTTON -->
+
+        <section class="analysis-action">
+
+            <div class="form-card">
+
+                <h2>🧠 Run Decision Intelligence Analysis</h2>
+
+                <p>
+
+                    The platform analyzes enterprise data and
+                    evaluates risk, impact, dependency and
+                    decision confidence.
+
+                </p>
+
+
+                <button
+                    class="btn-primary"
+                    id="runAnalysis"
+                >
+
+                    Run Analysis
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ANALYSIS CARDS -->
+
+        <section class="analysis-results">
+
+            <h2>Analysis Results</h2>
+
+
+            <div class="card-container">
+
+
+                <!-- RISK ANALYSIS -->
+
+                <div class="feature-card analysis-card">
+
+                    <div class="icon">
+
+                        ⚠️
+
+                    </div>
+
+
+                    <h3>Risk Analysis</h3>
+
+
+                    <h2
+                        id="riskScore"
+                    >
+
+                        0%
+
+                    </h2>
+
+
+                    <p id="riskMessage">
+
+                        Run analysis to evaluate
+                        enterprise risks.
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- IMPACT ANALYSIS -->
+
+                <div class="feature-card analysis-card">
+
+                    <div class="icon">
+
+                        📈
+
+                    </div>
+
+
+                    <h3>Impact Analysis</h3>
+
+
+                    <h2
+                        id="impactScore"
+                    >
+
+                        0%
+
+                    </h2>
+
+
+                    <p id="impactMessage">
+
+                        Run analysis to evaluate
+                        enterprise impact.
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- DEPENDENCY ANALYSIS -->
+
+                <div class="feature-card analysis-card">
+
+                    <div class="icon">
+
+                        🔗
+
+                    </div>
+
+
+                    <h3>Dependency Analysis</h3>
+
+
+                    <h2
+                        id="dependencyScore"
+                    >
+
+                        0%
+
+                    </h2>
+
+
+                    <p id="dependencyMessage">
+
+                        Run analysis to detect
+                        enterprise dependencies.
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- DECISION SCORE -->
+
+                <div class="feature-card analysis-card">
+
+                    <div class="icon">
+
+                        🎯
+
+                    </div>
+
+
+                    <h3>Decision Score</h3>
+
+
+                    <h2
+                        id="finalDecisionScore"
+                    >
+
+                        0%
+
+                    </h2>
+
+
+                    <p id="decisionMessage">
+
+                        Run analysis to calculate
+                        decision confidence.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- DECISION RECOMMENDATION -->
+
+        <section class="recommendation-section">
+
+            <div class="form-card">
+
+                <h2>🤖 AI Recommendation</h2>
+
+                <div
+                    id="recommendation"
+                    class="recommendation-box"
+                >
+
+                    Click "Run Analysis" to generate
+                    an AI-based enterprise recommendation.
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ANALYSIS DETAILS -->
+
+        <section class="table-section">
+
+            <div class="table-header">
+
+                <h2>Detailed Analysis</h2>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Analysis Type</th>
+
+                            <th>Score</th>
+
+                            <th>Status</th>
+
+                            <th>Business Meaning</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="analysisTableBody">
+
+                        <tr>
+
+                            <td>Risk Analysis</td>
+
+                            <td>-</td>
+
+                            <td>Not Started</td>
+
+                            <td>
+                                Run analysis to view results.
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+    </div>
+
+
+
+    <script>
+
+
+        /* =========================
+           RUN ANALYSIS
+        ========================= */
+
+        document
+            .getElementById(
+                "runAnalysis"
+            )
+            .addEventListener(
+                "click",
+                runAnalysis
+            );
+
+
+
+        function runAnalysis() {
+
+
+            /*
+               DEMO ANALYSIS SCORES
+
+               Later these values will come
+               from the backend analytics API.
+            */
+
+            const riskScore = 28;
+
+            const impactScore = 82;
+
+            const dependencyScore = 65;
+
+
+            /*
+               DECISION SCORE FORMULA
+
+               Higher risk and dependency
+               reduce decision confidence.
+            */
+
+            const decisionScore =
+                Math.round(
+
+                    (
+                        impactScore +
+                        (100 - riskScore) +
+                        (100 - dependencyScore)
+                    )
+
+                    / 3
+
+                );
+
+
+            /* UPDATE CARDS */
+
+            document.getElementById(
+                "riskScore"
+            ).innerText =
+                riskScore + "%";
+
+
+            document.getElementById(
+                "impactScore"
+            ).innerText =
+                impactScore + "%";
+
+
+            document.getElementById(
+                "dependencyScore"
+            ).innerText =
+                dependencyScore + "%";
+
+
+            document.getElementById(
+                "finalDecisionScore"
+            ).innerText =
+                decisionScore + "%";
+
+
+            /* RISK MESSAGE */
+
+            document.getElementById(
+                "riskMessage"
+            ).innerText =
+                "Low to moderate enterprise risk detected.";
+
+
+            /* IMPACT MESSAGE */
+
+            document.getElementById(
+                "impactMessage"
+            ).innerText =
+                "The proposed decision has high business impact.";
+
+
+            /* DEPENDENCY MESSAGE */
+
+            document.getElementById(
+                "dependencyMessage"
+            ).innerText =
+                "Several important dependencies were detected.";
+
+
+            /* DECISION MESSAGE */
+
+            document.getElementById(
+                "decisionMessage"
+            ).innerText =
+                "Decision confidence is good.";
+
+
+            /* AI RECOMMENDATION */
+
+            let recommendation = "";
+
+
+            if (decisionScore >= 75) {
+
+                recommendation =
+                    "Recommended: The enterprise decision has a strong confidence score. Proceed with monitoring of key dependencies and risks.";
+
+            }
+
+            else if (decisionScore >= 50) {
+
+                recommendation =
+                    "Conditional Recommendation: The decision is acceptable, but some risks and dependencies should be addressed before implementation.";
+
+            }
+
+            else {
+
+                recommendation =
+                    "Not Recommended: High enterprise risks or dependencies require further analysis before making the decision.";
+
+            }
+
+
+            document.getElementById(
+                "recommendation"
+            ).innerText =
+                recommendation;
+
+
+            /* UPDATE TABLE */
+
+            updateAnalysisTable(
+
+                riskScore,
+
+                impactScore,
+
+                dependencyScore,
+
+                decisionScore
+
+            );
+
+
+        }
+
+
+
+        /* =========================
+           UPDATE ANALYSIS TABLE
+        ========================= */
+
+        function updateAnalysisTable(
+
+            risk,
+
+            impact,
+
+            dependency,
+
+            decision
+
+        ) {
+
+
+            const tableBody =
+                document.getElementById(
+                    "analysisTableBody"
+                );
+
+
+            tableBody.innerHTML = `
+
+
+                <tr>
+
+                    <td>
+                        Risk Analysis
+                    </td>
+
+                    <td>
+                        ${risk}%
+                    </td>
+
+                    <td>
+                        Low Risk
+                    </td>
+
+                    <td>
+                        Enterprise risk level is manageable.
+                    </td>
+
+                </tr>
+
+
+
+                <tr>
+
+                    <td>
+                        Impact Analysis
+                    </td>
+
+                    <td>
+                        ${impact}%
+                    </td>
+
+                    <td>
+                        High Impact
+                    </td>
+
+                    <td>
+                        The decision can create significant business value.
+                    </td>
+
+                </tr>
+
+
+
+                <tr>
+
+                    <td>
+                        Dependency Analysis
+                    </td>
+
+                    <td>
+                        ${dependency}%
+                    </td>
+
+                    <td>
+                        Moderate Dependency
+                    </td>
+
+                    <td>
+                        Some enterprise components depend on each other.
+                    </td>
+
+                </tr>
+
+
+
+                <tr>
+
+                    <td>
+                        Decision Intelligence Score
+                    </td>
+
+                    <td>
+                        ${decision}%
+                    </td>
+
+                    <td>
+                        Recommended
+                    </td>
+
+                    <td>
+                        The decision has a good confidence level.
+                    </td>
+
+                </tr>
+
+
+            `;
+
+
+        }
+
+
+    </script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Entities | DecisionAI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+
+    <div class="sidebar">
+
+        <h2>DecisionAI</h2>
+
+        <a href="index.html">🏠 Home</a>
+
+        <a href="dashboard.html">📊 Dashboard</a>
+
+        <a href="entities.html" class="active">🏢 Entities</a>
+
+        <a href="relationships.html">🔗 Relationships</a>
+
+        <a href="analysis.html">🧠 Analysis</a>
+
+        <a href="reports.html">📄 Reports</a>
+
+    </div>
+
+
+    <!-- Main Content -->
+
+    <div class="main-content">
+
+        <!-- Header -->
+
+        <div class="header">
+
+            <div>
+                <h1>Entity Management</h1>
+
+                <p>
+                    Add and manage enterprise entities in the Knowledge Graph.
+                </p>
+            </div>
+
+            <div class="user-profile">
+                👤 Admin
+            </div>
+
+        </div>
+
+
+        <!-- Add Entity -->
+
+        <section class="entity-form-section">
+
+            <div class="form-card">
+
+                <h2>➕ Add New Entity</h2>
+
+                <form id="entityForm">
+
+                    <div class="form-group">
+
+                        <label>Entity Name</label>
+
+                        <input
+                            type="text"
+                            id="entityName"
+                            placeholder="Enter entity name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>Entity Type</label>
+
+                        <select id="entityType" required>
+
+                            <option value="">
+                                Select Entity Type
+                            </option>
+
+                            <option value="Department">
+                                Department
+                            </option>
+
+                            <option value="Employee">
+                                Employee
+                            </option>
+
+                            <option value="Project">
+                                Project
+                            </option>
+
+                            <option value="System">
+                                System
+                            </option>
+
+                            <option value="Resource">
+                                Resource
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>Description</label>
+
+                        <textarea
+                            id="entityDescription"
+                            placeholder="Enter entity description"
+                            rows="4"
+                        ></textarea>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="btn-primary"
+                    >
+
+                        Add Entity
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- Search -->
+
+        <section class="search-section">
+
+            <input
+                type="text"
+                id="searchEntity"
+                placeholder="🔍 Search entities..."
+            >
+
+        </section>
+
+
+
+        <!-- Entity Table -->
+
+        <section class="table-section">
+
+            <div class="table-header">
+
+                <h2>Enterprise Entities</h2>
+
+                <span id="entityTotal">
+                    Total: 0
+                </span>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>ID</th>
+
+                            <th>Name</th>
+
+                            <th>Type</th>
+
+                            <th>Description</th>
+
+                            <th>Action</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="entityTableBody">
+
+                        <!-- Entities will appear here -->
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+    </div>
+
+
+    <script src="script.js"></script>
+
+    <script>
+
+        let entities = [
+
+            {
+                id: 1,
+                name: "Sales Department",
+                type: "Department",
+                description: "Handles enterprise sales operations"
+            },
+
+            {
+                id: 2,
+                name: "AI Analytics System",
+                type: "System",
+                description: "Processes enterprise intelligence data"
+            },
+
+            {
+                id: 3,
+                name: "Digital Transformation Project",
+                type: "Project",
+                description: "Enterprise digital transformation initiative"
+            }
+
+        ];
+
+
+        /* =========================
+           DISPLAY ENTITIES
+        ========================= */
+
+        function displayEntities(data = entities) {
+
+            const tableBody =
+                document.getElementById(
+                    "entityTableBody"
+                );
+
+            tableBody.innerHTML = "";
+
+
+            data.forEach(entity => {
+
+                const row =
+                    document.createElement("tr");
+
+
+                row.innerHTML = `
+
+                    <td>${entity.id}</td>
+
+                    <td>${entity.name}</td>
+
+                    <td>
+                        <span class="entity-badge">
+                            ${entity.type}
+                        </span>
+                    </td>
+
+                    <td>
+                        ${entity.description}
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="delete-btn"
+                            onclick="deleteEntity(${entity.id})"
+                        >
+
+                            Delete
+
+                        </button>
+
+                    </td>
+
+                `;
+
+
+                tableBody.appendChild(row);
+
+            });
+
+
+            document.getElementById(
+                "entityTotal"
+            ).innerText =
+                "Total: " + entities.length;
+
+        }
+
+
+
+        /* =========================
+           ADD ENTITY
+        ========================= */
+
+        document
+            .getElementById("entityForm")
+            .addEventListener(
+                "submit",
+                function (event) {
+
+                    event.preventDefault();
+
+
+                    const name =
+                        document.getElementById(
+                            "entityName"
+                        ).value;
+
+
+                    const type =
+                        document.getElementById(
+                            "entityType"
+                        ).value;
+
+
+                    const description =
+                        document.getElementById(
+                            "entityDescription"
+                        ).value;
+
+
+                    const newEntity = {
+
+                        id:
+                            entities.length + 1,
+
+                        name:
+
+                            name,
+
+                        type:
+
+                            type,
+
+                        description:
+
+                            description
+
+                    };
+
+
+                    entities.push(newEntity);
+
+
+                    displayEntities();
+
+
+                    document
+                        .getElementById(
+                            "entityForm"
+                        )
+                        .reset();
+
+
+                    alert(
+                        "Entity Added Successfully!"
+                    );
+
+                }
+            );
+
+
+
+        /* =========================
+           DELETE ENTITY
+        ========================= */
+
+        function deleteEntity(id) {
+
+            entities =
+                entities.filter(
+                    entity =>
+                        entity.id !== id
+                );
+
+
+            displayEntities();
+
+        }
+
+
+
+        /* =========================
+           SEARCH ENTITY
+        ========================= */
+
+        document
+            .getElementById("searchEntity")
+            .addEventListener(
+                "input",
+                function () {
+
+                    const searchValue =
+                        this.value
+                            .toLowerCase();
+
+
+                    const filteredEntities =
+                        entities.filter(
+                            entity =>
+
+                                entity.name
+                                    .toLowerCase()
+                                    .includes(
+                                        searchValue
+                                    )
+
+                                ||
+
+                                entity.type
+                                    .toLowerCase()
+                                    .includes(
+                                        searchValue
+                                    )
+                        );
+
+
+                    displayEntities(
+                        filteredEntities
+                    );
+
+                }
+            );
+
+
+
+        /* =========================
+           INITIAL LOAD
+        ========================= */
+
+        displayEntities();
+
+    </script>
+
+</body>
+
+</html>
