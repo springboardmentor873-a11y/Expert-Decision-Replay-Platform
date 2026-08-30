@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Relationships | DecisionAI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+
+    <div class="sidebar">
+
+        <h2>DecisionAI</h2>
+
+        <a href="index.html">🏠 Home</a>
+
+        <a href="dashboard.html">📊 Dashboard</a>
+
+        <a href="entities.html">🏢 Entities</a>
+
+        <a href="relationships.html" class="active">
+            🔗 Relationships
+        </a>
+
+        <a href="analysis.html">🧠 Analysis</a>
+
+        <a href="reports.html">📄 Reports</a>
+
+    </div>
+
+
+
+    <!-- Main Content -->
+
+    <div class="main-content">
+
+
+        <!-- Header -->
+
+        <div class="header">
+
+            <div>
+
+                <h1>Relationship Management</h1>
+
+                <p>
+                    Create and manage connections between enterprise entities.
+                </p>
+
+            </div>
+
+
+            <div class="user-profile">
+
+                👤 Admin
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Add Relationship Form -->
+
+        <section class="entity-form-section">
+
+            <div class="form-card">
+
+                <h2>🔗 Add New Relationship</h2>
+
+
+                <form id="relationshipForm">
+
+
+                    <!-- Source Entity -->
+
+                    <div class="form-group">
+
+                        <label>Source Entity</label>
+
+                        <select id="sourceEntity" required>
+
+                            <option value="">
+                                Select Source Entity
+                            </option>
+
+                            <option value="Sales Department">
+                                Sales Department
+                            </option>
+
+                            <option value="AI Analytics System">
+                                AI Analytics System
+                            </option>
+
+                            <option value="Digital Transformation Project">
+                                Digital Transformation Project
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- Relationship Type -->
+
+                    <div class="form-group">
+
+                        <label>Relationship Type</label>
+
+                        <select id="relationshipType" required>
+
+                            <option value="">
+                                Select Relationship
+                            </option>
+
+                            <option value="Depends On">
+                                Depends On
+                            </option>
+
+                            <option value="Manages">
+                                Manages
+                            </option>
+
+                            <option value="Uses">
+                                Uses
+                            </option>
+
+                            <option value="Impacts">
+                                Impacts
+                            </option>
+
+                            <option value="Connected To">
+                                Connected To
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- Target Entity -->
+
+                    <div class="form-group">
+
+                        <label>Target Entity</label>
+
+                        <select id="targetEntity" required>
+
+                            <option value="">
+                                Select Target Entity
+                            </option>
+
+                            <option value="Sales Department">
+                                Sales Department
+                            </option>
+
+                            <option value="AI Analytics System">
+                                AI Analytics System
+                            </option>
+
+                            <option value="Digital Transformation Project">
+                                Digital Transformation Project
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- Relationship Strength -->
+
+                    <div class="form-group">
+
+                        <label>Relationship Strength</label>
+
+                        <select id="relationshipStrength">
+
+                            <option value="High">
+                                High
+                            </option>
+
+                            <option value="Medium">
+                                Medium
+                            </option>
+
+                            <option value="Low">
+                                Low
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <button
+                        type="submit"
+                        class="btn-primary"
+                    >
+
+                        Add Relationship
+
+                    </button>
+
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- Relationship Statistics -->
+
+        <section class="statistics">
+
+            <h2>Relationship Overview</h2>
+
+
+            <div class="stats-container">
+
+
+                <div class="stat-card">
+
+                    <h3 id="totalRelationships">
+                        0
+                    </h3>
+
+                    <p>Total Relationships</p>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <h3 id="highStrength">
+                        0
+                    </h3>
+
+                    <p>High Strength</p>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <h3 id="mediumStrength">
+                        0
+                    </h3>
+
+                    <p>Medium Strength</p>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <h3 id="lowStrength">
+                        0
+                    </h3>
+
+                    <p>Low Strength</p>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- Relationship Table -->
+
+        <section class="table-section">
+
+            <div class="table-header">
+
+                <h2>Knowledge Graph Relationships</h2>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th>ID</th>
+
+                            <th>Source Entity</th>
+
+                            <th>Relationship</th>
+
+                            <th>Target Entity</th>
+
+                            <th>Strength</th>
+
+                            <th>Action</th>
+
+                        </tr>
+
+                    </thead>
+
+
+
+                    <tbody id="relationshipTableBody">
+
+                    </tbody>
+
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+    </div>
+
+
+
+    <script>
+
+
+        /* =========================
+           SAMPLE RELATIONSHIPS
+        ========================= */
+
+        let relationships = [
+
+            {
+
+                id: 1,
+
+                source: "Sales Department",
+
+                type: "Uses",
+
+                target: "AI Analytics System",
+
+                strength: "High"
+
+            },
+
+            {
+
+                id: 2,
+
+                source: "Digital Transformation Project",
+
+                type: "Depends On",
+
+                target: "AI Analytics System",
+
+                strength: "High"
+
+            },
+
+            {
+
+                id: 3,
+
+                source: "Sales Department",
+
+                type: "Impacts",
+
+                target: "Digital Transformation Project",
+
+                strength: "Medium"
+
+            }
+
+        ];
+
+
+
+        /* =========================
+           DISPLAY RELATIONSHIPS
+        ========================= */
+
+        function displayRelationships() {
+
+
+            const tableBody =
+                document.getElementById(
+                    "relationshipTableBody"
+                );
+
+
+            tableBody.innerHTML = "";
+
+
+            relationships.forEach(
+                relationship => {
+
+
+                    const row =
+                        document.createElement("tr");
+
+
+                    row.innerHTML = `
+
+                        <td>
+                            ${relationship.id}
+                        </td>
+
+
+                        <td>
+                            ${relationship.source}
+                        </td>
+
+
+                        <td>
+
+                            <span class="entity-badge">
+
+                                ${relationship.type}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+                            ${relationship.target}
+                        </td>
+
+
+                        <td>
+
+                            <span class="strength-${relationship.strength.toLowerCase()}">
+
+                                ${relationship.strength}
+
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <button
+                                class="delete-btn"
+                                onclick="deleteRelationship(${relationship.id})"
+                            >
+
+                                Delete
+
+                            </button>
+
+                        </td>
+
+                    `;
+
+
+                    tableBody.appendChild(row);
+
+                }
+            );
+
+
+            updateStatistics();
+
+        }
+
+
+
+        /* =========================
+           ADD RELATIONSHIP
+        ========================= */
+
+        document
+            .getElementById(
+                "relationshipForm"
+            )
+            .addEventListener(
+                "submit",
+                function (event) {
+
+
+                    event.preventDefault();
+
+
+                    const source =
+                        document.getElementById(
+                            "sourceEntity"
+                        ).value;
+
+
+                    const type =
+                        document.getElementById(
+                            "relationshipType"
+                        ).value;
+
+
+                    const target =
+                        document.getElementById(
+                            "targetEntity"
+                        ).value;
+
+
+                    const strength =
+                        document.getElementById(
+                            "relationshipStrength"
+                        ).value;
+
+
+                    if (source === target) {
+
+                        alert(
+                            "Source and Target Entity cannot be the same!"
+                        );
+
+                        return;
+
+                    }
+
+
+                    const newRelationship = {
+
+                        id:
+                            relationships.length + 1,
+
+                        source:
+                            source,
+
+                        type:
+                            type,
+
+                        target:
+                            target,
+
+                        strength:
+                            strength
+
+                    };
+
+
+                    relationships.push(
+                        newRelationship
+                    );
+
+
+                    displayRelationships();
+
+
+                    document
+                        .getElementById(
+                            "relationshipForm"
+                        )
+                        .reset();
+
+
+                    alert(
+                        "Relationship Added Successfully!"
+                    );
+
+                }
+            );
+
+
+
+        /* =========================
+           DELETE RELATIONSHIP
+        ========================= */
+
+        function deleteRelationship(id) {
+
+
+            relationships =
+                relationships.filter(
+                    relationship =>
+                        relationship.id !== id
+                );
+
+
+            displayRelationships();
+
+        }
+
+
+
+        /* =========================
+           UPDATE STATISTICS
+        ========================= */
+
+        function updateStatistics() {
+
+
+            const high =
+                relationships.filter(
+                    relationship =>
+                        relationship.strength === "High"
+                ).length;
+
+
+            const medium =
+                relationships.filter(
+                    relationship =>
+                        relationship.strength === "Medium"
+                ).length;
+
+
+            const low =
+                relationships.filter(
+                    relationship =>
+                        relationship.strength === "Low"
+                ).length;
+
+
+            document.getElementById(
+                "totalRelationships"
+            ).innerText =
+                relationships.length;
+
+
+            document.getElementById(
+                "highStrength"
+            ).innerText =
+                high;
+
+
+            document.getElementById(
+                "mediumStrength"
+            ).innerText =
+                medium;
+
+
+            document.getElementById(
+                "lowStrength"
+            ).innerText =
+                low;
+
+        }
+
+
+
+        /* =========================
+           INITIAL LOAD
+        ========================= */
+
+        displayRelationships();
+
+
+    </script>
+
+</body>
+
+</html>

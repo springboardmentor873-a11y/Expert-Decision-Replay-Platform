@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard | DecisionAI</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+
+    <div class="sidebar">
+
+        <h2>DecisionAI</h2>
+
+        <a href="index.html">
+            🏠 Home
+        </a>
+
+        <a href="dashboard.html" class="active">
+            📊 Dashboard
+        </a>
+
+        <a href="entities.html">
+            🏢 Entities
+        </a>
+
+        <a href="relationships.html">
+            🔗 Relationships
+        </a>
+
+        <a href="analysis.html">
+            🧠 Analysis
+        </a>
+
+        <a href="reports.html">
+            📄 Reports
+        </a>
+
+    </div>
+
+
+
+    <!-- =========================
+         MAIN CONTENT
+    ========================== -->
+
+    <div class="main-content">
+
+
+        <!-- HEADER -->
+
+        <div class="header">
+
+            <div>
+
+                <h1>Decision Intelligence Dashboard</h1>
+
+                <p>
+                    Monitor enterprise knowledge, relationships,
+                    risks and decision outcomes.
+                </p>
+
+            </div>
+
+
+            <div class="user-profile">
+
+                👤 Admin
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =========================
+             DASHBOARD STATISTICS
+        ========================== -->
+
+        <section class="statistics">
+
+            <div class="stats-container">
+
+
+                <!-- TOTAL ENTITIES -->
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+
+                        🏢
+
+                    </div>
+
+                    <h3 id="dashboardEntities">
+
+                        25
+
+                    </h3>
+
+                    <p>
+                        Total Entities
+                    </p>
+
+                </div>
+
+
+
+                <!-- RELATIONSHIPS -->
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+
+                        🔗
+
+                    </div>
+
+                    <h3 id="dashboardRelationships">
+
+                        48
+
+                    </h3>
+
+                    <p>
+                        Relationships
+                    </p>
+
+                </div>
+
+
+
+                <!-- DECISION SCORE -->
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+
+                        🎯
+
+                    </div>
+
+                    <h3 id="dashboardDecision">
+
+                        85%
+
+                    </h3>
+
+                    <p>
+                        Decision Score
+                    </p>
+
+                </div>
+
+
+
+                <!-- RISK LEVEL -->
+
+                <div class="stat-card">
+
+                    <div class="dashboard-icon">
+
+                        ⚠️
+
+                    </div>
+
+                    <h3 id="dashboardRisk">
+
+                        Low
+
+                    </h3>
+
+                    <p>
+                        Enterprise Risk
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             KNOWLEDGE GRAPH OVERVIEW
+        ========================== -->
+
+        <section class="dashboard-section">
+
+            <div class="section-header">
+
+                <h2>
+                    🔗 Knowledge Graph Overview
+                </h2>
+
+                <a
+                    href="relationships.html"
+                    class="view-link"
+                >
+
+                    View Relationships →
+
+                </a>
+
+            </div>
+
+
+            <div class="graph-card">
+
+
+                <div class="graph-node">
+
+                    🏢
+                    <br>
+                    Sales Department
+
+                </div>
+
+
+                <div class="graph-line">
+
+                    ─────── Uses ───────
+
+                </div>
+
+
+                <div class="graph-node">
+
+                    🤖
+                    <br>
+                    AI Analytics System
+
+                </div>
+
+
+                <div class="graph-line">
+
+                    ───── Impacts ─────
+
+                </div>
+
+
+                <div class="graph-node">
+
+                    📁
+                    <br>
+                    Digital Project
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             ANALYTICS OVERVIEW
+        ========================== -->
+
+        <section class="dashboard-section">
+
+            <div class="section-header">
+
+                <h2>
+                    📈 Analytics Overview
+                </h2>
+
+                <a
+                    href="analysis.html"
+                    class="view-link"
+                >
+
+                    Run Analysis →
+
+                </a>
+
+            </div>
+
+
+            <div class="analytics-grid">
+
+
+                <!-- RISK -->
+
+                <div class="analytics-card">
+
+                    <h3>
+                        ⚠️ Risk Analysis
+                    </h3>
+
+                    <div class="progress-bar">
+
+                        <div
+                            class="progress-fill"
+                            style="width: 28%;"
+                        >
+
+                        </div>
+
+                    </div>
+
+                    <p>
+                        Risk Score: <strong>28%</strong>
+                    </p>
+
+                </div>
+
+
+
+                <!-- IMPACT -->
+
+                <div class="analytics-card">
+
+                    <h3>
+                        📈 Impact Analysis
+                    </h3>
+
+                    <div class="progress-bar">
+
+                        <div
+                            class="progress-fill"
+                            style="width: 82%;"
+                        >
+
+                        </div>
+
+                    </div>
+
+                    <p>
+                        Impact Score: <strong>82%</strong>
+                    </p>
+
+                </div>
+
+
+
+                <!-- DEPENDENCY -->
+
+                <div class="analytics-card">
+
+                    <h3>
+                        🔗 Dependency Analysis
+                    </h3>
+
+                    <div class="progress-bar">
+
+                        <div
+                            class="progress-fill"
+                            style="width: 65%;"
+                        >
+
+                        </div>
+
+                    </div>
+
+                    <p>
+                        Dependency Score: <strong>65%</strong>
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             AI RECOMMENDATION
+        ========================== -->
+
+        <section class="dashboard-section">
+
+
+            <div class="section-header">
+
+                <h2>
+                    🤖 AI Decision Recommendation
+                </h2>
+
+            </div>
+
+
+            <div class="recommendation-box dashboard-recommendation">
+
+
+                <h3>
+                    Recommended Decision
+                </h3>
+
+
+                <p>
+
+                    The enterprise decision shows a strong
+                    confidence score. The system recommends
+                    proceeding with implementation while
+                    continuously monitoring critical dependencies
+                    and enterprise risks.
+
+                </p>
+
+
+                <a
+                    href="analysis.html"
+                    class="btn-primary"
+                >
+
+                    View Full Analysis
+
+                </a>
+
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- =========================
+             RECENT ACTIVITIES
+        ========================== -->
+
+        <section class="dashboard-section">
+
+
+            <div class="section-header">
+
+                <h2>
+                    🕒 Recent Activities
+                </h2>
+
+            </div>
+
+
+            <div class="activity-card">
+
+
+                <div class="activity-item">
+
+                    <span>
+
+                        🏢
+
+                    </span>
+
+                    <p>
+
+                        New entity
+                        <strong>
+                            "AI Analytics System"
+                        </strong>
+                        was added.
+
+                    </p>
+
+                </div>
+
+
+
+                <div class="activity-item">
+
+                    <span>
+
+                        🔗
+
+                    </span>
+
+                    <p>
+
+                        Relationship created between
+                        Sales Department and
+                        AI Analytics System.
+
+                    </p>
+
+                </div>
+
+
+
+                <div class="activity-item">
+
+                    <span>
+
+                        🧠
+
+                    </span>
+
+                    <p>
+
+                        Enterprise outcome analysis
+                        was completed successfully.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+    </div>
+
+
+    <script src="script.js"></script>
+
+
+</body>
+
+</html>
