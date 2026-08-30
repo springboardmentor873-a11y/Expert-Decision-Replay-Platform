@@ -9,6 +9,6 @@ app.use(cors())
 app.use(express.json());
 
 app.use("/api/auth", authRouter)
-app.use("/api/decision", decisionRouter)
+app.use("/api/decisions", decisionRouter)
 
 export default app;
