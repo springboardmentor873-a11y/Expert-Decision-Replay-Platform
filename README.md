@@ -1,398 +1,391 @@
-# 🧠 Expert Decision Replay Platform
+# Enterprise Decision Intelligence Platform for Knowledge Graphs and Outcome Analysis
 
-> A platform for capturing, managing, reviewing, and replaying expert decision-making processes.
+##  Overview
 
-![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
-![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?logo=vite&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-Authentication-000000?logo=jsonwebtokens&logoColor=white)
+The **Enterprise Decision Intelligence Platform** is a web-based application designed to help organizations analyze enterprise data, relationships, risks, dependencies, and business outcomes.
+
+The platform uses a **Knowledge Graph-based approach** to represent connections between enterprise entities such as departments, systems, projects, and databases. Analytics modules and AI-based decision logic are used to generate insights, calculate decision scores, and provide recommendations.
 
 ---
 
-## 🚀 Quick Start
+## Features
 
-### Prerequisites
-
-Make sure you have the following installed:
-
-- Python
-- Node.js
-- PostgreSQL
-- pgAdmin
-- Git
-
----
-
-### Step 1 — Clone the repository
-
-```bash
-git clone https://github.com/springboardmentor873-a11y/Expert-Decision-Replay-Platform.git
-cd Expert-Decision-Replay-Platform
-```
+*  Enterprise Dashboard
+*  Entity Management
+*  Relationship Management
+*  Knowledge Graph-Based Analysis
+*  Risk Analysis
+*  Impact Analysis
+*  Dependency Analysis
+*  Decision Intelligence Score
+*  AI Decision Engine
+*  AI-Based Recommendations
+*  Decision Explanation Engine
+*  Enterprise Report Generation
+*  SQLite Database Integration
+*  REST API Backend
 
 ---
 
-## 🔧 Step 2 — Start the Backend
-
-Open a terminal and navigate to the backend:
-
-```bash
-cd Backend
-```
-
-### Create a Python virtual environment
-
-```bash
-python -m venv .venv
-```
-
-### Activate the virtual environment
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Windows Command Prompt:
-
-```cmd
-.venv\Scripts\activate
-```
-
-### Install backend dependencies
-
-```bash
-pip install fastapi uvicorn sqlalchemy psycopg2-binary python-jose passlib bcrypt python-multipart
-```
-
-### Start FastAPI
-
-```bash
-python -m uvicorn main:app --reload
-```
-
-The backend will run at:
+##  System Architecture
 
 ```text
-http://127.0.0.1:8000
+Frontend
+   │
+   ▼
+REST API
+   │
+   ▼
+Node.js + Express Backend
+   │
+   ▼
+Controllers
+   │
+   ▼
+Services
+   │
+   ├───────────────┐
+   ▼               ▼
+Analytics Engine   AI Decision Engine
+   │               │
+   └───────┬───────┘
+           ▼
+     SQLite Database
 ```
 
 ---
 
-## 📚 Step 3 — Open API Documentation
-
-FastAPI automatically provides interactive API documentation.
-
-Open:
+##  Project Structure
 
 ```text
-http://127.0.0.1:8000/docs
-```
-
-From Swagger UI, you can view and test the available API endpoints.
-
----
-
-## 💻 Step 4 — Start the Frontend
-
-Open a new terminal.
-
-Navigate to the frontend:
-
-```bash
-cd frontend
-```
-
-Install the required packages:
-
-```bash
-npm install
-```
-
-Start the React development server:
-
-```bash
-npm run dev
-```
-
-The frontend will run at:
-
-```text
-http://localhost:5173
-```
-
-Open this address in your browser.
-
----
-
-## 🔐 Step 5 — Login
-
-The frontend provides a login page where users can enter:
-
-- Email
-- Password
-
-The login form sends the credentials to the FastAPI backend.
-
-If the credentials are valid, the backend returns a JWT access token.
-
-The token is stored in the browser using:
-
-```text
-localStorage
-```
-
----
-
-## 👤 Step 6 — User Information
-
-After successful login, the frontend requests the authenticated user's information using:
-
-```text
-GET /me
-```
-
-The JWT token is sent with the request:
-
-```text
-Authorization: Bearer <token>
-```
-
-The dashboard displays information such as:
-
-- User name
-- Email
-- User ID
-- Role ID
-- Team ID
-
----
-
-## 🗄️ Database Structure
-
-The project uses PostgreSQL as the database.
-
-The current database structure contains the following tables:
-
-### Roles
-
-Stores the different roles available in the platform.
-
-Current roles:
-
-- Employee
-- Reviewer
-- Manager
-- Administrator
-
-### Teams
-
-Stores team information.
-
-### Users
-
-Stores user information including:
-
-- User ID
-- Name
-- Email
-- Password hash
-- Role ID
-- Team ID
-
-### User Profiles
-
-Stores additional information about users, including:
-
-- Phone
-- Department
-- Designation
-- Profile image
-
----
-
-## 🏗️ Project Structure
-
-```text
-Expert-Decision-Replay-Platform/
-│
-├── Backend/
-│   ├── Schemas/
-│   │   ├── __init__.py
-│   │   ├── team.py
-│   │   └── user.py
-│   │
-│   ├── database/
-│   │   ├── __init__.py
-│   │   └── database.py
-│   │
-│   ├── models/
-│   │   ├── _init_.py
-│   │   ├── role.py
-│   │   ├── team.py
-│   │   └── user.py
-│   │
-│   ├── security/
-│   │   ├── _init_.py
-│   │   ├── auth.py
-│   │   ├── jwt.py
-│   │   └── password.py
-│   │
-│   └── main.py
+enterprise-decision-intelligence/
 │
 ├── frontend/
-│   ├── public/
-│   │
-│   ├── src/
-│   │   ├── assets/
-│   │   ├── App.jsx
-│   │   ├── App.css
-│   │   ├── dashboard.jsx
-│   │   ├── index.css
-│   │   └── main.jsx
-│   │
-│   ├── package.json
-│   └── vite.config.js
+│   ├── index.html
+│   ├── entities.html
+│   ├── relationships.html
+│   ├── analysis.html
+│   ├── dashboard.html
+│   ├── reports.html
+│   ├── style.css
+│   └── script.js
 │
+├── backend/
+│   ├── server.js
+│   ├── database.js
+│   ├── package.json
+│   │
+│   ├── routes/
+│   │   ├── entityRoutes.js
+│   │   ├── relationshipRoutes.js
+│   │   └── analysisRoutes.js
+│   │
+│   ├── controllers/
+│   │   ├── entityController.js
+│   │   ├── relationshipController.js
+│   │   └── analysisController.js
+│   │
+│   ├── services/
+│   │   ├── entityService.js
+│   │   ├── relationshipService.js
+│   │   └── decisionService.js
+│   │
+│   └── middleware/
+│       └── errorHandler.js
+│
+├── database/
+│   ├── schema.sql
+│   ├── seed.sql
+│   └── migrations/
+│
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── sample-data.json
+│
+├── analytics/
+│   ├── risk-analysis.js
+│   ├── impact-analysis.js
+│   ├── dependency-analysis.js
+│   └── decision-score.js
+│
+├── ai/
+│   ├── decision-engine.js
+│   ├── recommendation-engine.js
+│   └── explanation-engine.js
+│
+├── config/
+│   ├── database.config.js
+│   └── app.config.js
+│
+├── scripts/
+│   ├── setup.js
+│   ├── seed.js
+│   └── backup.js
+│
+├── .env.example
+├── .gitignore
 └── README.md
 ```
 
 ---
 
-## 🔑 Authentication Flow
-
-The current authentication flow works as follows:
-
-```text
-User
-  │
-  ▼
-React Login Page
-  │
-  │ Email + Password
-  ▼
-FastAPI Backend
-  │
-  ▼
-Verify Credentials
-  │
-  ▼
-Generate JWT Token
-  │
-  ▼
-React Frontend
-  │
-  ▼
-Store Token in localStorage
-  │
-  ▼
-Request /me
-  │
-  ▼
-Display User Dashboard
-```
-
----
-
-## 🎯 Milestone 1
-
-Milestone 1 focuses on establishing the basic authentication and user-management foundation of the platform.
-
-### Completed
-
-- Project repository setup
-- Backend setup using FastAPI
-- React frontend setup using Vite
-- PostgreSQL database structure
-- User model
-- Role model
-- Team model
-- Password handling
-- JWT authentication
-- Login API
-- Protected `/me` endpoint
-- Frontend login page
-- Frontend dashboard
-- User information display
-- Logout functionality
-- GitHub repository setup
-
----
-
-## 🛠️ Technologies Used
+##  Technologies Used
 
 ### Frontend
 
-- React
-- Vite
-- JavaScript
-- HTML
-- CSS
+* HTML5
+* CSS3
+* JavaScript
 
 ### Backend
 
-- Python
-- FastAPI
-- Uvicorn
-- SQLAlchemy
+* Node.js
+* Express.js
 
 ### Database
 
-- PostgreSQL
-- pgAdmin
+* SQLite
 
-### Authentication
+### Analytics
 
-- JWT
-- Password hashing
+* Risk Analysis
+* Impact Analysis
+* Dependency Analysis
+* Decision Score Calculation
 
-### Version Control
+### AI Modules
 
-- Git
-- GitHub
+* Decision Engine
+* Recommendation Engine
+* Explanation Engine
 
 ---
 
-## 📌 Current Status
+## ⚙️ Installation
 
-The first milestone of the Expert Decision Replay Platform has been completed.
+### 1. Clone the Repository
 
-The application currently supports:
-
-```text
-Login
-  ↓
-JWT Authentication
-  ↓
-Authenticated User
-  ↓
-User Information
-  ↓
-Dashboard
-  ↓
-Logout
+```bash
+git clone <your-repository-url>
 ```
 
-Further milestones will extend the platform with the core expert decision capture, review, and replay functionality.
+### 2. Navigate to the Project Folder
+
+```bash
+cd enterprise-decision-intelligence
+```
+
+### 3. Install Backend Dependencies
+
+```bash
+cd backend
+npm install
+```
+
+### 4. Return to the Project Root
+
+```bash
+cd ..
+```
+
+### 5. Setup the Database
+
+```bash
+node scripts/setup.js
+```
+
+### 6. Insert Sample Data
+
+```bash
+node scripts/seed.js
+```
+
+### 7. Start the Backend Server
+
+```bash
+cd backend
+npm start
+```
+
+The server will run at:
+
+```text
+http://localhost:5000
+```
 
 ---
 
-## 👥 Project Roles
+##  API Endpoints
 
-The platform currently defines four user roles:
+### Entity APIs
 
-| Role | Purpose |
-|------|---------|
-| Employee | Regular platform user |
-| Reviewer | Reviews submitted decisions |
-| Manager | Manages teams and reviews |
-| Administrator | Manages the overall platform |
+| Method | Endpoint            | Description         |
+| ------ | ------------------- | ------------------- |
+| GET    | `/api/entities`     | Get all entities    |
+| GET    | `/api/entities/:id` | Get entity by ID    |
+| POST   | `/api/entities`     | Create a new entity |
+| DELETE | `/api/entities/:id` | Delete an entity    |
+
+### Relationship APIs
+
+| Method | Endpoint                 | Description            |
+| ------ | ------------------------ | ---------------------- |
+| GET    | `/api/relationships`     | Get all relationships  |
+| GET    | `/api/relationships/:id` | Get relationship by ID |
+| POST   | `/api/relationships`     | Create a relationship  |
+| DELETE | `/api/relationships/:id` | Delete a relationship  |
+
+### Analysis API
+
+| Method | Endpoint        | Description                      |
+| ------ | --------------- | -------------------------------- |
+| GET    | `/api/analysis` | Get enterprise decision analysis |
 
 ---
 
-## 📄 License
+##  Analytics Modules
 
-This project is developed as part of the Expert Decision Replay Platform project.
+###  Risk Analysis
+
+The system analyzes relationship strength to identify enterprise risks.
+
+```text
+High Strength   → Higher Risk
+Medium Strength → Moderate Risk
+Low Strength    → Lower Risk
+```
+
+---
+
+###  Impact Analysis
+
+The impact score is calculated using:
+
+```text
+Impact Score =
+(Entity Contribution)
++
+(Relationship Contribution)
+```
+
+A higher score indicates a greater potential business impact.
+
+---
+
+###  Dependency Analysis
+
+The dependency score identifies how strongly enterprise components depend on each other.
+
+```text
+Dependency Score =
+(Total Relationships / Total Entities) × 20
+```
+
+---
+
+##  Decision Intelligence Score
+
+The final decision score is calculated using:
+
+```text
+Decision Score =
+
+(
+Impact Score
++
+(100 - Risk Score)
++
+(100 - Dependency Score)
+) / 3
+```
+
+---
+
+##  AI Decision Recommendation
+
+Based on the Decision Intelligence Score:
+
+| Decision Score | Status          |
+| -------------- | --------------- |
+| 75 – 100       | Recommended     |
+| 50 – 74        | Conditional     |
+| Below 50       | Not Recommended |
+
+The AI Recommendation Engine provides suggestions based on:
+
+* Enterprise Risk
+* Business Impact
+* System Dependencies
+* Final Decision Score
+
+---
+
+##  Reports
+
+The platform supports the generation of:
+
+* Decision Intelligence Reports
+* Risk Analysis Reports
+* Impact Analysis Reports
+* Dependency Analysis Reports
+
+Reports provide a summary of enterprise data and decision outcomes.
+
+---
+
+##  Database Backup
+
+To create a backup of the SQLite database:
+
+```bash
+node scripts/backup.js
+```
+
+Backup files are stored in:
+
+```text
+database/backups/
+```
+
+---
+
+## 🔮 Future Enhancements
+
+* Interactive Knowledge Graph Visualization
+* Machine Learning-Based Prediction
+* Real-Time Enterprise Data Analysis
+* User Authentication
+* Role-Based Access Control
+* Advanced AI Models
+* PDF Report Generation
+* Cloud Database Integration
+* Docker Deployment
+* Real-Time Dashboard Updates
+
+---
+
+##  Academic Purpose
+
+This project was developed for **educational and academic purposes** to demonstrate the implementation of:
+
+* Knowledge Graph Concepts
+* Enterprise Data Analysis
+* Backend API Development
+* Database Management
+* Decision Intelligence
+* AI-Based Recommendations
+
+---
+
+## License
+
+This project is intended for educational purposes.
+
+---
+
+##  Conclusion
+
+The **Enterprise Decision Intelligence Platform for Knowledge Graphs and Outcome Analysis** provides a structured system for analyzing enterprise entities, relationships, risks, dependencies, and business outcomes.
+
+By combining **Knowledge Graph concepts, analytics modules, and AI-based decision engines**, the platform supports intelligent and data-driven enterprise decision-making.
