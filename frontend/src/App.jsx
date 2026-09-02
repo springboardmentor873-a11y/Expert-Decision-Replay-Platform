@@ -1,8 +1,9 @@
 import { Routes, Route } from "react-router-dom";
-import LandingPage from "./components/LandingPage.jsx";
-import Login from "./components/Login.jsx";
-import Register from "./components/Register.jsx";
-import Dashboard from "./components/Dashboard.jsx";
+
+import LandingPage from "./pages/LandingPage.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 
 function App() {
   return (

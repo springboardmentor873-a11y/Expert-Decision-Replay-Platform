@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "nodemon --exec \"node --env-file=.env server.js\"",
+    "backend": "nodemon --exec \"node --env-file=.env server.js\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
