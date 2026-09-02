@@ -33,7 +33,12 @@ export const AuthProvider = ({ children }) => {
     restoreAuth();
   }, [restoreAuth]);
 
-  const login = async (credentials) => {
+  const login = async (emailOrCredentials, maybePassword) => {
+    const credentials =
+      typeof emailOrCredentials === 'object' && emailOrCredentials !== null
+        ? emailOrCredentials
+        : { email: emailOrCredentials, password: maybePassword };
+
     const tokenData = await loginUser(credentials);
     const accessToken = tokenData.access_token;
     localStorage.setItem('token', accessToken);

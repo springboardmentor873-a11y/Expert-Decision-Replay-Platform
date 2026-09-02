@@ -25,5 +25,8 @@ class User(Base):
     # Relationship to Role model (Many Users to 1 Role)
     role = relationship("Role", back_populates="users")
 
+    # Relationship to Decision model (1 User to Many Decisions)
+    decisions = relationship("Decision", back_populates="creator", cascade="all, delete-orphan")
+
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role_id={self.role_id})>"

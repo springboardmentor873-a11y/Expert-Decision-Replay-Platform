@@ -37,9 +37,14 @@ export async function registerUser(userData) {
 
 /**
  * Authenticates user credentials and returns JWT bearer token.
- * @param {Object} credentials - { email, password }
+ * Accepts either an object { email, password } or two arguments (email, password).
  */
-export async function loginUser(credentials) {
+export async function loginUser(emailOrCredentials, maybePassword) {
+  const credentials =
+    typeof emailOrCredentials === 'object' && emailOrCredentials !== null
+      ? emailOrCredentials
+      : { email: emailOrCredentials, password: maybePassword };
+
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
