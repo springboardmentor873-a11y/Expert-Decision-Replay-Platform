@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -8,7 +9,9 @@ import {
 } from "lucide-react";
 import "../styles/Login.css";
 
-function Login({ onRegister, onLogin }) {
+function Login() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -35,7 +38,7 @@ function Login({ onRegister, onLogin }) {
       }
 
       localStorage.setItem("token", data.token);
-      onLogin();
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       alert("Unable to connect to the server.");
@@ -243,7 +246,7 @@ function Login({ onRegister, onLogin }) {
             <div className="auth-switch">
               <span>Don't have an account?</span>
 
-              <button onClick={onRegister}>
+              <button type="button" onClick={() => navigate("/register")}>
                 Create one
                 <ArrowRight size={14} />
               </button>

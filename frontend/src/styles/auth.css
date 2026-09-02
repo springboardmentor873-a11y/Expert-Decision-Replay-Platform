@@ -97,7 +97,7 @@ select {
   height: 100%;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(450px, 0.95fr);
+  grid-template-columns: minmax(0, 1.26fr) minmax(450px, 0.95fr);
 }
 
 .auth-visual {

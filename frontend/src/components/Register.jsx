@@ -1,8 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ArrowRight, BrainCircuit, LockKeyhole } from "lucide-react";
 import "../styles/Register.css";
 
-function Register({ onLogin }) {
+function Register() {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -286,7 +289,7 @@ function Register({ onLogin }) {
             <div className="auth-switch">
               <span>Already have an account?</span>
 
-              <button onClick={onLogin}>
+              <button type="button" onClick={() => navigate("/login")}>
                 Sign in
                 <ArrowRight size={14} />
               </button>

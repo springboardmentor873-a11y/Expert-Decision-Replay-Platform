@@ -1,28 +1,18 @@
-import { useState } from "react";
-
-import Login from "./components/Login";
-import Register from "./components/Register";
-import Dashboard from "./components/Dashboard";
+import { Routes, Route } from "react-router-dom";
+import LandingPage from "./components/LandingPage.jsx";
+import Login from "./components/Login.jsx";
+import Register from "./components/Register.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 
 function App() {
-  const [page, setPage] = useState("login");
-
-  if (page === "login") {
-    return (
-      <Login
-        onRegister={() => setPage("register")}
-        onLogin={() => setPage("dashboard")}
-      />
-    );
-  }
-
-  if (page === "register") {
-    return <Register onLogin={() => setPage("login")} />;
-  }
-
-  if (page === "dashboard") {
-    return <Dashboard />;
-  }
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
+  );
 }
 
 export default App;
