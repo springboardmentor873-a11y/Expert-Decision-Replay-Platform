@@ -1,398 +1,140 @@
-# 🧠 Expert Decision Replay Platform
+# Expert Decision Replay Platform
 
-> A platform for capturing, managing, reviewing, and replaying expert decision-making processes.
+## Milestone 1 — Database design, backend setup, and login
 
-![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
-![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?logo=vite&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-Authentication-000000?logo=jsonwebtokens&logoColor=white)
+This covers: user/team database design, FastAPI backend with JWT auth
+(register, login, refresh, logout), role-based access control, and a
+working login/register page on the frontend.
 
 ---
 
-## 🚀 Quick Start
+## Quick start
 
-### Prerequisites
-
-Make sure you have the following installed:
-
-- Python
-- Node.js
-- PostgreSQL
-- pgAdmin
-- Git
-
----
-
-### Step 1 — Clone the repository
+### 1. Backend + database (Docker)
 
 ```bash
-git clone https://github.com/springboardmentor873-a11y/Expert-Decision-Replay-Platform.git
-cd Expert-Decision-Replay-Platform
+cp backend/.env.example backend/.env
+# edit backend/.env and set a real SECRET_KEY before anything but local dev
+
+docker compose up --build
 ```
 
----
+This starts Postgres, Redis (ready for later milestones), and the FastAPI
+backend on **http://localhost:8000**. Interactive API docs are at
+**http://localhost:8000/docs**.
 
-## 🔧 Step 2 — Start the Backend
-
-Open a terminal and navigate to the backend:
+Run the first migration once Postgres is up:
 
 ```bash
-cd Backend
+docker compose exec backend alembic revision --autogenerate -m "initial tables"
+docker compose exec backend alembic upgrade head
 ```
 
-### Create a Python virtual environment
-
-```bash
-python -m venv .venv
-```
-
-### Activate the virtual environment
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Windows Command Prompt:
-
-```cmd
-.venv\Scripts\activate
-```
-
-### Install backend dependencies
-
-```bash
-pip install fastapi uvicorn sqlalchemy psycopg2-binary python-jose passlib bcrypt python-multipart
-```
-
-### Start FastAPI
-
-```bash
-python -m uvicorn main:app --reload
-```
-
-The backend will run at:
-
-```text
-http://127.0.0.1:8000
-```
-
----
-
-## 📚 Step 3 — Open API Documentation
-
-FastAPI automatically provides interactive API documentation.
-
-Open:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-From Swagger UI, you can view and test the available API endpoints.
-
----
-
-## 💻 Step 4 — Start the Frontend
-
-Open a new terminal.
-
-Navigate to the frontend:
+### 2. Frontend
 
 ```bash
 cd frontend
-```
-
-Install the required packages:
-
-```bash
+cp .env.example .env
 npm install
-```
-
-Start the React development server:
-
-```bash
 npm run dev
 ```
 
-The frontend will run at:
+Open **http://localhost:5173** — you'll land on `/login`. Use "Create an
+account" to register (new accounts start as `employee`), then sign in.
+A successful login takes you to `/dashboard`.
 
-```text
-http://localhost:5173
+---
+
+## Running the backend without Docker
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env   # point DATABASE_URL at a Postgres instance you have running
+uvicorn app.main:app --reload
 ```
 
-Open this address in your browser.
+## Running the backend test suite
 
----
-
-## 🔐 Step 5 — Login
-
-The frontend provides a login page where users can enter:
-
-- Email
-- Password
-
-The login form sends the credentials to the FastAPI backend.
-
-If the credentials are valid, the backend returns a JWT access token.
-
-The token is stored in the browser using:
-
-```text
-localStorage
+```bash
+cd backend
+pytest -v
 ```
 
+10 tests cover registration, duplicate-email handling, login (success/
+failure), `/me`, token refresh, logout/revocation, and role-based access
+control. These run against an in-memory SQLite database, so no live
+Postgres is required to run them.
+
 ---
 
-## 👤 Step 6 — User Information
+## What's built in this milestone
 
-After successful login, the frontend requests the authenticated user's information using:
+**Database (`backend/app/models/`)**
+- `users` — full name, email, hashed password, role (`employee` /
+  `reviewer` / `manager` / `administrator`), active flag, team
+- `teams` — lightweight grouping, referenced by `users.team_id`
+- `refresh_tokens` — tracks active login sessions by token id (not the
+  raw token) so sessions can be revoked individually
 
-```text
-GET /me
+**Backend (`backend/app/`)**
+- `POST /api/v1/auth/register` — creates an account (always as `employee`
+  — role upgrades go through `PATCH /api/v1/users/{id}/role`, admin-only)
+- `POST /api/v1/auth/login` — returns an access token (30 min) and
+  refresh token (7 days)
+- `POST /api/v1/auth/refresh` — exchanges a valid refresh token for a
+  new access token
+- `POST /api/v1/auth/logout` — revokes a refresh token server-side
+- `GET /api/v1/auth/me` — returns the logged-in user
+- `GET /api/v1/users` — Manager/Administrator only
+- `PATCH /api/v1/users/{id}/role` — Administrator only
+
+**Frontend (`frontend/src/`)**
+- `pages/Login`, `pages/Register`, `pages/Dashboard`
+- `context/AuthContext` — holds the session, restores it from a stored
+  token on page load
+- `services/api.js`, `services/auth.js` — talk to the backend
+- `routes/AppRoutes.jsx` + `routes/RequireAuth.jsx` — `/dashboard` is
+  gated behind a valid session
+
+## Next milestone
+
+Approval workflow — reviewer/manager sign-off, delegation, and SLA
+reminders (Stage 4 in the architecture plan).
+
+---
+
+## Milestone 2 — Decisions, alternatives, and attachments
+
+Run the migration to add the new tables:
+
+```bash
+docker compose exec backend alembic revision --autogenerate -m "add decisions, alternatives, attachments"
+docker compose exec backend alembic upgrade head
 ```
 
-The JWT token is sent with the request:
+**What's new**
 
-```text
-Authorization: Bearer <token>
-```
+Database: `decisions`, `decision_versions` (a snapshot saved on every
+edit), `decision_alternatives`, `attachments`.
 
-The dashboard displays information such as:
+Backend endpoints:
+- `POST /api/v1/decisions`, `GET /api/v1/decisions`,
+  `GET /api/v1/decisions/{id}`, `PATCH /api/v1/decisions/{id}`,
+  `POST /api/v1/decisions/{id}/submit`
+- `POST/PATCH/DELETE /api/v1/decisions/{id}/alternatives/...`
+- `POST/GET/DELETE /api/v1/decisions/{id}/attachments/...`
 
-- User name
-- Email
-- User ID
-- Role ID
-- Team ID
+Editing rule (enforced and tested): only the decision's creator, a
+Manager, or an Administrator can edit it — and only while it's still a
+Draft. Submitting for review locks it.
 
----
+Frontend: `pages/Decisions` (list), `pages/CreateDecision` (form with
+inline alternatives), `pages/DecisionDetails` (view, upload/download
+files, submit for review), plus a shared `components/Navbar` used
+across all logged-in pages. `Dashboard` was updated to use the new
+Navbar and link to the Decisions list.
 
-## 🗄️ Database Structure
-
-The project uses PostgreSQL as the database.
-
-The current database structure contains the following tables:
-
-### Roles
-
-Stores the different roles available in the platform.
-
-Current roles:
-
-- Employee
-- Reviewer
-- Manager
-- Administrator
-
-### Teams
-
-Stores team information.
-
-### Users
-
-Stores user information including:
-
-- User ID
-- Name
-- Email
-- Password hash
-- Role ID
-- Team ID
-
-### User Profiles
-
-Stores additional information about users, including:
-
-- Phone
-- Department
-- Designation
-- Profile image
-
----
-
-## 🏗️ Project Structure
-
-```text
-Expert-Decision-Replay-Platform/
-│
-├── Backend/
-│   ├── Schemas/
-│   │   ├── __init__.py
-│   │   ├── team.py
-│   │   └── user.py
-│   │
-│   ├── database/
-│   │   ├── __init__.py
-│   │   └── database.py
-│   │
-│   ├── models/
-│   │   ├── _init_.py
-│   │   ├── role.py
-│   │   ├── team.py
-│   │   └── user.py
-│   │
-│   ├── security/
-│   │   ├── _init_.py
-│   │   ├── auth.py
-│   │   ├── jwt.py
-│   │   └── password.py
-│   │
-│   └── main.py
-│
-├── frontend/
-│   ├── public/
-│   │
-│   ├── src/
-│   │   ├── assets/
-│   │   ├── App.jsx
-│   │   ├── App.css
-│   │   ├── dashboard.jsx
-│   │   ├── index.css
-│   │   └── main.jsx
-│   │
-│   ├── package.json
-│   └── vite.config.js
-│
-└── README.md
-```
-
----
-
-## 🔑 Authentication Flow
-
-The current authentication flow works as follows:
-
-```text
-User
-  │
-  ▼
-React Login Page
-  │
-  │ Email + Password
-  ▼
-FastAPI Backend
-  │
-  ▼
-Verify Credentials
-  │
-  ▼
-Generate JWT Token
-  │
-  ▼
-React Frontend
-  │
-  ▼
-Store Token in localStorage
-  │
-  ▼
-Request /me
-  │
-  ▼
-Display User Dashboard
-```
-
----
-
-## 🎯 Milestone 1
-
-Milestone 1 focuses on establishing the basic authentication and user-management foundation of the platform.
-
-### Completed
-
-- Project repository setup
-- Backend setup using FastAPI
-- React frontend setup using Vite
-- PostgreSQL database structure
-- User model
-- Role model
-- Team model
-- Password handling
-- JWT authentication
-- Login API
-- Protected `/me` endpoint
-- Frontend login page
-- Frontend dashboard
-- User information display
-- Logout functionality
-- GitHub repository setup
-
----
-
-## 🛠️ Technologies Used
-
-### Frontend
-
-- React
-- Vite
-- JavaScript
-- HTML
-- CSS
-
-### Backend
-
-- Python
-- FastAPI
-- Uvicorn
-- SQLAlchemy
-
-### Database
-
-- PostgreSQL
-- pgAdmin
-
-### Authentication
-
-- JWT
-- Password hashing
-
-### Version Control
-
-- Git
-- GitHub
-
----
-
-## 📌 Current Status
-
-The first milestone of the Expert Decision Replay Platform has been completed.
-
-The application currently supports:
-
-```text
-Login
-  ↓
-JWT Authentication
-  ↓
-Authenticated User
-  ↓
-User Information
-  ↓
-Dashboard
-  ↓
-Logout
-```
-
-Further milestones will extend the platform with the core expert decision capture, review, and replay functionality.
-
----
-
-## 👥 Project Roles
-
-The platform currently defines four user roles:
-
-| Role | Purpose |
-|------|---------|
-| Employee | Regular platform user |
-| Reviewer | Reviews submitted decisions |
-| Manager | Manages teams and reviews |
-| Administrator | Manages the overall platform |
-
----
-
-## 📄 License
-
-This project is developed as part of the Expert Decision Replay Platform project.
+Backend test suite: 26 tests total, including a real file
+upload → download byte-for-byte roundtrip.

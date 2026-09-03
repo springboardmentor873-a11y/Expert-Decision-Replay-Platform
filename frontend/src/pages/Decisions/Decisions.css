@@ -1,0 +1,139 @@
+.decisions {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+}
+
+.decisions__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 2.25rem;
+}
+
+.decisions__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 0 0 0.4rem;
+}
+
+.decisions__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 2.1rem;
+  margin: 0;
+}
+
+.decisions__new-button {
+  background: var(--ink);
+  color: var(--paper);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.65rem 1.1rem;
+  border-radius: 7px;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.decisions__new-button:hover {
+  background: var(--ink-soft);
+}
+
+.decisions__error {
+  background: rgba(181, 67, 47, 0.08);
+  border: 1px solid rgba(181, 67, 47, 0.25);
+  color: var(--danger);
+  font-size: 0.87rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.decisions__loading {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.decisions__empty {
+  border: 1px dashed var(--line-dark);
+  border-radius: 10px;
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.decisions__empty a {
+  color: var(--brass-dim);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.decisions__empty a:hover {
+  text-decoration: underline;
+}
+
+.decisions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.decisions__item {
+  border: 1px solid var(--line-dark);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.decisions__item:hover {
+  border-color: var(--brass);
+}
+
+.decisions__item-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.1rem 1.4rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.decisions__item-main {
+  min-width: 0;
+}
+
+.decisions__item-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  margin: 0 0 0.3rem;
+}
+
+.decisions__item-problem {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.decisions__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.decisions__item-category {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
