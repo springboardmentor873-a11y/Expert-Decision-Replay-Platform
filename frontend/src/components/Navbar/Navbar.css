@@ -1,0 +1,78 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 2.5rem;
+  border-bottom: 1px solid var(--line-dark);
+  background: var(--paper);
+}
+
+.navbar__left {
+  display: flex;
+  align-items: center;
+  gap: 2.25rem;
+}
+
+.navbar__mark {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  color: var(--brass-dim);
+  border: 1px solid var(--line-dark);
+  padding: 0.35rem 0.6rem;
+  border-radius: 3px;
+}
+
+.navbar__links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.navbar__link {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.3rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar__link:hover {
+  color: var(--text-ink);
+}
+
+.navbar__link--active {
+  color: var(--text-ink);
+  border-bottom-color: var(--brass);
+  font-weight: 500;
+}
+
+.navbar__right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.navbar__user {
+  font-size: 0.87rem;
+  color: var(--text-ink);
+}
+
+.navbar__role {
+  color: var(--text-muted);
+}
+
+.navbar__logout {
+  background: transparent;
+  border: 1px solid var(--line-dark);
+  border-radius: 6px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.83rem;
+  color: var(--text-ink);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.navbar__logout:hover {
+  background: var(--paper-dim);
+}

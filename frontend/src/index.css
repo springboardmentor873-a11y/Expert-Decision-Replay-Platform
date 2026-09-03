@@ -1,0 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root {
+  --ink: #10162b;
+  --ink-soft: #1b2340;
+  --paper: #f8f6f1;
+  --paper-dim: #eeebe3;
+  --text-ink: #1c2235;
+  --text-muted: #6b7280;
+  --brass: #c1893f;
+  --brass-dim: #9c6f34;
+  --teal: #3f6b63;
+  --line: rgba(255, 255, 255, 0.14);
+  --line-dark: rgba(16, 22, 43, 0.12);
+  --danger: #b5432f;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Shared wrapper for every page behind the Navbar (Decisions, CreateDecision,
+   DecisionDetails, Dashboard) — keeps background consistent app-wide. */
+.page {
+  min-height: 100vh;
+  background: var(--paper);
+}

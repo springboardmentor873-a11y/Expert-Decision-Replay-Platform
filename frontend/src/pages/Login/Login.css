@@ -1,0 +1,262 @@
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+}
+
+/* ---------- Left: ink panel with the ledger signature ---------- */
+
+.login-panel {
+  background: linear-gradient(165deg, var(--ink) 0%, var(--ink-soft) 100%);
+  color: var(--paper);
+  padding: 3rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-panel__mark {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  color: var(--brass);
+  border: 1px solid var(--line);
+  width: fit-content;
+  padding: 0.35rem 0.6rem;
+  border-radius: 3px;
+}
+
+.login-panel__body {
+  max-width: 30rem;
+}
+
+.login-panel__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: rgba(248, 246, 241, 0.55);
+  margin: 0 0 1.25rem;
+}
+
+.login-panel__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.1rem, 3.4vw, 2.9rem);
+  line-height: 1.12;
+  margin: 0 0 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.login-panel__copy {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(248, 246, 241, 0.72);
+  margin: 0 0 2.75rem;
+  max-width: 26rem;
+}
+
+/* The ledger: a real depiction of the decision lifecycle (Draft -> Under
+   Review -> Approved -> Archived), not decorative numbering. This is the
+   signature element — it's the one thing this page says that a generic
+   login screen couldn't. */
+.ledger {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+}
+
+.ledger__stage {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.ledger__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brass);
+  box-shadow: 0 0 0 4px rgba(193, 137, 63, 0.18);
+  flex-shrink: 0;
+}
+
+.ledger__stage:first-child .ledger__dot {
+  background: var(--teal);
+  box-shadow: 0 0 0 4px rgba(63, 107, 99, 0.22);
+}
+
+.ledger__label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: rgba(248, 246, 241, 0.68);
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.ledger__track {
+  width: clamp(1.2rem, 3vw, 2.4rem);
+  height: 1px;
+  background: var(--line);
+  margin: 0 0.85rem;
+}
+
+.login-panel__footnote {
+  font-size: 0.8rem;
+  color: rgba(248, 246, 241, 0.45);
+  margin: 0;
+}
+
+/* ---------- Right: the actual login form ---------- */
+
+.login-form-side {
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 23rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-card__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.9rem;
+  margin: 0 0 0.35rem;
+  color: var(--text-ink);
+}
+
+.login-card__subtitle {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  margin: 0 0 1.9rem;
+}
+
+.login-error {
+  background: rgba(181, 67, 47, 0.08);
+  border: 1px solid rgba(181, 67, 47, 0.25);
+  color: var(--danger);
+  font-size: 0.87rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.15rem;
+}
+
+.field__label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-ink);
+  margin-bottom: 0.4rem;
+}
+
+.field input {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line-dark);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input::placeholder {
+  color: #9ca0ac;
+}
+
+.field input:focus {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 3px rgba(193, 137, 63, 0.14);
+}
+
+.login-button {
+  margin-top: 0.5rem;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 7px;
+  padding: 0.78rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.login-button:hover:not(:disabled) {
+  background: var(--ink-soft);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-card__register {
+  text-align: center;
+  font-size: 0.87rem;
+  color: var(--text-muted);
+  margin: 1.5rem 0 0;
+}
+
+.login-card__register a {
+  color: var(--brass-dim);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.login-card__register a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Responsive: stack panels on narrow screens ---------- */
+
+@media (max-width: 860px) {
+  .login-screen {
+    grid-template-columns: 1fr;
+  }
+
+  .login-panel {
+    padding: 2.25rem 1.75rem;
+  }
+
+  .login-panel__body {
+    max-width: none;
+  }
+
+  .ledger {
+    flex-wrap: wrap;
+    row-gap: 0.6rem;
+  }
+
+  .ledger__track {
+    display: none;
+  }
+
+  .ledger__stage {
+    margin-right: 1.1rem;
+  }
+
+  .login-form-side {
+    padding: 2.25rem 1.75rem 3rem;
+  }
+}
