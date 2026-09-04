@@ -31,6 +31,19 @@ model User{
   createdBy User @relation(fields: [createdById], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  alternatives Alternative[]
+ }
+
+ model Alternative {
+  id Int @id @default(autoincrement())
+  name String
+  pros        String
+  cons        String
+  cost        String
+  feasibility String
+  risk        String
+  decisionId Int
+  decision   Decision @relation(fields: [decisionId], references: [id])
  }
 
 enum Role {
