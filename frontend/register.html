@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - Expert Decision Replay Platform</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <h1>Expert Decision Replay Platform</h1>
+  </div>
+
+  <div class="auth-container">
+    <div class="card">
+      <h2>Create an Account</h2>
+
+      <div id="register-alert" class="alert"></div>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label for="full_name">Full Name</label>
+          <input type="text" id="full_name" name="full_name" required />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="new-password" />
+          <small style="color: var(--color-muted);">
+            At least 8 characters, including letters and numbers.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="role">Role</label>
+          <select id="role" name="role" required>
+            <option value="Employee">Employee</option>
+            <option value="Reviewer">Reviewer</option>
+            <option value="Manager">Manager</option>
+            <option value="Administrator">Administrator</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="team_id">Team ID (optional)</label>
+          <input type="text" id="team_id" name="team_id" placeholder="Leave blank if no team yet" />
+        </div>
+
+        <button type="submit" class="full-width">Register</button>
+      </form>
+
+      <p class="helper-text">
+        Already have an account? <a href="login.html">Login here</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

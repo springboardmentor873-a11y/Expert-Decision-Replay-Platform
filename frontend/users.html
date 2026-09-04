@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management - Expert Decision Replay Platform</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <h1>Expert Decision Replay Platform</h1>
+    <div class="user-chip">
+      <button id="logout-btn" class="secondary">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="top-actions">
+        <h2 style="margin:0;">User Management</h2>
+        <a href="dashboard.html">← Back to Dashboard</a>
+      </div>
+
+      <div id="users-alert" class="alert"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Team</th>
+            <th>Role</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="5">Loading users...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/users.js"></script>
+</body>
+</html>

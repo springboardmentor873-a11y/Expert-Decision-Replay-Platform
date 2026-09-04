@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Expert Decision Replay Platform</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <h1>Expert Decision Replay Platform</h1>
+    <div class="user-chip">
+      <span id="welcome-name-topbar"></span>
+      <button id="logout-btn" class="secondary">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Welcome, <span id="welcome-name">...</span> 👋</h2>
+      <p style="color: var(--color-muted);">
+        Here is your account information, retrieved live from the backend.
+      </p>
+
+      <dl class="info-grid">
+        <dt>Full Name</dt>
+        <dd id="info-name">Loading...</dd>
+
+        <dt>Email</dt>
+        <dd id="info-email">Loading...</dd>
+
+        <dt>Role</dt>
+        <dd id="info-role">Loading...</dd>
+
+        <dt>Team</dt>
+        <dd id="info-team">Loading...</dd>
+      </dl>
+
+      <div class="nav-links">
+        <a href="users.html" id="admin-link" style="display:none;">Manage Users →</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

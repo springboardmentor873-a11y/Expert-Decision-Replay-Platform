@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expert Decision Replay Platform</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <h1>Expert Decision Replay Platform</h1>
+  </div>
+
+  <div class="auth-container">
+    <div class="card" style="text-align:center;">
+      <h2>Welcome</h2>
+      <p style="color: var(--color-muted);">
+        A centralized place to record, review, and preserve organizational
+        decisions. This is the Milestone 1 preview: authentication, user
+        management, and the foundational database.
+      </p>
+      <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+        <a class="btn" href="login.html">Login</a>
+        <a class="btn secondary" href="register.html">Register</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    // If already logged in, skip straight to the dashboard.
+    if (isLoggedIn()) {
+      window.location.href = "dashboard.html";
+    }
+  </script>
+</body>
+</html>

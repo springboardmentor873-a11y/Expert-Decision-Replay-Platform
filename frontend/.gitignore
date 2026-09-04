@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Environment secrets
+.env
+
+# OS / Editor
+.DS_Store
+.vscode/
+*.swp
+
+# Logs
+*.log
