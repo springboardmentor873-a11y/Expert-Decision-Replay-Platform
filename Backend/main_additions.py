@@ -1,18 +1,13 @@
+# ============================================================
+# 1. Add these imports at the top of main.py
+# ============================================================
 import os
 import shutil
-
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import UploadFile, File
 from fastapi.responses import FileResponse
 
-from database import engine, Base, SessionLocal
-from models import (
-    User, Decision, DecisionHistory,
-    Alternative, Review, Outcome, Document, Comment
-)
+from models import User, Decision, DecisionHistory, Alternative, Review, Outcome, Document, Comment
 from schemas import (
-    UserCreate, UserLogin,
-    DecisionCreate, DecisionEditUpdate,
     AlternativeCreate, AlternativeOut,
     ReviewCreate, ReviewOut,
     OutcomeCreate, OutcomeOut,
@@ -20,278 +15,44 @@ from schemas import (
     DocumentOut,
 )
 
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Expert Decision Replay Platform")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 UPLOAD_DIR = "uploads"
 
 
-@app.get("/")
-def home():
-    return {"message": "Expert Decision Replay Platform Backend"}
-
-
-@app.get("/health")
-def health():
-    return {"status": "healthy"}
-
-
 # ============================================================
-# Users
+# 2. Replace your existing update_decision with this version
+#    (it now auto-logs a history/version entry on every change)
 # ============================================================
-
-@app.post("/register")
-def register_user(payload: UserCreate):
-    db = SessionLocal()
-    try:
-        existing_user = db.query(User).filter(User.email == payload.email).first()
-
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
-
-        user = User(
-            name=payload.name,
-            email=payload.email,
-            password=payload.password,
-            role=payload.role
-        )
-
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-        return {
-            "message": "Registration successful",
-            "user_id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "role": user.role
-        }
-    finally:
-        db.close()
-
-
-@app.post("/login")
-def login_user(payload: UserLogin):
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.email == payload.email).first()
-
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-        if user.password != payload.password:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-        return {
-            "message": "Login successful",
-            "user_id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "role": user.role
-        }
-    finally:
-        db.close()
-
-
-@app.get("/users")
-def get_users():
-    return {"message": "Users API is working"}
-
-
-# ============================================================
-# Decisions
-# ============================================================
-
-@app.get("/decisions")
-def get_decisions():
-    db = SessionLocal()
-    try:
-        return db.query(Decision).all()
-    finally:
-        db.close()
-
-
-@app.get("/decisions/{decision_id}")
-def get_decision(decision_id: int):
-    db = SessionLocal()
-    try:
-        decision = db.query(Decision).filter(Decision.id == decision_id).first()
-        if not decision:
-            raise HTTPException(status_code=404, detail="Decision not found")
-        return decision
-    finally:
-        db.close()
-
-
-@app.post("/decisions")
-def create_decision(payload: DecisionCreate):
-    db = SessionLocal()
-    try:
-        decision = Decision(
-            title=payload.title,
-            problem=payload.problem,
-            reasoning=payload.reasoning,
-            category=payload.category,
-            user_id=payload.user_id,
-        )
-        db.add(decision)
-        db.commit()
-        db.refresh(decision)
-        return decision
-    finally:
-        db.close()
-
-
 @app.put("/decisions/{decision_id}")
 def update_decision(decision_id: int, final_decision: str):
     db = SessionLocal()
     try:
         decision = db.query(Decision).filter(Decision.id == decision_id).first()
-
         if not decision:
             return {"message": "Decision not found"}
 
         old_status = decision.status
         decision.final_decision = final_decision
         decision.status = "Completed"
-
         db.commit()
         db.refresh(decision)
 
-        db.add(DecisionHistory(
+        # auto version log
+        history = DecisionHistory(
             action="Updated",
             description=f"Status changed from {old_status} to {decision.status}",
             decision_id=decision.id,
-        ))
-        db.commit()
-
-        return decision
-    finally:
-        db.close()
-
-
-@app.put("/decisions/{decision_id}/edit")
-def edit_decision(decision_id: int, payload: DecisionEditUpdate):
-    db = SessionLocal()
-    try:
-        decision = db.query(Decision).filter(Decision.id == decision_id).first()
-
-        if not decision:
-            raise HTTPException(status_code=404, detail="Decision not found")
-
-        changes = []
-
-        if payload.title is not None and payload.title != decision.title:
-            changes.append(f"title: '{decision.title}' -> '{payload.title}'")
-            decision.title = payload.title
-
-        if payload.problem is not None and payload.problem != decision.problem:
-            changes.append("problem statement updated")
-            decision.problem = payload.problem
-
-        if payload.reasoning is not None and payload.reasoning != decision.reasoning:
-            changes.append("reasoning updated")
-            decision.reasoning = payload.reasoning
-
-        if payload.category is not None and payload.category != decision.category:
-            changes.append(f"category: '{decision.category}' -> '{payload.category}'")
-            decision.category = payload.category
-
-        db.commit()
-        db.refresh(decision)
-
-        if changes:
-            db.add(DecisionHistory(
-                action="Edited",
-                description="; ".join(changes),
-                decision_id=decision.id,
-            ))
-            db.commit()
-
-        return decision
-    finally:
-        db.close()
-
-
-@app.delete("/decisions/{decision_id}")
-def delete_decision(decision_id: int):
-    db = SessionLocal()
-    try:
-        decision = db.query(Decision).filter(Decision.id == decision_id).first()
-
-        if not decision:
-            raise HTTPException(status_code=404, detail="Decision not found")
-
-        # remove related rows first to avoid foreign key errors
-        db.query(Alternative).filter(Alternative.decision_id == decision_id).delete()
-        db.query(Review).filter(Review.decision_id == decision_id).delete()
-        db.query(DecisionHistory).filter(DecisionHistory.decision_id == decision_id).delete()
-        db.query(Outcome).filter(Outcome.decision_id == decision_id).delete()
-        db.query(Document).filter(Document.decision_id == decision_id).delete()
-        db.query(Comment).filter(Comment.decision_id == decision_id).delete()
-
-        db.delete(decision)
-        db.commit()
-
-        return {"message": "Decision deleted"}
-    finally:
-        db.close()
-
-
-# ============================================================
-# Decision History / Replay
-# ============================================================
-
-@app.post("/decisions/{decision_id}/history")
-def add_history(decision_id: int, action: str, description: str):
-    db = SessionLocal()
-    try:
-        history = DecisionHistory(action=action, description=description, decision_id=decision_id)
+        )
         db.add(history)
         db.commit()
-        db.refresh(history)
-        return history
-    finally:
-        db.close()
 
-
-@app.get("/decisions/{decision_id}/history")
-def get_history(decision_id: int):
-    db = SessionLocal()
-    try:
-        return db.query(DecisionHistory).filter(DecisionHistory.decision_id == decision_id).all()
-    finally:
-        db.close()
-
-
-@app.get("/decisions/{decision_id}/replay")
-def replay_decision(decision_id: int):
-    db = SessionLocal()
-    try:
-        decision = db.query(Decision).filter(Decision.id == decision_id).first()
-        if not decision:
-            return {"message": "Decision not found"}
-
-        history = db.query(DecisionHistory).filter(DecisionHistory.decision_id == decision_id).all()
-        return {"decision": decision, "history": history}
+        return decision
     finally:
         db.close()
 
 
 # ============================================================
-# Alternatives
+# 3. Alternative routes
 # ============================================================
-
 @app.post("/decisions/{decision_id}/alternatives", response_model=AlternativeOut)
 def create_alternative(decision_id: int, payload: AlternativeCreate):
     db = SessionLocal()
@@ -337,9 +98,8 @@ def delete_alternative(alternative_id: int):
 
 
 # ============================================================
-# Reviews
+# 4. Review routes
 # ============================================================
-
 @app.post("/decisions/{decision_id}/reviews", response_model=ReviewOut)
 def create_review(decision_id: int, payload: ReviewCreate):
     db = SessionLocal()
@@ -367,9 +127,8 @@ def get_reviews(decision_id: int):
 
 
 # ============================================================
-# Outcomes
+# 5. Outcome routes
 # ============================================================
-
 @app.post("/decisions/{decision_id}/outcome", response_model=OutcomeOut)
 def create_outcome(decision_id: int, payload: OutcomeCreate):
     db = SessionLocal()
@@ -400,9 +159,8 @@ def get_outcome(decision_id: int):
 
 
 # ============================================================
-# Comments (Discussion Module)
+# 6. Comment routes (Discussion Module)
 # ============================================================
-
 @app.post("/decisions/{decision_id}/comments", response_model=CommentOut)
 def create_comment(decision_id: int, payload: CommentCreate):
     db = SessionLocal()
@@ -430,9 +188,8 @@ def get_comments(decision_id: int):
 
 
 # ============================================================
-# Documents (File Upload)
+# 7. Document routes (File Upload)
 # ============================================================
-
 @app.post("/decisions/{decision_id}/documents", response_model=DocumentOut)
 def upload_document(decision_id: int, file: UploadFile = File(...)):
     db = SessionLocal()
