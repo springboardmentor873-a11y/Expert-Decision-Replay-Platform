@@ -1,0 +1,18 @@
+# Python / backend
+Backend/venv/
+Backend/**/__pycache__/
+Backend/.pytest_cache/
+*.pyc
+Backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Uploaded files (keep the folder, ignore contents)
+Backend/static/uploads/*
+!Backend/static/uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+*.swp

@@ -1,0 +1,41 @@
+<svg viewBox="0 0 700 500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="500" fill="#f3f4f6"/>
+  <rect x="50" y="40" width="600" height="420" rx="12" fill="#ffffff" stroke="#9ca3af" stroke-width="2"/>
+
+  <text x="80" y="80" font-family="Arial" font-size="10" fill="#6b7280">EXPERT DECISION REPLAY PLATFORM</text>
+  <text x="80" y="105" font-family="Arial" font-size="18" font-weight="bold" fill="#111827">Welcome, Stefin Admin</text>
+
+  <line x1="80" y1="130" x2="620" y2="130" stroke="#e5e7eb"/>
+  <text x="80" y="125" font-family="Arial" font-size="12" fill="#6b7280">Profile</text>
+  <text x="150" y="125" font-family="Arial" font-size="12" fill="#6b7280">Teams</text>
+  <text x="220" y="125" font-family="Arial" font-size="12" fill="#111827" font-weight="bold">Admin</text>
+  <line x1="220" y1="130" x2="265" y2="130" stroke="#4f46e5" stroke-width="2"/>
+
+  <text x="80" y="170" font-family="Arial" font-size="15" fill="#111827">All Users (Admin)</text>
+
+  <line x1="80" y1="190" x2="620" y2="190" stroke="#e5e7eb"/>
+  <text x="90" y="185" font-family="Arial" font-size="9" fill="#6b7280">ID</text>
+  <text x="130" y="185" font-family="Arial" font-size="9" fill="#6b7280">NAME</text>
+  <text x="260" y="185" font-family="Arial" font-size="9" fill="#6b7280">EMAIL</text>
+  <text x="440" y="185" font-family="Arial" font-size="9" fill="#6b7280">TEAM ID</text>
+  <text x="520" y="185" font-family="Arial" font-size="9" fill="#6b7280">ROLE</text>
+
+  <line x1="80" y1="225" x2="620" y2="225" stroke="#f3f4f6"/>
+  <text x="90" y="217" font-family="Arial" font-size="11" fill="#111827">1</text>
+  <text x="130" y="217" font-family="Arial" font-size="11" fill="#111827">Stefin Admin</text>
+  <text x="260" y="217" font-family="Arial" font-size="11" fill="#111827">admin@test.com</text>
+  <text x="440" y="217" font-family="Arial" font-size="11" fill="#111827">—</text>
+  <rect x="510" y="203" width="100" height="24" rx="4" fill="none" stroke="#d1d5db"/>
+  <text x="518" y="219" font-family="Arial" font-size="10" fill="#111827">administrator ▾</text>
+
+  <line x1="80" y1="260" x2="620" y2="260" stroke="#f3f4f6"/>
+  <text x="90" y="252" font-family="Arial" font-size="11" fill="#111827">2</text>
+  <text x="130" y="252" font-family="Arial" font-size="11" fill="#111827">Test Employee</text>
+  <text x="260" y="252" font-family="Arial" font-size="11" fill="#111827">emp@test.com</text>
+  <text x="440" y="252" font-family="Arial" font-size="11" fill="#111827">1</text>
+  <rect x="510" y="238" width="100" height="24" rx="4" fill="none" stroke="#d1d5db"/>
+  <text x="518" y="254" font-family="Arial" font-size="10" fill="#111827">employee ▾</text>
+
+  <text x="80" y="330" font-family="Arial" font-size="9" fill="#9ca3af">Role dropdown updates a user's role immediately via PUT /auth/users/{id}/role</text>
+  <text x="80" y="345" font-family="Arial" font-size="9" fill="#9ca3af">This entire tab is only reachable by users with the Administrator role</text>
+</svg>

@@ -1,0 +1,44 @@
+<svg viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="560" fill="#f3f4f6"/>
+  <rect x="50" y="40" width="600" height="480" rx="12" fill="#ffffff" stroke="#9ca3af" stroke-width="2"/>
+
+  <text x="80" y="80" font-family="Arial" font-size="10" fill="#6b7280">EXPERT DECISION REPLAY PLATFORM</text>
+  <text x="80" y="105" font-family="Arial" font-size="18" font-weight="bold" fill="#111827">Welcome, Stefin Admin</text>
+
+  <line x1="80" y1="130" x2="620" y2="130" stroke="#e5e7eb"/>
+  <text x="80" y="125" font-family="Arial" font-size="12" fill="#6b7280">Profile</text>
+  <text x="150" y="125" font-family="Arial" font-size="12" fill="#111827" font-weight="bold">Teams</text>
+  <line x1="150" y1="130" x2="195" y2="130" stroke="#4f46e5" stroke-width="2"/>
+  <text x="220" y="125" font-family="Arial" font-size="12" fill="#6b7280">Admin</text>
+
+  <text x="80" y="170" font-family="Arial" font-size="15" fill="#111827">Teams</text>
+
+  <!-- table -->
+  <line x1="80" y1="190" x2="620" y2="190" stroke="#e5e7eb"/>
+  <text x="90" y="185" font-family="Arial" font-size="9" fill="#6b7280">ID</text>
+  <text x="150" y="185" font-family="Arial" font-size="9" fill="#6b7280">NAME</text>
+  <text x="400" y="185" font-family="Arial" font-size="9" fill="#6b7280">MANAGER ID</text>
+
+  <line x1="80" y1="220" x2="620" y2="220" stroke="#f3f4f6"/>
+  <text x="90" y="212" font-family="Arial" font-size="11" fill="#111827">1</text>
+  <text x="150" y="212" font-family="Arial" font-size="11" fill="#111827">Engineering</text>
+  <text x="400" y="212" font-family="Arial" font-size="11" fill="#111827">1</text>
+
+  <!-- create team form (manager/admin only) -->
+  <text x="80" y="270" font-family="Arial" font-size="12" fill="#374151">Create a team</text>
+  <rect x="80" y="280" width="240" height="32" rx="6" fill="none" stroke="#d1d5db"/>
+  <text x="95" y="300" font-family="Arial" font-size="10" fill="#9ca3af">Team name</text>
+  <rect x="330" y="280" width="90" height="32" rx="6" fill="#4f46e5"/>
+  <text x="355" y="300" font-family="Arial" font-size="11" fill="#ffffff">Create</text>
+
+  <!-- assign form -->
+  <text x="80" y="350" font-family="Arial" font-size="12" fill="#374151">Assign a user to a team</text>
+  <rect x="80" y="360" width="140" height="32" rx="6" fill="none" stroke="#d1d5db"/>
+  <text x="95" y="380" font-family="Arial" font-size="10" fill="#9ca3af">User ID</text>
+  <rect x="230" y="360" width="140" height="32" rx="6" fill="none" stroke="#d1d5db"/>
+  <text x="245" y="380" font-family="Arial" font-size="10" fill="#9ca3af">Team ID</text>
+  <rect x="380" y="360" width="90" height="32" rx="6" fill="#4f46e5"/>
+  <text x="400" y="380" font-family="Arial" font-size="11" fill="#ffffff">Assign</text>
+
+  <text x="80" y="430" font-family="Arial" font-size="9" fill="#9ca3af">Create/assign controls only render for Manager and Administrator roles</text>
+</svg>
