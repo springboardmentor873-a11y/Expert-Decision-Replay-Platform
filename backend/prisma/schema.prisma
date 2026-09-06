@@ -20,6 +20,7 @@ model User{
   role Role
 
   decisions Decision []
+  discussions Discussion[]
 }
 
  model Decision{
@@ -33,6 +34,7 @@ model User{
   updatedAt DateTime @updatedAt
   alternatives Alternative[]
   documents Document[]
+  discussions Discussion[]
  }
 
  model Alternative {
@@ -69,4 +71,52 @@ enum DecisionStatus {
   Rejected
   Approved
   Archived
+}
+
+enum DiscussionType {
+  Comment
+  MeetingNote
+  Rationale
+}
+
+model Discussion {
+  id          Int            @id @default(autoincrement())
+  content     String
+  type        DiscussionType @default(Comment)
+
+  decisionId  Int
+  decision    Decision       @relation(fields: [decisionId], references: [id])
+
+  createdById Int
+  createdBy   User           @relation(fields: [createdById], references: [id])
+
+  parentId    Int?
+  parent      Discussion?    @relation(
+    "DiscussionThread",
+    fields: [parentId],
+    references: [id],
+    onDelete: SetNull
+  )
+
+  replies     Discussion[]   @relation("DiscussionThread")
+
+  attachments DiscussionAttachment[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model DiscussionAttachment {
+  id           Int        @id @default(autoincrement())
+  filename     String
+  filePath     String
+
+  discussionId Int
+  discussion   Discussion @relation(
+    fields: [discussionId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt    DateTime   @default(now())
 }
