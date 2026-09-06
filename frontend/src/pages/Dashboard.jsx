@@ -89,6 +89,8 @@ function Dashboard() {
 
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [editingAlternative, setEditingAlternative] = useState(null);
+  const [decisionTab, setDecisionTab] = useState("overview");
+  const [selectedAlternative, setSelectedAlternative] = useState(null);
 
   const normalizedRole = (currentUser?.role || "Employee").trim().toLowerCase();
 
@@ -445,6 +447,7 @@ function Dashboard() {
       setDiscussionForm({ type: "Comment", content: "", parentId: "" });
       setEditingDiscussion(null);
       setSelectedDiscussionFile(null);
+      setDecisionTab("overview");
 
       setModal({
         type: "view-decision",
@@ -702,6 +705,41 @@ function Dashboard() {
     } finally {
       setUploadingDocument(false);
     }
+  };
+
+  const getDocumentUrl = (document) => {
+    const rawPath = document?.url || document?.filePath || document?.path || "";
+
+    if (!rawPath) {
+      return "";
+    }
+
+    if (/^https?:\/\//i.test(rawPath)) {
+      return rawPath;
+    }
+
+    const normalizedPath = rawPath.replace(/\\/g, "/").replace(/^\.\//, "");
+
+    if (normalizedPath.startsWith("/")) {
+      return `${API_BASE_URL}${normalizedPath}`;
+    }
+
+    if (normalizedPath.startsWith("uploads/")) {
+      return `${API_BASE_URL}/${normalizedPath}`;
+    }
+
+    return `${API_BASE_URL}/uploads/${normalizedPath.split("/").pop()}`;
+  };
+
+  const handleOpenDocument = (document) => {
+    const url = getDocumentUrl(document);
+
+    if (!url) {
+      alert("This document does not have a stored file path.");
+      return;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleSaveDiscussion = async (event) => {
@@ -2164,550 +2202,761 @@ function Dashboard() {
 
             {modal.type === "view-decision" && selectedDecision && (
               <>
-                <span className="modal-eyebrow">
-                  {displayStatus(selectedDecision.status).toUpperCase()}
-                </span>
+                <div className="decision-modal-hero">
+                  <div className="decision-modal-heading">
+                    <span className="modal-eyebrow">
+                      {displayStatus(selectedDecision.status).toUpperCase()}
+                    </span>
+                    <h2>{selectedDecision.title}</h2>
+                    <p className="decision-detail-copy">
+                      {selectedDecision.problemStatement}
+                    </p>
 
-                <h2>{selectedDecision.title}</h2>
-
-                <p className="decision-detail-copy">
-                  {selectedDecision.problemStatement}
-                </p>
-
-                <div className="decision-detail-meta">
-                  <div>
-                    <span>CREATED</span>
-
-                    <strong>
-                      {formatDecisionDate(selectedDecision.createdAt)}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>OWNER</span>
-
-                    <strong>
-                      {selectedDecision.createdBy?.name ||
-                        currentUser?.name ||
-                        "You"}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>STATUS</span>
-
-                    <strong>{displayStatus(selectedDecision.status)}</strong>
-                  </div>
-                </div>
-
-                <div className="decision-alternatives">
-                  <div className="modal-section-header">
-                    <div>
-                      <span className="modal-section-label">
-                        ALTERNATIVE ANALYSIS
+                    <div className="decision-modal-meta-line">
+                      <span>
+                        Created {formatDecisionDate(selectedDecision.createdAt)}
                       </span>
-
-                      <h3>Options</h3>
-                    </div>
-
-                    <span>{(selectedDecision.alternatives || []).length}</span>
-                  </div>
-
-                  <form
-                    className="alternative-form"
-                    onSubmit={handleSaveAlternative}
-                  >
-                    <input
-                      type="text"
-                      placeholder="Alternative name"
-                      value={alternativeForm.name}
-                      onChange={(event) =>
-                        setAlternativeForm({
-                          ...alternativeForm,
-                          name: event.target.value,
-                        })
-                      }
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Pros"
-                      value={alternativeForm.pros}
-                      onChange={(event) =>
-                        setAlternativeForm({
-                          ...alternativeForm,
-                          pros: event.target.value,
-                        })
-                      }
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Cons"
-                      value={alternativeForm.cons}
-                      onChange={(event) =>
-                        setAlternativeForm({
-                          ...alternativeForm,
-                          cons: event.target.value,
-                        })
-                      }
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Cost"
-                      value={alternativeForm.cost}
-                      onChange={(event) =>
-                        setAlternativeForm({
-                          ...alternativeForm,
-                          cost: event.target.value,
-                        })
-                      }
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Feasibility"
-                      value={alternativeForm.feasibility}
-                      onChange={(event) =>
-                        setAlternativeForm({
-                          ...alternativeForm,
-                          feasibility: event.target.value,
-                        })
-                      }
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Risk"
-                      value={alternativeForm.risk}
-                      onChange={(event) =>
-                        setAlternativeForm({
-                          ...alternativeForm,
-                          risk: event.target.value,
-                        })
-                      }
-                    />
-
-                    <div className="modal-actions">
-                      <button
-                        className="modal-primary"
-                        type="submit"
-                        disabled={savingAlternative}
+                      <span>•</span>
+                      <span>
+                        {selectedDecision.createdBy?.name ||
+                          currentUser?.name ||
+                          "You"}
+                      </span>
+                      <span
+                        className={`status status-${getStatusClass(displayStatus(selectedDecision.status))}`}
                       >
-                        {savingAlternative
-                          ? "Saving..."
-                          : editingAlternative
-                            ? "Update alternative"
-                            : "Add alternative"}
-
-                        <ArrowUpRight size={14} />
-                      </button>
-
-                      {editingAlternative && (
-                        <button
-                          className="modal-secondary"
-                          type="button"
-                          onClick={() => {
-                            setEditingAlternative(null);
-
-                            setAlternativeForm(EMPTY_ALTERNATIVE_FORM);
-                          }}
-                        >
-                          Cancel edit
-                        </button>
-                      )}
+                        <span />
+                        {displayStatus(selectedDecision.status)}
+                      </span>
                     </div>
-                  </form>
-
-                  <div className="alternative-list">
-                    {(selectedDecision.alternatives || []).length > 0 ? (
-                      (selectedDecision.alternatives || []).map(
-                        (alternative) => (
-                          <div
-                            className="alternative-card"
-                            key={alternative.id}
-                          >
-                            <div className="alternative-card-header">
-                              <div>
-                                <strong>{alternative.name}</strong>
-
-                                <span>Option</span>
-                              </div>
-
-                              <div className="alternative-actions">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleEditAlternative(alternative)
-                                  }
-                                >
-                                  Edit
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteAlternative(alternative)
-                                  }
-                                  disabled={
-                                    deletingAlternativeId === alternative.id
-                                  }
-                                >
-                                  {deletingAlternativeId === alternative.id
-                                    ? "Deleting..."
-                                    : "Delete"}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="alternative-grid">
-                              <div>
-                                <span>Pros</span>
-
-                                <strong>{alternative.pros || "—"}</strong>
-                              </div>
-
-                              <div>
-                                <span>Cons</span>
-
-                                <strong>{alternative.cons || "—"}</strong>
-                              </div>
-
-                              <div>
-                                <span>Cost</span>
-
-                                <strong>{alternative.cost || "—"}</strong>
-                              </div>
-
-                              <div>
-                                <span>Feasibility</span>
-
-                                <strong>
-                                  {alternative.feasibility || "—"}
-                                </strong>
-                              </div>
-
-                              <div>
-                                <span>Risk</span>
-
-                                <strong>{alternative.risk || "—"}</strong>
-                              </div>
-                            </div>
-                          </div>
-                        ),
-                      )
-                    ) : (
-                      <div className="empty-alternative-state">
-                        <Database size={17} />
-
-                        <strong>No alternatives yet</strong>
-
-                        <span>
-                          Add options to compare this decision properly.
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="decision-documents">
-                  <div className="modal-section-header">
-                    <div>
-                      <span className="modal-section-label">DOCUMENTS</span>
-                      <h3>Supporting files</h3>
-                    </div>
-
-                    <span>{(selectedDecision.documents || []).length}</span>
                   </div>
 
-                  <div className="document-upload-panel">
-                    <label
-                      className="file-picker"
-                      htmlFor="decision-document-upload"
-                    >
-                      <input
-                        id="decision-document-upload"
-                        type="file"
-                        onChange={(event) =>
-                          setSelectedFile(event.target.files?.[0] || null)
-                        }
-                      />
-                      <span className="file-picker-icon">
-                        <FileText size={17} />
-                      </span>
-                      <span className="file-picker-copy">
-                        <strong>
-                          {selectedFile
-                            ? selectedFile.name
-                            : "Choose a supporting file"}
-                        </strong>
-                        <small>
-                          {selectedFile
-                            ? "Ready to upload"
-                            : "PDF, DOCX, PPTX, XLSX or other project files"}
-                        </small>
-                      </span>
-                    </label>
-
+                  <div className="decision-modal-top-actions">
                     <button
-                      className="modal-primary"
+                      className="modal-secondary"
                       type="button"
-                      onClick={handleUploadDocument}
-                      disabled={!selectedFile || uploadingDocument}
+                      onClick={() => openEditDecision(selectedDecision)}
                     >
-                      {uploadingDocument ? "Uploading..." : "Upload document"}
-                      <ArrowUpRight size={14} />
+                      Edit
+                    </button>
+                    <button
+                      className="modal-danger"
+                      type="button"
+                      onClick={() => handleDeleteDecision(selectedDecision)}
+                      disabled={deletingDecision}
+                    >
+                      {deletingDecision ? "Deleting..." : "Delete"}
                     </button>
                   </div>
+                </div>
 
-                  <div className="document-list">
-                    {(selectedDecision.documents || []).length > 0 ? (
-                      (selectedDecision.documents || []).map((document) => (
-                        <div className="document-card" key={document.id}>
-                          <div className="document-card-icon">
-                            <FileText size={18} />
-                          </div>
-                          <div className="document-card-main">
-                            <strong>{document.filename}</strong>
-                            <span>
-                              Supporting document · Uploaded{" "}
-                              {formatDecisionDate(document.createdAt)}
-                            </span>
-                          </div>
-                          <span className="document-badge">Stored</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="empty-module-state">
-                        <FileText size={17} />
-                        <strong>No documents yet</strong>
-                        <span>Attach supporting files to this decision.</span>
-                      </div>
-                    )}
+                <div className="decision-summary-strip">
+                  <div>
+                    <span>Alternatives</span>
+                    <strong>
+                      {(selectedDecision.alternatives || []).length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Documents</span>
+                    <strong>{(selectedDecision.documents || []).length}</strong>
+                  </div>
+                  <div>
+                    <span>Discussion</span>
+                    <strong>
+                      {(selectedDecision.discussions || []).length}
+                    </strong>
                   </div>
                 </div>
 
-                <div className="decision-discussions">
-                  <div className="modal-section-header">
-                    <div>
-                      <span className="modal-section-label">DISCUSSIONS</span>
-                      <h3>Decision conversation</h3>
-                    </div>
-                    <span>{(selectedDecision.discussions || []).length}</span>
-                  </div>
-
-                  <form
-                    className="discussion-compose"
-                    onSubmit={handleSaveDiscussion}
-                  >
-                    <select
-                      value={discussionForm.type}
-                      onChange={(event) =>
-                        setDiscussionForm({
-                          ...discussionForm,
-                          type: event.target.value,
-                        })
+                <div
+                  className="decision-tabs"
+                  role="tablist"
+                  aria-label="Decision details"
+                >
+                  {[
+                    ["overview", "Overview", LayoutDashboard],
+                    ["alternatives", "Alternatives", Database],
+                    ["documents", "Documents", FileText],
+                    ["discussion", "Discussion", MessageCircle],
+                  ].map(([value, label, Icon]) => (
+                    <button
+                      key={value}
+                      className={
+                        decisionTab === value
+                          ? "decision-tab active"
+                          : "decision-tab"
                       }
+                      type="button"
+                      role="tab"
+                      aria-selected={decisionTab === value}
+                      onClick={() => setDecisionTab(value)}
                     >
-                      <option value="Comment">Comment</option>
-                      <option value="MeetingNote">Meeting note</option>
-                      <option value="Rationale">Decision rationale</option>
-                    </select>
+                      <Icon size={15} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
 
-                    <select
-                      value={discussionForm.parentId}
-                      onChange={(event) =>
-                        setDiscussionForm({
-                          ...discussionForm,
-                          parentId: event.target.value,
-                        })
-                      }
-                    >
-                      <option value="">New thread</option>
-                      {(selectedDecision.discussions || []).map(
-                        (discussion) => (
-                          <option key={discussion.id} value={discussion.id}>
-                            Reply to #{discussion.id}
-                          </option>
-                        ),
-                      )}
-                    </select>
+                <div className="decision-tab-panel" key={decisionTab}>
+                  {decisionTab === "overview" && (
+                    <div className="decision-tab-content decision-tab-content-overview">
+                      <div className="tab-scroll-area overview-scroll-area">
+                        <div className="decision-overview-panel">
+                          <div className="decision-overview-card">
+                            <div className="panel-kicker">DECISION DETAILS</div>
+                            <h3>Why this decision exists</h3>
+                            <p>
+                              {selectedDecision.problemStatement ||
+                                "No problem statement has been added yet."}
+                            </p>
 
-                    <textarea
-                      rows="4"
-                      placeholder="Write a comment, meeting note, or decision rationale..."
-                      value={discussionForm.content}
-                      onChange={(event) =>
-                        setDiscussionForm({
-                          ...discussionForm,
-                          content: event.target.value,
-                        })
-                      }
-                    />
-
-                    <div className="modal-actions">
-                      <button
-                        className="modal-primary"
-                        type="submit"
-                        disabled={savingDiscussion}
-                      >
-                        {savingDiscussion
-                          ? "Saving..."
-                          : editingDiscussion
-                            ? "Update discussion"
-                            : "Add to discussion"}
-                        <ArrowUpRight size={14} />
-                      </button>
-                      {editingDiscussion && (
-                        <button
-                          className="modal-secondary"
-                          type="button"
-                          onClick={() => {
-                            setEditingDiscussion(null);
-                            setDiscussionForm({
-                              type: "Comment",
-                              content: "",
-                              parentId: "",
-                            });
-                          }}
-                        >
-                          Cancel edit
-                        </button>
-                      )}
-                    </div>
-                  </form>
-
-                  <div className="alternative-list">
-                    {(selectedDecision.discussions || []).length > 0 ? (
-                      (selectedDecision.discussions || []).map((discussion) => (
-                        <div className="alternative-card" key={discussion.id}>
-                          <div className="alternative-card-header">
-                            <div>
-                              <strong>
-                                {discussion.type === "MeetingNote"
-                                  ? "Meeting note"
-                                  : discussion.type === "Rationale"
-                                    ? "Decision rationale"
-                                    : "Comment"}
-                              </strong>
-                              <span>
-                                {discussion.createdBy?.name ||
-                                  "Workspace member"}{" "}
-                                · #{discussion.id}
-                              </span>
-                            </div>
-                            <div className="alternative-actions">
-                              <button
-                                type="button"
-                                onClick={() => handleEditDiscussion(discussion)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDeleteDiscussion(discussion)
-                                }
-                                disabled={
-                                  deletingDiscussionId === discussion.id
-                                }
-                              >
-                                {deletingDiscussionId === discussion.id
-                                  ? "Deleting..."
-                                  : "Delete"}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="alternative-grid">
-                            <div style={{ gridColumn: "1 / -1" }}>
-                              <span>Conversation</span>
-                              <strong>{discussion.content}</strong>
-                            </div>
-                            <div>
-                              <span>Created</span>
-                              <strong>
-                                {formatDecisionDate(discussion.createdAt)}
-                              </strong>
-                            </div>
-                            <div>
-                              <span>Thread</span>
-                              <strong>
-                                {discussion.parentId
-                                  ? `Reply to #${discussion.parentId}`
-                                  : "New thread"}
-                              </strong>
-                            </div>
-                            <div style={{ gridColumn: "1 / -1" }}>
-                              <span>Supporting files</span>
-                              {(discussion.attachments || []).length > 0 ? (
-                                <div
-                                  style={{
-                                    display: "grid",
-                                    gap: "6px",
-                                    marginTop: "6px",
-                                  }}
-                                >
-                                  {(discussion.attachments || []).map(
-                                    (attachment) => (
-                                      <strong key={attachment.id}>
-                                        {attachment.filename}
-                                      </strong>
-                                    ),
+                            <div className="overview-detail-list">
+                              <div>
+                                <span>Created on</span>
+                                <strong>
+                                  {formatDecisionDate(
+                                    selectedDecision.createdAt,
                                   )}
-                                </div>
-                              ) : (
-                                <strong>No attachments</strong>
-                              )}
+                                </strong>
+                              </div>
+                              <div>
+                                <span>Created by</span>
+                                <strong>
+                                  {selectedDecision.createdBy?.name ||
+                                    currentUser?.name ||
+                                    "You"}
+                                </strong>
+                              </div>
+                              <div>
+                                <span>Status</span>
+                                <strong>
+                                  {displayStatus(selectedDecision.status)}
+                                </strong>
+                              </div>
                             </div>
                           </div>
-                          <div className="discussion-attachment-row">
-                            <label
-                              className="discussion-file-picker"
-                              htmlFor={`discussion-file-${discussion.id}`}
-                            >
-                              <input
-                                id={`discussion-file-${discussion.id}`}
-                                type="file"
-                                onChange={(event) =>
-                                  setSelectedDiscussionFile(
-                                    event.target.files?.[0] || null,
-                                  )
-                                }
-                              />
-                              <span>
-                                {selectedDiscussionFile
-                                  ? selectedDiscussionFile.name
-                                  : "Attach supporting file"}
-                              </span>
-                            </label>
+
+                          <div className="decision-overview-card">
+                            <div className="panel-kicker">QUICK ACTIONS</div>
+                            <h3>Keep building the decision</h3>
+
+                            <div className="quick-action-grid">
+                              <button
+                                type="button"
+                                onClick={() => setDecisionTab("alternatives")}
+                              >
+                                <span className="quick-action-icon">
+                                  <Database size={16} />
+                                </span>
+                                <span>
+                                  <strong>Add alternative</strong>
+                                  <small>Compare more options</small>
+                                </span>
+                                <ChevronRight size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDecisionTab("documents")}
+                              >
+                                <span className="quick-action-icon">
+                                  <FileText size={16} />
+                                </span>
+                                <span>
+                                  <strong>Upload document</strong>
+                                  <small>Add supporting evidence</small>
+                                </span>
+                                <ChevronRight size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDecisionTab("discussion")}
+                              >
+                                <span className="quick-action-icon">
+                                  <MessageCircle size={16} />
+                                </span>
+                                <span>
+                                  <strong>Start discussion</strong>
+                                  <small>Capture team reasoning</small>
+                                </span>
+                                <ChevronRight size={15} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {decisionTab === "alternatives" && (
+                    <div className="decision-tab-content">
+                      <div className="tab-content-header">
+                        <div>
+                          <div className="panel-kicker">
+                            ALTERNATIVE ANALYSIS
+                          </div>
+                          <h3>Compare the available options</h3>
+                        </div>
+                        <span className="count-pill">
+                          {(selectedDecision.alternatives || []).length}
+                        </span>
+                      </div>
+
+                      <form
+                        className="alternative-form"
+                        onSubmit={handleSaveAlternative}
+                      >
+                        <input
+                          type="text"
+                          placeholder="Alternative name"
+                          value={alternativeForm.name}
+                          onChange={(event) =>
+                            setAlternativeForm({
+                              ...alternativeForm,
+                              name: event.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Pros"
+                          value={alternativeForm.pros}
+                          onChange={(event) =>
+                            setAlternativeForm({
+                              ...alternativeForm,
+                              pros: event.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Cons"
+                          value={alternativeForm.cons}
+                          onChange={(event) =>
+                            setAlternativeForm({
+                              ...alternativeForm,
+                              cons: event.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Cost"
+                          value={alternativeForm.cost}
+                          onChange={(event) =>
+                            setAlternativeForm({
+                              ...alternativeForm,
+                              cost: event.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Feasibility"
+                          value={alternativeForm.feasibility}
+                          onChange={(event) =>
+                            setAlternativeForm({
+                              ...alternativeForm,
+                              feasibility: event.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          type="text"
+                          placeholder="Risk"
+                          value={alternativeForm.risk}
+                          onChange={(event) =>
+                            setAlternativeForm({
+                              ...alternativeForm,
+                              risk: event.target.value,
+                            })
+                          }
+                        />
+                        <div className="modal-actions">
+                          <button
+                            className="modal-primary"
+                            type="submit"
+                            disabled={savingAlternative}
+                          >
+                            {savingAlternative
+                              ? "Saving..."
+                              : editingAlternative
+                                ? "Update alternative"
+                                : "Add alternative"}
+                            <ArrowUpRight size={14} />
+                          </button>
+                          {editingAlternative && (
                             <button
                               className="modal-secondary"
                               type="button"
-                              onClick={() =>
-                                handleUploadDiscussionAttachment(discussion)
-                              }
-                              disabled={
-                                !selectedDiscussionFile ||
-                                uploadingDiscussionFile
+                              onClick={() => {
+                                setEditingAlternative(null);
+                                setAlternativeForm(EMPTY_ALTERNATIVE_FORM);
+                              }}
+                            >
+                              Cancel edit
+                            </button>
+                          )}
+                        </div>
+                      </form>
+
+                      <div className="tab-scroll-area alternatives-scroll-area">
+                        {(selectedDecision.alternatives || []).length > 0 ? (
+                          (selectedDecision.alternatives || []).map(
+                            (alternative) => (
+                              <div
+                                className="alternative-card"
+                                key={alternative.id}
+                              >
+                                <div className="alternative-card-header">
+                                  <div>
+                                    <strong>{alternative.name}</strong>
+                                    <span>Option</span>
+                                  </div>
+                                  <div className="alternative-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleEditAlternative(alternative)
+                                      }
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteAlternative(alternative)
+                                      }
+                                      disabled={
+                                        deletingAlternativeId === alternative.id
+                                      }
+                                    >
+                                      {deletingAlternativeId === alternative.id
+                                        ? "Deleting..."
+                                        : "Delete"}
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="alternative-grid">
+                                  <div>
+                                    <span>Pros</span>
+                                    <strong>{alternative.pros || "—"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Cons</span>
+                                    <strong>{alternative.cons || "—"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Cost</span>
+                                    <strong>{alternative.cost || "—"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Feasibility</span>
+                                    <strong>
+                                      {alternative.feasibility || "—"}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span>Risk</span>
+                                    <strong>{alternative.risk || "—"}</strong>
+                                  </div>
+                                </div>
+                                <button
+                                  className="alternative-view-more"
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAlternative(alternative);
+                                    setModal({ type: "view-alternative" });
+                                  }}
+                                >
+                                  View more
+                                  <ChevronRight size={14} />
+                                </button>
+                              </div>
+                            ),
+                          )
+                        ) : (
+                          <div className="empty-module-state">
+                            <Database size={18} />
+                            <strong>No alternatives yet</strong>
+                            <span>
+                              Add options here to compare them without expanding
+                              the whole decision view.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {decisionTab === "documents" && (
+                    <div className="decision-tab-content">
+                      <div className="tab-content-header">
+                        <div>
+                          <div className="panel-kicker">DOCUMENTS</div>
+                          <h3>Supporting files</h3>
+                        </div>
+                        <span className="count-pill">
+                          {(selectedDecision.documents || []).length}
+                        </span>
+                      </div>
+
+                      <div className="document-upload-panel">
+                        <label
+                          className="file-picker"
+                          htmlFor="decision-document-upload"
+                        >
+                          <input
+                            id="decision-document-upload"
+                            type="file"
+                            onChange={(event) =>
+                              setSelectedFile(event.target.files?.[0] || null)
+                            }
+                          />
+                          <span className="file-picker-icon">
+                            <FileText size={17} />
+                          </span>
+                          <span className="file-picker-copy">
+                            <strong>
+                              {selectedFile
+                                ? selectedFile.name
+                                : "Choose a supporting file"}
+                            </strong>
+                            <small>
+                              PDF, DOCX, PPTX, XLSX or other project files
+                            </small>
+                          </span>
+                        </label>
+                        <button
+                          className="modal-primary"
+                          type="button"
+                          onClick={handleUploadDocument}
+                          disabled={!selectedFile || uploadingDocument}
+                        >
+                          {uploadingDocument
+                            ? "Uploading..."
+                            : "Upload document"}
+                          <ArrowUpRight size={14} />
+                        </button>
+                      </div>
+
+                      <div className="tab-scroll-area documents-scroll-area">
+                        {(selectedDecision.documents || []).length > 0 ? (
+                          (selectedDecision.documents || []).map((document) => (
+                            <div className="document-card" key={document.id}>
+                              <span className="document-card-icon">
+                                <FileText size={17} />
+                              </span>
+                              <div className="document-card-main">
+                                <strong title={document.filename}>
+                                  {document.filename}
+                                </strong>
+                                <span>
+                                  Supporting document · Uploaded{" "}
+                                  {formatDecisionDate(document.createdAt)}
+                                </span>
+                              </div>
+                              <div className="document-card-actions">
+                                <span className="document-status">Stored</span>
+                                <button
+                                  className="document-open-button"
+                                  type="button"
+                                  onClick={() => handleOpenDocument(document)}
+                                >
+                                  Open
+                                  <ArrowUpRight size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="empty-module-state">
+                            <FileText size={18} />
+                            <strong>No documents yet</strong>
+                            <span>
+                              Attach supporting files to this decision.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {decisionTab === "discussion" && (
+                    <div className="decision-tab-content">
+                      <div className="tab-content-header">
+                        <div>
+                          <div className="panel-kicker">DISCUSSIONS</div>
+                          <h3>Decision conversation</h3>
+                        </div>
+                        <span className="count-pill">
+                          {(selectedDecision.discussions || []).length}
+                        </span>
+                      </div>
+
+                      <form
+                        className="discussion-compose"
+                        onSubmit={handleSaveDiscussion}
+                      >
+                        <div className="discussion-compose-head">
+                          <div className="discussion-field">
+                            <span className="discussion-field-label">TYPE</span>
+                            <select
+                              value={discussionForm.type}
+                              onChange={(event) =>
+                                setDiscussionForm({
+                                  ...discussionForm,
+                                  type: event.target.value,
+                                })
                               }
                             >
-                              {uploadingDiscussionFile
-                                ? "Uploading..."
-                                : "Attach file"}
+                              <option value="Comment">Comment</option>
+                              <option value="MeetingNote">Meeting note</option>
+                              <option value="Rationale">
+                                Decision rationale
+                              </option>
+                            </select>
+                          </div>
+                          <div className="discussion-field">
+                            <span className="discussion-field-label">
+                              THREAD
+                            </span>
+                            <select
+                              value={discussionForm.parentId}
+                              onChange={(event) =>
+                                setDiscussionForm({
+                                  ...discussionForm,
+                                  parentId: event.target.value,
+                                })
+                              }
+                            >
+                              <option value="">New thread</option>
+                              {(selectedDecision.discussions || []).map(
+                                (discussion) => (
+                                  <option
+                                    key={discussion.id}
+                                    value={discussion.id}
+                                  >
+                                    Reply to #{discussion.id}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </div>
+                        </div>
+                        <textarea
+                          className="discussion-composer-input"
+                          rows="4"
+                          placeholder="Share a comment, capture a meeting note, or record the reasoning behind this decision..."
+                          value={discussionForm.content}
+                          onChange={(event) =>
+                            setDiscussionForm({
+                              ...discussionForm,
+                              content: event.target.value,
+                            })
+                          }
+                        />
+                        <div className="discussion-compose-footer">
+                          <div className="discussion-compose-hint">
+                            <MessageCircle size={14} />
+                            <span>
+                              {discussionForm.parentId
+                                ? `Replying to discussion #${discussionForm.parentId}`
+                                : "Start a new conversation thread"}
+                            </span>
+                          </div>
+                          <div className="modal-actions">
+                            {editingDiscussion && (
+                              <button
+                                className="modal-secondary"
+                                type="button"
+                                onClick={() => {
+                                  setEditingDiscussion(null);
+                                  setDiscussionForm({
+                                    type: "Comment",
+                                    content: "",
+                                    parentId: "",
+                                  });
+                                }}
+                              >
+                                Cancel edit
+                              </button>
+                            )}
+                            <button
+                              className="modal-primary"
+                              type="submit"
+                              disabled={savingDiscussion}
+                            >
+                              {savingDiscussion
+                                ? "Saving..."
+                                : editingDiscussion
+                                  ? "Update discussion"
+                                  : "Post to discussion"}
+                              <ArrowUpRight size={14} />
                             </button>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="empty-alternative-state">
-                        <MessageCircle size={17} />
-                        <strong>No discussions yet</strong>
-                        <span>Start a conversation around this decision.</span>
+                      </form>
+
+                      <div className="tab-scroll-area discussion-scroll-area">
+                        {(selectedDecision.discussions || []).length > 0 ? (
+                          (selectedDecision.discussions || []).map(
+                            (discussion) => {
+                              const discussionType =
+                                discussion.type === "MeetingNote"
+                                  ? "Meeting note"
+                                  : discussion.type === "Rationale"
+                                    ? "Decision rationale"
+                                    : "Comment";
+                              const authorName =
+                                discussion.createdBy?.name ||
+                                "Workspace member";
+                              return (
+                                <article
+                                  className={`discussion-card ${discussion.parentId ? "discussion-reply" : ""}`}
+                                  key={discussion.id}
+                                >
+                                  <div className="discussion-card-header">
+                                    <div className="discussion-author">
+                                      <div className="discussion-avatar">
+                                        {authorName.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="discussion-author-copy">
+                                        <div className="discussion-author-line">
+                                          <strong>{authorName}</strong>
+                                          <span className="discussion-type-badge">
+                                            {discussionType}
+                                          </span>
+                                        </div>
+                                        <span>
+                                          {formatRelativeTime(
+                                            discussion.createdAt,
+                                          )}{" "}
+                                          · #{discussion.id}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="discussion-actions">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setDiscussionForm({
+                                            type: "Comment",
+                                            content: "",
+                                            parentId: String(discussion.id),
+                                          })
+                                        }
+                                      >
+                                        Reply
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleEditDiscussion(discussion)
+                                        }
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleDeleteDiscussion(discussion)
+                                        }
+                                        disabled={
+                                          deletingDiscussionId === discussion.id
+                                        }
+                                      >
+                                        {deletingDiscussionId === discussion.id
+                                          ? "Deleting..."
+                                          : "Delete"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {discussion.parentId && (
+                                    <div className="discussion-thread-label">
+                                      Replying to discussion #
+                                      {discussion.parentId}
+                                    </div>
+                                  )}
+                                  <div className="discussion-content">
+                                    {discussion.content}
+                                  </div>
+                                  {(discussion.attachments || []).length >
+                                    0 && (
+                                    <div className="discussion-attachments">
+                                      <span className="discussion-sub-label">
+                                        Supporting files
+                                      </span>
+                                      <div className="discussion-attachment-list">
+                                        {(discussion.attachments || []).map(
+                                          (attachment) => (
+                                            <span
+                                              className="discussion-attachment-chip"
+                                              key={attachment.id}
+                                            >
+                                              <FileText size={13} />
+                                              {attachment.filename}
+                                            </span>
+                                          ),
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="discussion-attachment-row">
+                                    <label
+                                      className="discussion-file-picker"
+                                      htmlFor={`discussion-file-${discussion.id}`}
+                                    >
+                                      <input
+                                        id={`discussion-file-${discussion.id}`}
+                                        type="file"
+                                        onChange={(event) =>
+                                          setSelectedDiscussionFile(
+                                            event.target.files?.[0] || null,
+                                          )
+                                        }
+                                      />
+                                      <FileText size={14} />
+                                      <span>
+                                        {selectedDiscussionFile
+                                          ? selectedDiscussionFile.name
+                                          : "Attach supporting file"}
+                                      </span>
+                                    </label>
+                                    <button
+                                      className="modal-secondary"
+                                      type="button"
+                                      onClick={() =>
+                                        handleUploadDiscussionAttachment(
+                                          discussion,
+                                        )
+                                      }
+                                      disabled={
+                                        !selectedDiscussionFile ||
+                                        uploadingDiscussionFile
+                                      }
+                                    >
+                                      {uploadingDiscussionFile
+                                        ? "Uploading..."
+                                        : "Attach file"}
+                                    </button>
+                                  </div>
+                                </article>
+                              );
+                            },
+                          )
+                        ) : (
+                          <div className="empty-module-state">
+                            <MessageCircle size={18} />
+                            <strong>No discussions yet</strong>
+                            <span>
+                              Start the first conversation around this decision.
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="modal-actions decision-detail-actions">
@@ -2718,22 +2967,66 @@ function Dashboard() {
                   >
                     Close
                   </button>
+                </div>
+              </>
+            )}
 
+            {modal.type === "view-alternative" && selectedAlternative && (
+              <>
+                <div className="alternative-detail-modal-content">
+                  <div className="alternative-detail-topline">
+                    <div>
+                      <span className="modal-eyebrow">ALTERNATIVE DETAIL</span>
+                      <h2>{selectedAlternative.name}</h2>
+                      <p>Full comparison details for this option.</p>
+                    </div>
+                    <span className="count-pill">OPTION</span>
+                  </div>
+
+                  <div className="alternative-detail-grid">
+                    <section>
+                      <span>Pros</span>
+                      <p>{selectedAlternative.pros || "No pros recorded."}</p>
+                    </section>
+                    <section>
+                      <span>Cons</span>
+                      <p>{selectedAlternative.cons || "No cons recorded."}</p>
+                    </section>
+                    <section>
+                      <span>Cost</span>
+                      <p>
+                        {selectedAlternative.cost ||
+                          "No cost information recorded."}
+                      </p>
+                    </section>
+                    <section>
+                      <span>Feasibility</span>
+                      <p>
+                        {selectedAlternative.feasibility ||
+                          "No feasibility assessment recorded."}
+                      </p>
+                    </section>
+                    <section>
+                      <span>Risk</span>
+                      <p>
+                        {selectedAlternative.risk ||
+                          "No risk assessment recorded."}
+                      </p>
+                    </section>
+                  </div>
+                </div>
+
+                <div className="modal-actions decision-detail-actions alternative-detail-actions">
                   <button
                     className="modal-secondary"
                     type="button"
-                    onClick={() => openEditDecision(selectedDecision)}
+                    onClick={() => {
+                      setSelectedAlternative(null);
+                      setModal({ type: "view-decision" });
+                      setDecisionTab("alternatives");
+                    }}
                   >
-                    Edit decision
-                  </button>
-
-                  <button
-                    className="modal-danger"
-                    type="button"
-                    onClick={() => handleDeleteDecision(selectedDecision)}
-                    disabled={deletingDecision}
-                  >
-                    {deletingDecision ? "Deleting..." : "Delete"}
+                    Back to alternatives
                   </button>
                 </div>
               </>
