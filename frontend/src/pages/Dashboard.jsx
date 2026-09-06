@@ -67,6 +67,8 @@ function Dashboard() {
   const [alternativeForm, setAlternativeForm] = useState(
     EMPTY_ALTERNATIVE_FORM,
   );
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
 
   const [creatingDecision, setCreatingDecision] = useState(false);
   const [savingDecision, setSavingDecision] = useState(false);
@@ -122,7 +124,7 @@ function Dashboard() {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers: {
-        ...(options.body
+        ...(options.body && !(options.body instanceof FormData)
           ? {
               "Content-Type": "application/json",
             }
@@ -393,15 +395,29 @@ function Dashboard() {
 
   const openDecision = async (decision) => {
     try {
-      setMoreMenu(null);
-
       const data = await apiRequest(`/api/decisions/${decision.id}`);
 
-      setSelectedDecision(data?.decision || decision);
+      const alternatives = await apiRequest(
+        `/api/decisions/${decision.id}/alternatives`,
+      );
+
+      const documents = await apiRequest(
+        `/api/decisions/${decision.id}/documents`,
+      );
+
+      setSelectedDecision({
+        ...(data?.decision || decision),
+        alternatives: Array.isArray(alternatives)
+          ? alternatives
+          : alternatives?.alternatives || [],
+        documents: Array.isArray(documents)
+          ? documents
+          : documents?.documents || [],
+      });
 
       setAlternativeForm(EMPTY_ALTERNATIVE_FORM);
-
       setEditingAlternative(null);
+      setSelectedFile(null);
 
       setModal({
         type: "view-decision",
@@ -622,6 +638,42 @@ function Dashboard() {
       alert(alternativeError.message || "Unable to delete alternative.");
     } finally {
       setDeletingAlternativeId(null);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!selectedDecision?.id || !selectedFile) {
+      alert("Please select a file first.");
+      return;
+    }
+
+    try {
+      setUploadingDocument(true);
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const responseData = await apiRequest(
+        `/api/decisions/${selectedDecision.id}/documents`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      const savedDocument = responseData?.document || responseData;
+
+      setSelectedDecision({
+        ...selectedDecision,
+        documents: [...(selectedDecision.documents || []), savedDocument],
+      });
+
+      setSelectedFile(null);
+    } catch (documentError) {
+      console.error("Upload document error:", documentError);
+      alert(documentError.message || "Unable to upload document.");
+    } finally {
+      setUploadingDocument(false);
     }
   };
 
@@ -2205,6 +2257,75 @@ function Dashboard() {
                         <span>
                           Add options to compare this decision properly.
                         </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="decision-documents">
+                  <div className="modal-section-header">
+                    <div>
+                      <span className="modal-section-label">DOCUMENTS</span>
+                      <h3>Supporting files</h3>
+                    </div>
+
+                    <span>{(selectedDecision.documents || []).length}</span>
+                  </div>
+
+                  <div className="alternative-form document-upload-form">
+                    <input
+                      type="file"
+                      onChange={(event) =>
+                        setSelectedFile(event.target.files?.[0] || null)
+                      }
+                    />
+
+                    {selectedFile && <span>{selectedFile.name}</span>}
+
+                    <div className="modal-actions">
+                      <button
+                        className="modal-primary"
+                        type="button"
+                        onClick={handleUploadDocument}
+                        disabled={!selectedFile || uploadingDocument}
+                      >
+                        {uploadingDocument ? "Uploading..." : "Upload document"}
+                        <ArrowUpRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="alternative-list">
+                    {(selectedDecision.documents || []).length > 0 ? (
+                      (selectedDecision.documents || []).map((document) => (
+                        <div className="alternative-card" key={document.id}>
+                          <div className="alternative-card-header">
+                            <div>
+                              <strong>{document.filename}</strong>
+                              <span>Supporting document</span>
+                            </div>
+                          </div>
+
+                          <div className="alternative-grid">
+                            <div>
+                              <span>Uploaded</span>
+                              <strong>
+                                {formatDecisionDate(document.createdAt)}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>Stored path</span>
+                              <strong>{document.filePath || "—"}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="empty-alternative-state">
+                        <FileText size={17} />
+                        <strong>No documents yet</strong>
+                        <span>Attach supporting files to this decision.</span>
                       </div>
                     )}
                   </div>
