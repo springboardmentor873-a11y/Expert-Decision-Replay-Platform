@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -47,6 +47,7 @@ const EMPTY_ALTERNATIVE_FORM = {
 
 function Dashboard() {
   const navigate = useNavigate();
+  const modalRef = useRef(null);
 
   const [activePage, setActivePage] = useState("Overview");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -69,6 +70,16 @@ function Dashboard() {
   );
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [discussionForm, setDiscussionForm] = useState({
+    type: "Comment",
+    content: "",
+    parentId: "",
+  });
+  const [savingDiscussion, setSavingDiscussion] = useState(false);
+  const [deletingDiscussionId, setDeletingDiscussionId] = useState(null);
+  const [editingDiscussion, setEditingDiscussion] = useState(null);
+  const [selectedDiscussionFile, setSelectedDiscussionFile] = useState(null);
+  const [uploadingDiscussionFile, setUploadingDiscussionFile] = useState(false);
 
   const [creatingDecision, setCreatingDecision] = useState(false);
   const [savingDecision, setSavingDecision] = useState(false);
@@ -291,6 +302,12 @@ function Dashboard() {
     fetchCurrentUser();
   }, []);
 
+  useEffect(() => {
+    if (modalRef.current) {
+      modalRef.current.scrollTop = 0;
+    }
+  }, [modal]);
+
   const dashboardDecisions = useMemo(() => {
     return decisions.map((decision) => ({
       ...decision,
@@ -405,6 +422,10 @@ function Dashboard() {
         `/api/decisions/${decision.id}/documents`,
       );
 
+      const discussions = await apiRequest(
+        `/api/decisions/${decision.id}/discussions`,
+      );
+
       setSelectedDecision({
         ...(data?.decision || decision),
         alternatives: Array.isArray(alternatives)
@@ -413,11 +434,17 @@ function Dashboard() {
         documents: Array.isArray(documents)
           ? documents
           : documents?.documents || [],
+        discussions: Array.isArray(discussions)
+          ? discussions
+          : discussions?.discussions || [],
       });
 
       setAlternativeForm(EMPTY_ALTERNATIVE_FORM);
       setEditingAlternative(null);
       setSelectedFile(null);
+      setDiscussionForm({ type: "Comment", content: "", parentId: "" });
+      setEditingDiscussion(null);
+      setSelectedDiscussionFile(null);
 
       setModal({
         type: "view-decision",
@@ -674,6 +701,127 @@ function Dashboard() {
       alert(documentError.message || "Unable to upload document.");
     } finally {
       setUploadingDocument(false);
+    }
+  };
+
+  const handleSaveDiscussion = async (event) => {
+    event.preventDefault();
+
+    if (!selectedDecision?.id || !discussionForm.content.trim()) {
+      alert("Discussion content is required.");
+      return;
+    }
+
+    try {
+      setSavingDiscussion(true);
+
+      const path = editingDiscussion?.id
+        ? `/api/decisions/${selectedDecision.id}/discussions/${editingDiscussion.id}`
+        : `/api/decisions/${selectedDecision.id}/discussions`;
+
+      const responseData = await apiRequest(path, {
+        method: editingDiscussion?.id ? "PATCH" : "POST",
+        body: JSON.stringify({
+          type: discussionForm.type,
+          content: discussionForm.content.trim(),
+          parentId: discussionForm.parentId
+            ? Number(discussionForm.parentId)
+            : null,
+        }),
+      });
+
+      const savedDiscussion = responseData?.discussion || responseData;
+      const discussions = editingDiscussion?.id
+        ? (selectedDecision.discussions || []).map((item) =>
+            item.id === editingDiscussion.id ? savedDiscussion : item,
+          )
+        : [...(selectedDecision.discussions || []), savedDiscussion];
+
+      setSelectedDecision({ ...selectedDecision, discussions });
+      setDiscussionForm({ type: "Comment", content: "", parentId: "" });
+      setEditingDiscussion(null);
+    } catch (discussionError) {
+      console.error("Save discussion error:", discussionError);
+      alert(discussionError.message || "Unable to save discussion.");
+    } finally {
+      setSavingDiscussion(false);
+    }
+  };
+
+  const handleEditDiscussion = (discussion) => {
+    setEditingDiscussion(discussion);
+    setDiscussionForm({
+      type: discussion.type || "Comment",
+      content: discussion.content || "",
+      parentId: discussion.parentId ? String(discussion.parentId) : "",
+    });
+  };
+
+  const handleUploadDiscussionAttachment = async (discussion) => {
+    if (!selectedDiscussionFile) {
+      alert("Please select a file first.");
+      return;
+    }
+
+    try {
+      setUploadingDiscussionFile(true);
+
+      const formData = new FormData();
+      formData.append("file", selectedDiscussionFile);
+
+      const responseData = await apiRequest(
+        `/api/discussions/${discussion.id}/attachments`,
+        { method: "POST", body: formData },
+      );
+
+      const savedAttachment = responseData?.attachment || responseData;
+      const discussions = (selectedDecision.discussions || []).map((item) =>
+        item.id === discussion.id
+          ? {
+              ...item,
+              attachments: [...(item.attachments || []), savedAttachment],
+            }
+          : item,
+      );
+
+      setSelectedDecision({ ...selectedDecision, discussions });
+      setSelectedDiscussionFile(null);
+    } catch (attachmentError) {
+      console.error("Upload discussion attachment error:", attachmentError);
+      alert(attachmentError.message || "Unable to upload attachment.");
+    } finally {
+      setUploadingDiscussionFile(false);
+    }
+  };
+
+  const handleDeleteDiscussion = async (discussion) => {
+    if (!selectedDecision?.id) return;
+
+    const confirmed = window.confirm(
+      "Delete this discussion entry? This cannot be undone.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingDiscussionId(discussion.id);
+
+      await apiRequest(
+        `/api/decisions/${selectedDecision.id}/discussions/${discussion.id}`,
+        { method: "DELETE" },
+      );
+
+      setSelectedDecision({
+        ...selectedDecision,
+        discussions: (selectedDecision.discussions || []).filter(
+          (item) => item.id !== discussion.id,
+        ),
+      });
+    } catch (discussionError) {
+      console.error("Delete discussion error:", discussionError);
+      alert(discussionError.message || "Unable to delete discussion.");
+    } finally {
+      setDeletingDiscussionId(null);
     }
   };
 
@@ -1838,6 +1986,7 @@ function Dashboard() {
           onClick={() => setModal(null)}
         >
           <div
+            ref={modalRef}
             className="dashboard-modal"
             onClick={(event) => event.stopPropagation()}
           >
@@ -2272,60 +2421,290 @@ function Dashboard() {
                     <span>{(selectedDecision.documents || []).length}</span>
                   </div>
 
-                  <div className="alternative-form document-upload-form">
-                    <input
-                      type="file"
+                  <div className="document-upload-panel">
+                    <label
+                      className="file-picker"
+                      htmlFor="decision-document-upload"
+                    >
+                      <input
+                        id="decision-document-upload"
+                        type="file"
+                        onChange={(event) =>
+                          setSelectedFile(event.target.files?.[0] || null)
+                        }
+                      />
+                      <span className="file-picker-icon">
+                        <FileText size={17} />
+                      </span>
+                      <span className="file-picker-copy">
+                        <strong>
+                          {selectedFile
+                            ? selectedFile.name
+                            : "Choose a supporting file"}
+                        </strong>
+                        <small>
+                          {selectedFile
+                            ? "Ready to upload"
+                            : "PDF, DOCX, PPTX, XLSX or other project files"}
+                        </small>
+                      </span>
+                    </label>
+
+                    <button
+                      className="modal-primary"
+                      type="button"
+                      onClick={handleUploadDocument}
+                      disabled={!selectedFile || uploadingDocument}
+                    >
+                      {uploadingDocument ? "Uploading..." : "Upload document"}
+                      <ArrowUpRight size={14} />
+                    </button>
+                  </div>
+
+                  <div className="document-list">
+                    {(selectedDecision.documents || []).length > 0 ? (
+                      (selectedDecision.documents || []).map((document) => (
+                        <div className="document-card" key={document.id}>
+                          <div className="document-card-icon">
+                            <FileText size={18} />
+                          </div>
+                          <div className="document-card-main">
+                            <strong>{document.filename}</strong>
+                            <span>
+                              Supporting document · Uploaded{" "}
+                              {formatDecisionDate(document.createdAt)}
+                            </span>
+                          </div>
+                          <span className="document-badge">Stored</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="empty-module-state">
+                        <FileText size={17} />
+                        <strong>No documents yet</strong>
+                        <span>Attach supporting files to this decision.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="decision-discussions">
+                  <div className="modal-section-header">
+                    <div>
+                      <span className="modal-section-label">DISCUSSIONS</span>
+                      <h3>Decision conversation</h3>
+                    </div>
+                    <span>{(selectedDecision.discussions || []).length}</span>
+                  </div>
+
+                  <form
+                    className="discussion-compose"
+                    onSubmit={handleSaveDiscussion}
+                  >
+                    <select
+                      value={discussionForm.type}
                       onChange={(event) =>
-                        setSelectedFile(event.target.files?.[0] || null)
+                        setDiscussionForm({
+                          ...discussionForm,
+                          type: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="Comment">Comment</option>
+                      <option value="MeetingNote">Meeting note</option>
+                      <option value="Rationale">Decision rationale</option>
+                    </select>
+
+                    <select
+                      value={discussionForm.parentId}
+                      onChange={(event) =>
+                        setDiscussionForm({
+                          ...discussionForm,
+                          parentId: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="">New thread</option>
+                      {(selectedDecision.discussions || []).map(
+                        (discussion) => (
+                          <option key={discussion.id} value={discussion.id}>
+                            Reply to #{discussion.id}
+                          </option>
+                        ),
+                      )}
+                    </select>
+
+                    <textarea
+                      rows="4"
+                      placeholder="Write a comment, meeting note, or decision rationale..."
+                      value={discussionForm.content}
+                      onChange={(event) =>
+                        setDiscussionForm({
+                          ...discussionForm,
+                          content: event.target.value,
+                        })
                       }
                     />
-
-                    {selectedFile && <span>{selectedFile.name}</span>}
 
                     <div className="modal-actions">
                       <button
                         className="modal-primary"
-                        type="button"
-                        onClick={handleUploadDocument}
-                        disabled={!selectedFile || uploadingDocument}
+                        type="submit"
+                        disabled={savingDiscussion}
                       >
-                        {uploadingDocument ? "Uploading..." : "Upload document"}
+                        {savingDiscussion
+                          ? "Saving..."
+                          : editingDiscussion
+                            ? "Update discussion"
+                            : "Add to discussion"}
                         <ArrowUpRight size={14} />
                       </button>
+                      {editingDiscussion && (
+                        <button
+                          className="modal-secondary"
+                          type="button"
+                          onClick={() => {
+                            setEditingDiscussion(null);
+                            setDiscussionForm({
+                              type: "Comment",
+                              content: "",
+                              parentId: "",
+                            });
+                          }}
+                        >
+                          Cancel edit
+                        </button>
+                      )}
                     </div>
-                  </div>
+                  </form>
 
                   <div className="alternative-list">
-                    {(selectedDecision.documents || []).length > 0 ? (
-                      (selectedDecision.documents || []).map((document) => (
-                        <div className="alternative-card" key={document.id}>
+                    {(selectedDecision.discussions || []).length > 0 ? (
+                      (selectedDecision.discussions || []).map((discussion) => (
+                        <div className="alternative-card" key={discussion.id}>
                           <div className="alternative-card-header">
                             <div>
-                              <strong>{document.filename}</strong>
-                              <span>Supporting document</span>
+                              <strong>
+                                {discussion.type === "MeetingNote"
+                                  ? "Meeting note"
+                                  : discussion.type === "Rationale"
+                                    ? "Decision rationale"
+                                    : "Comment"}
+                              </strong>
+                              <span>
+                                {discussion.createdBy?.name ||
+                                  "Workspace member"}{" "}
+                                · #{discussion.id}
+                              </span>
+                            </div>
+                            <div className="alternative-actions">
+                              <button
+                                type="button"
+                                onClick={() => handleEditDiscussion(discussion)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteDiscussion(discussion)
+                                }
+                                disabled={
+                                  deletingDiscussionId === discussion.id
+                                }
+                              >
+                                {deletingDiscussionId === discussion.id
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </button>
                             </div>
                           </div>
 
                           <div className="alternative-grid">
+                            <div style={{ gridColumn: "1 / -1" }}>
+                              <span>Conversation</span>
+                              <strong>{discussion.content}</strong>
+                            </div>
                             <div>
-                              <span>Uploaded</span>
+                              <span>Created</span>
                               <strong>
-                                {formatDecisionDate(document.createdAt)}
+                                {formatDecisionDate(discussion.createdAt)}
                               </strong>
                             </div>
-
                             <div>
-                              <span>Stored path</span>
-                              <strong>{document.filePath || "—"}</strong>
+                              <span>Thread</span>
+                              <strong>
+                                {discussion.parentId
+                                  ? `Reply to #${discussion.parentId}`
+                                  : "New thread"}
+                              </strong>
                             </div>
+                            <div style={{ gridColumn: "1 / -1" }}>
+                              <span>Supporting files</span>
+                              {(discussion.attachments || []).length > 0 ? (
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gap: "6px",
+                                    marginTop: "6px",
+                                  }}
+                                >
+                                  {(discussion.attachments || []).map(
+                                    (attachment) => (
+                                      <strong key={attachment.id}>
+                                        {attachment.filename}
+                                      </strong>
+                                    ),
+                                  )}
+                                </div>
+                              ) : (
+                                <strong>No attachments</strong>
+                              )}
+                            </div>
+                          </div>
+                          <div className="discussion-attachment-row">
+                            <label
+                              className="discussion-file-picker"
+                              htmlFor={`discussion-file-${discussion.id}`}
+                            >
+                              <input
+                                id={`discussion-file-${discussion.id}`}
+                                type="file"
+                                onChange={(event) =>
+                                  setSelectedDiscussionFile(
+                                    event.target.files?.[0] || null,
+                                  )
+                                }
+                              />
+                              <span>
+                                {selectedDiscussionFile
+                                  ? selectedDiscussionFile.name
+                                  : "Attach supporting file"}
+                              </span>
+                            </label>
+                            <button
+                              className="modal-secondary"
+                              type="button"
+                              onClick={() =>
+                                handleUploadDiscussionAttachment(discussion)
+                              }
+                              disabled={
+                                !selectedDiscussionFile ||
+                                uploadingDiscussionFile
+                              }
+                            >
+                              {uploadingDiscussionFile
+                                ? "Uploading..."
+                                : "Attach file"}
+                            </button>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="empty-alternative-state">
-                        <FileText size={17} />
-                        <strong>No documents yet</strong>
-                        <span>Attach supporting files to this decision.</span>
+                        <MessageCircle size={17} />
+                        <strong>No discussions yet</strong>
+                        <span>Start a conversation around this decision.</span>
                       </div>
                     )}
                   </div>
