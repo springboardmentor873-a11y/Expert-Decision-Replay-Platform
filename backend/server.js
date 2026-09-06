@@ -3,6 +3,6 @@ dotenv.config({ path: "./.env" });
 
 import app from "./src/app.js";
 
-app.listen(process.env.PORT, (req, res) => {
+app.listen(process.env.PORT, () => {
   console.log(`Server is running at port ${process.env.PORT}`);
 });

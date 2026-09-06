@@ -1,25 +1,32 @@
 import { Router } from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
 import {
   createAlternative,
   getAlternative,
   updateAlternative,
-  deleteAlternative
+  deleteAlternative,
 } from "../controllers/alternativeController.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const alternativeRouter = Router();
+
+alternativeRouter.get(
+  "/:decisionId/alternatives",
+  authMiddleware,
+  getAlternative,
+);
 
 alternativeRouter.post(
   "/:decisionId/alternatives",
   authMiddleware,
   createAlternative,
 );
-alternativeRouter.get("/:decisionId/alternatives", getAlternative);
+
 alternativeRouter.patch(
   "/:decisionId/alternatives/:alternativeId",
   authMiddleware,
   updateAlternative,
 );
+
 alternativeRouter.delete(
   "/:decisionId/alternatives/:alternativeId",
   authMiddleware,
