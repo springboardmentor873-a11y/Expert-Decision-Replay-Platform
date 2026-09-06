@@ -1,47 +1,61 @@
-
 # DecisionVault
 
-DecisionVault is a decision intelligence platform designed to capture, organize, and revisit the reasoning behind important decisions.
+> **Decision intelligence platform for capturing, comparing, discussing, and preserving organizational decisions.**
 
-Instead of only storing the final outcome, DecisionVault preserves the context, assumptions, alternatives, and reasoning that led to it.
+DecisionVault provides a centralized workspace for documenting decisions, evaluating alternatives, managing supporting files, and preserving the reasoning behind outcomes.
 
 ## Features
 
-- User authentication with Login and Registration
-- Decision and review management
-- Decision status tracking
-- Knowledge and decision history
-- Responsive modern UI
-- AI-assisted decision insights *(planned)*
+- **Decision Management** — Create, edit, view, and track decisions with status management.
+- **Alternative Analysis** — Compare options using pros, cons, cost, feasibility, and risk.
+- **Document Management** — Upload and open supporting files directly from a decision.
+- **Discussion Module** — Add comments, meeting notes, rationales, threads, replies, and attachments.
+- **Authentication** — JWT-based login with role-aware access.
+- **Persistent Storage** — PostgreSQL database with Prisma ORM and local file storage.
 
 ## Tech Stack
 
-**Frontend:** React, Vite, CSS, Lucide React  
+**Frontend:** React  
 **Backend:** Node.js, Express  
 **Database:** PostgreSQL  
-**Authentication:** JWT
+**ORM:** Prisma  
+**Authentication:** JWT, bcrypt  
+**Storage:** Local filesystem  
+**Tools:** Docker, Postman, Git/GitHub
 
 ## Project Structure
 
 ```text
 DecisionVault/
-├── frontend/
+├── frontend/        # React application
+├── backend/         # Express API
 │   ├── src/
-│   │   ├── components/
-│   │   ├── styles/
-│   │   └── ...
-│   └── ...
-│
-└── backend/
-    ├── routes/
-    ├── models/
-    ├── controllers/
-    └── ...
-````
+│   ├── prisma/
+│   └── uploads/
+└── README.md
+```
 
 ## Getting Started
 
-Clone the repository and install dependencies in both `frontend` and `backend`.
+### 1. Start PostgreSQL
+
+The project uses PostgreSQL through Docker.
+
+### 2. Backend
+
+```bash
+cd backend
+npm install
+npm run backend
+```
+
+The API runs on:
+
+```text
+http://localhost:4000
+```
+
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -49,18 +63,14 @@ npm install
 npm run dev
 ```
 
-Then start the backend separately:
+The frontend runs on the Vite development server.
 
-```bash
-cd backend
-npm install
-npm start
-```
+## Current Milestone
 
-## Purpose
+**Milestone 2 — Completed**
 
-DecisionVault aims to become a long-term memory layer for organizations, helping teams understand not only **what was decided**, but **why it was decided**.
+Includes decision management, alternative comparison, file uploads, document management, discussion features, and related collaboration functionality.
 
-```
-This keeps it GitHub-friendly without turning the README into a wall of documentation.
-```
+---
+
+**DecisionVault — Decisions, preserved.**
