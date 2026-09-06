@@ -32,6 +32,7 @@ model User{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   alternatives Alternative[]
+  documents Document[]
  }
 
  model Alternative {
@@ -45,6 +46,15 @@ model User{
   decisionId Int
   decision   Decision @relation(fields: [decisionId], references: [id])
  }
+
+ model Document {
+  id         Int      @id @default(autoincrement())
+  filename   String
+  filePath   String
+  decisionId Int
+  decision   Decision @relation(fields: [decisionId], references: [id])
+  createdAt  DateTime @default(now())
+}
 
 enum Role {
     Employee
