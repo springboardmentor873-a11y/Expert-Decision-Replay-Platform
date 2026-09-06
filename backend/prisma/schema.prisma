@@ -91,13 +91,7 @@ model Discussion {
   createdBy   User           @relation(fields: [createdById], references: [id])
 
   parentId    Int?
-  parent      Discussion?    @relation(
-    "DiscussionThread",
-    fields: [parentId],
-    references: [id],
-    onDelete: SetNull
-  )
-
+  parent      Discussion?    @relation("DiscussionThread", fields: [parentId], references: [id], onDelete: SetNull)
   replies     Discussion[]   @relation("DiscussionThread")
 
   attachments DiscussionAttachment[]
@@ -112,11 +106,7 @@ model DiscussionAttachment {
   filePath     String
 
   discussionId Int
-  discussion   Discussion @relation(
-    fields: [discussionId],
-    references: [id],
-    onDelete: Cascade
-  )
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
 
   createdAt    DateTime   @default(now())
 }
