@@ -2,7 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getDecision, submitDecision, deleteDecision } from '../services/decisionService';
+import {
+  getAlternatives,
+  createAlternative,
+  updateAlternative,
+  deleteAlternative,
+} from '../services/alternativeService';
+import {
+  getDocuments,
+  uploadDocument,
+  downloadDocument,
+  deleteDocument,
+} from '../services/documentService';
 import { DecisionStatusBadge } from '../components/DecisionStatusBadge';
+import { AlternativeComparisonTable } from '../components/AlternativeComparisonTable';
+import { AlternativeModal } from '../components/AlternativeModal';
+import { DocumentUpload } from '../components/DocumentUpload';
+import { DocumentList } from '../components/DocumentList';
+import { DiscussionSection } from '../components/DiscussionSection';
+import { VersionHistory } from '../components/VersionHistory';
 import {
   ArrowLeft,
   Edit3,
@@ -16,7 +34,10 @@ import {
   CheckCircle2,
   TrendingUp,
   Loader2,
-  Layers
+  Layers,
+  PlusCircle,
+  Sparkles,
+  Paperclip,
 } from 'lucide-react';
 
 export const DecisionDetails = () => {
@@ -25,9 +46,21 @@ export const DecisionDetails = () => {
   const { user } = useAuth();
 
   const [decision, setDecision] = useState(null);
+  const [alternatives, setAlternatives] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Alternative Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedAlternative, setSelectedAlternative] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  // Document Upload & Action States
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docActionLoadingId, setDocActionLoadingId] = useState(null);
 
   const fetchDecisionDetails = async () => {
     setLoading(true);
@@ -35,6 +68,28 @@ export const DecisionDetails = () => {
     try {
       const data = await getDecision(id);
       setDecision(data);
+
+      // Fetch alternatives
+      try {
+        const alts = await getAlternatives(id);
+        setAlternatives(alts || []);
+      } catch (altErr) {
+        console.warn('Could not load alternatives:', altErr);
+        if (data.alternatives && Array.isArray(data.alternatives)) {
+          setAlternatives(data.alternatives);
+        }
+      }
+
+      // Fetch attached documents
+      try {
+        const docs = await getDocuments(id);
+        setDocuments(docs || []);
+      } catch (docErr) {
+        console.warn('Could not load documents:', docErr);
+        if (data.documents && Array.isArray(data.documents)) {
+          setDocuments(data.documents);
+        }
+      }
     } catch (err) {
       setError(err.message || 'Failed to load decision details.');
     } finally {
@@ -63,7 +118,7 @@ export const DecisionDetails = () => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete this decision? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to permanently delete this decision, its alternatives, and attached documents? This action cannot be undone.')) {
       return;
     }
 
@@ -74,6 +129,93 @@ export const DecisionDetails = () => {
     } catch (err) {
       alert(err.message || 'Failed to delete decision.');
       setActionLoading(false);
+    }
+  };
+
+  // Alternative CRUD handlers
+  const handleOpenAddModal = () => {
+    setSelectedAlternative(null);
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (alt) => {
+    setSelectedAlternative(alt);
+    setModalOpen(true);
+  };
+
+  const handleSaveAlternative = async (altPayload) => {
+    setModalLoading(true);
+    try {
+      if (selectedAlternative) {
+        await updateAlternative(id, selectedAlternative.id, altPayload);
+      } else {
+        await createAlternative(id, altPayload);
+      }
+      setModalOpen(false);
+      setSelectedAlternative(null);
+
+      // Refresh alternatives
+      const updatedAlts = await getAlternatives(id);
+      setAlternatives(updatedAlts);
+    } catch (err) {
+      alert(err.message || 'Failed to save alternative evaluation.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleDeleteAlternative = async (altId) => {
+    if (!window.confirm('Are you sure you want to delete this alternative evaluation?')) {
+      return;
+    }
+
+    try {
+      await deleteAlternative(id, altId);
+      setAlternatives(prev => prev.filter(a => a.id !== altId));
+    } catch (err) {
+      alert(err.message || 'Failed to delete alternative.');
+    }
+  };
+
+  // Document handlers
+  const handleUploadDocument = async (file) => {
+    setUploadingDoc(true);
+    try {
+      const newDoc = await uploadDocument(id, file);
+      setDocuments(prev => [newDoc, ...prev]);
+      setShowUploadForm(false);
+    } catch (err) {
+      alert(err.message || 'Failed to upload document.');
+      throw err;
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDownloadDocument = async (doc) => {
+    try {
+      setDocActionLoadingId(doc.id);
+      await downloadDocument(id, doc.id, doc.original_filename);
+    } catch (err) {
+      alert(err.message || 'Failed to download document.');
+    } finally {
+      setDocActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteDocument = async (doc) => {
+    if (!window.confirm(`Are you sure you want to permanently delete document "${doc.original_filename}"?`)) {
+      return;
+    }
+
+    try {
+      setDocActionLoadingId(doc.id);
+      await deleteDocument(id, doc.id);
+      setDocuments(prev => prev.filter(d => d.id !== doc.id));
+    } catch (err) {
+      alert(err.message || 'Failed to delete document.');
+    } finally {
+      setDocActionLoadingId(null);
     }
   };
 
@@ -105,6 +247,9 @@ export const DecisionDetails = () => {
   const isDraft = decision.status === 'Draft';
   const canEdit = isOwner || isAdmin;
   const canDelete = (isDraft && isOwner) || isAdmin;
+  const canEditAlternatives = (isDraft && isOwner) || isAdmin;
+  const canUploadDocuments = (isDraft && isOwner) || isAdmin;
+  const canDeleteDocuments = (isDraft && isOwner) || isAdmin;
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';
@@ -255,9 +400,95 @@ export const DecisionDetails = () => {
           <section className="section-box">
             <h3 className="section-box-title">
               <Layers size={18} />
-              <span>Reasoning</span>
+              <span>Reasoning & Trade-offs</span>
             </h3>
             <p className="section-box-body">{decision.reasoning}</p>
+          </section>
+
+          {/* =========================================================
+              ALTERNATIVE COMPARISON & ANALYSIS SECTION
+              ========================================================= */}
+          <section className="section-box alternatives-comparison-section">
+            <div className="alternatives-section-header">
+              <div className="alt-header-title-group">
+                <div className="brand-icon-box" style={{ width: '28px', height: '28px' }}>
+                  <Sparkles size={16} />
+                </div>
+                <h3 className="section-box-title" style={{ margin: 0 }}>
+                  Alternative Comparison & Trade-off Analysis
+                </h3>
+                <span className="alternatives-count-pill">
+                  {alternatives.length} {alternatives.length === 1 ? 'Option' : 'Options'}
+                </span>
+              </div>
+
+              {canEditAlternatives && (
+                <button
+                  onClick={handleOpenAddModal}
+                  className="btn btn-primary btn-sm"
+                  title="Add a new alternative for trade-off comparison"
+                >
+                  <PlusCircle size={15} />
+                  <span>+ Add Alternative</span>
+                </button>
+              )}
+            </div>
+
+            <AlternativeComparisonTable
+              alternatives={alternatives}
+              canEdit={canEditAlternatives}
+              onAddAlternative={handleOpenAddModal}
+              onEditAlternative={handleOpenEditModal}
+              onDeleteAlternative={handleDeleteAlternative}
+            />
+          </section>
+
+          {/* =========================================================
+              DOCUMENTS & ATTACHMENTS SECTION
+              ========================================================= */}
+          <section className="section-box documents-section">
+            <div className="documents-section-header">
+              <div className="doc-header-title-group">
+                <div className="brand-icon-box" style={{ width: '28px', height: '28px' }}>
+                  <Paperclip size={16} />
+                </div>
+                <h3 className="section-box-title" style={{ margin: 0 }}>
+                  Supporting Documents & Attachments
+                </h3>
+                <span className="documents-count-pill">
+                  {documents.length} {documents.length === 1 ? 'File' : 'Files'}
+                </span>
+              </div>
+
+              {canUploadDocuments && (
+                <button
+                  onClick={() => setShowUploadForm(!showUploadForm)}
+                  className={`btn ${showUploadForm ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                  title="Attach supporting files to this decision"
+                >
+                  <Paperclip size={15} />
+                  <span>{showUploadForm ? 'Cancel' : '+ Attach Document'}</span>
+                </button>
+              )}
+            </div>
+
+            {showUploadForm && canUploadDocuments && (
+              <div className="document-upload-wrapper">
+                <DocumentUpload
+                  onUpload={handleUploadDocument}
+                  loading={uploadingDoc}
+                  onClose={() => setShowUploadForm(false)}
+                />
+              </div>
+            )}
+
+            <DocumentList
+              documents={documents}
+              canDelete={canDeleteDocuments}
+              onDownload={handleDownloadDocument}
+              onDelete={handleDeleteDocument}
+              actionLoadingId={docActionLoadingId}
+            />
           </section>
 
           {decision.expected_outcome && (
@@ -279,8 +510,34 @@ export const DecisionDetails = () => {
               <p className="section-box-body">{decision.actual_outcome}</p>
             </section>
           )}
+
+          {/* =========================================================
+              VERSION TRACKING & HISTORY SECTION
+              ========================================================= */}
+          <VersionHistory
+            decisionId={id}
+            currentDecisionStatus={decision.status}
+          />
+
+          {/* =========================================================
+              DISCUSSIONS & COLLABORATION SECTION
+              ========================================================= */}
+          <DiscussionSection
+            decisionId={id}
+            currentUserId={user?.id}
+            isAdmin={isAdmin}
+          />
         </div>
       </article>
+
+      {/* Alternative Add / Edit Modal Dialog */}
+      <AlternativeModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveAlternative}
+        alternative={selectedAlternative}
+        loading={modalLoading}
+      />
     </div>
   );
 };

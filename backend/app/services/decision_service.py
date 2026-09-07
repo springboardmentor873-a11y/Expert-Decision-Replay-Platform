@@ -6,6 +6,11 @@ from app.models.decision import Decision, DecisionStatusEnum
 from app.models.role import RoleEnum
 from app.models.user import User
 from app.schemas.decision import DecisionCreateRequest, DecisionUpdateRequest
+from app.services.decision_version_service import (
+    create_initial_version,
+    create_version_snapshot,
+    generate_change_summary,
+)
 
 
 def create_decision(db: Session, decision_in: DecisionCreateRequest, user_id: int) -> Decision:
@@ -22,6 +27,8 @@ def create_decision(db: Session, decision_in: DecisionCreateRequest, user_id: in
         created_by=user_id,
     )
     db.add(decision)
+    db.flush()
+    create_initial_version(db=db, decision=decision, user_id=user_id)
     db.commit()
     db.refresh(decision)
     return decision
@@ -130,6 +137,18 @@ def update_decision(
                 detail=f"Cannot edit core fields ({', '.join(disallowed_fields)}) of a decision in '{decision.status}' status."
             )
 
+    # Record current values before applying updates
+    old_values = {
+        "title": decision.title,
+        "problem_statement": decision.problem_statement,
+        "context": decision.context,
+        "decision_taken": decision.decision_taken,
+        "reasoning": decision.reasoning,
+        "expected_outcome": decision.expected_outcome,
+        "actual_outcome": decision.actual_outcome,
+        "status": decision.status,
+    }
+
     # Apply updates
     if decision_in.title is not None:
         decision.title = decision_in.title.strip()
@@ -148,6 +167,26 @@ def update_decision(
     if decision_in.status is not None:
         status_val = decision_in.status.value if hasattr(decision_in.status, "value") else str(decision_in.status)
         decision.status = status_val
+
+    # Detect changes and create version snapshot if changes exist
+    new_values = {
+        "title": decision.title,
+        "problem_statement": decision.problem_statement,
+        "context": decision.context,
+        "decision_taken": decision.decision_taken,
+        "reasoning": decision.reasoning,
+        "expected_outcome": decision.expected_outcome,
+        "actual_outcome": decision.actual_outcome,
+        "status": decision.status,
+    }
+    change_summary = generate_change_summary(old_values, new_values)
+    if change_summary:
+        create_version_snapshot(
+            db=db,
+            decision=decision,
+            changed_by=current_user.id,
+            change_summary=change_summary,
+        )
 
     db.commit()
     db.refresh(decision)
@@ -180,6 +219,12 @@ def submit_decision(db: Session, decision_id: int, current_user: User) -> Decisi
         )
 
     decision.status = DecisionStatusEnum.SUBMITTED.value
+    create_version_snapshot(
+        db=db,
+        decision=decision,
+        changed_by=current_user.id,
+        change_summary="Decision submitted for review",
+    )
     db.commit()
     db.refresh(decision)
     return decision
@@ -213,3 +258,14 @@ def delete_decision(db: Session, decision_id: int, current_user: User) -> None:
 
     db.delete(decision)
     db.commit()
+
+    # Clean up any document files stored on disk for this decision
+    try:
+        import os
+        import shutil
+        from app.core.config import settings
+        decision_storage_dir = os.path.join(os.getcwd(), settings.UPLOAD_DIR, "decisions", str(decision_id))
+        if os.path.isdir(decision_storage_dir):
+            shutil.rmtree(decision_storage_dir, ignore_errors=True)
+    except Exception:
+        pass

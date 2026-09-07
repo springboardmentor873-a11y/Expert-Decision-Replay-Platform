@@ -28,5 +28,14 @@ class User(Base):
     # Relationship to Decision model (1 User to Many Decisions)
     decisions = relationship("Decision", back_populates="creator", cascade="all, delete-orphan")
 
+    # Relationship to Document model (1 User to Many Uploaded Documents)
+    documents = relationship("Document", back_populates="uploader")
+
+    # Relationship to Discussion model (1 User to Many Discussions)
+    discussions = relationship("Discussion", back_populates="user")
+
+    # Relationship to DecisionVersion model (1 User to Many Decision Versions)
+    decision_versions = relationship("DecisionVersion", back_populates="changer")
+
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role_id={self.role_id})>"

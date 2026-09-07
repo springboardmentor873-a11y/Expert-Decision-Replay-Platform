@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.api.router import api_router
 from app.api.routes import auth, decisions, users
 from app.database.database import Base, engine, SessionLocal
-from app.models import Decision, Role, User  # Ensure models are imported for create_all
+from app.models import Alternative, Decision, DecisionVersion, Discussion, Document, Role, User  # Ensure models are imported for create_all
 from app.services.user_service import seed_roles_if_needed
 
 

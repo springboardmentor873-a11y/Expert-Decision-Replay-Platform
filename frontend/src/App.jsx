@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { Header } from './components/Header';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
@@ -31,14 +32,19 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// Layout wrapper for authenticated views
+// Layout wrapper for authenticated views with enterprise Sidebar & Top Header
 const AuthenticatedLayout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="app-layout">
-      <Navbar />
-      <main className="main-content">
-        <Outlet />
-      </main>
+    <div className="app-layout enterprise-dashboard-shell">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="app-main-wrapper">
+        <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <main className="main-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

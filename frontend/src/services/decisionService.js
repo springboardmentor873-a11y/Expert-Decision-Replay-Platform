@@ -1,5 +1,23 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
+function resolveToken(candidate) {
+  if (typeof candidate === 'string' && candidate.startsWith('ey')) {
+    return candidate;
+  }
+  return localStorage.getItem('token') || '';
+}
+
+function getHeaders(token) {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  const resolved = resolveToken(token);
+  if (resolved) {
+    headers['Authorization'] = `Bearer ${resolved}`;
+  }
+  return headers;
+}
+
 async function handleResponse(response) {
   if (!response.ok) {
     let errorDetail = 'An unexpected error occurred';
@@ -25,52 +43,67 @@ async function handleResponse(response) {
 
 /**
  * Fetches all accessible decisions for the authenticated user with optional status filter.
- * @param {string} token - JWT bearer token
- * @param {string|null} status - Optional status filter (Draft, Submitted, etc.)
+ * Accepts either: getDecisions(status) OR getDecisions(token, status)
  */
-export async function getDecisions(token, status = null) {
+export async function getDecisions(statusOrToken = null, maybeStatus = null) {
+  let status = null;
+  let token = null;
+
+  if (typeof statusOrToken === 'string' && statusOrToken.startsWith('ey')) {
+    token = statusOrToken;
+    status = maybeStatus;
+  } else {
+    status = statusOrToken;
+  }
+
   const url = new URL(`${API_BASE_URL}/decisions`);
-  if (status) {
+  if (status && status !== 'ALL') {
     url.searchParams.append('status', status);
   }
+
   const response = await fetch(url.toString(), {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getHeaders(token),
   });
   return handleResponse(response);
 }
 
 /**
  * Fetches a single decision by its ID.
- * @param {string} token - JWT bearer token
- * @param {number|string} id - Decision ID
+ * Accepts either: getDecision(id) OR getDecision(token, id)
  */
-export async function getDecision(token, id) {
+export async function getDecision(idOrToken, maybeId = null) {
+  let id = idOrToken;
+  let token = null;
+
+  if (typeof idOrToken === 'string' && idOrToken.startsWith('ey')) {
+    token = idOrToken;
+    id = maybeId;
+  }
+
   const response = await fetch(`${API_BASE_URL}/decisions/${id}`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getHeaders(token),
   });
   return handleResponse(response);
 }
 
 /**
  * Creates a new decision. The creator is derived automatically from the JWT token.
- * @param {string} token - JWT bearer token
- * @param {Object} decisionData - { title, problem_statement, context, decision_taken, reasoning, expected_outcome, actual_outcome }
+ * Accepts either: createDecision(decisionData) OR createDecision(token, decisionData)
  */
-export async function createDecision(token, decisionData) {
+export async function createDecision(dataOrToken, maybeData = null) {
+  let decisionData = dataOrToken;
+  let token = null;
+
+  if (typeof dataOrToken === 'string' && dataOrToken.startsWith('ey')) {
+    token = dataOrToken;
+    decisionData = maybeData;
+  }
+
   const response = await fetch(`${API_BASE_URL}/decisions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getHeaders(token),
     body: JSON.stringify(decisionData),
   });
   return handleResponse(response);
@@ -78,17 +111,25 @@ export async function createDecision(token, decisionData) {
 
 /**
  * Updates an existing decision.
- * @param {string} token - JWT bearer token
- * @param {number|string} id - Decision ID
- * @param {Object} decisionData - Partial or full decision update fields
+ * Accepts either: updateDecision(id, decisionData) OR updateDecision(token, id, decisionData)
  */
-export async function updateDecision(token, id, decisionData) {
+export async function updateDecision(idOrToken, idOrData, maybeData = null) {
+  let id;
+  let decisionData;
+  let token = null;
+
+  if (typeof idOrToken === 'string' && idOrToken.startsWith('ey')) {
+    token = idOrToken;
+    id = idOrData;
+    decisionData = maybeData;
+  } else {
+    id = idOrToken;
+    decisionData = idOrData;
+  }
+
   const response = await fetch(`${API_BASE_URL}/decisions/${id}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getHeaders(token),
     body: JSON.stringify(decisionData),
   });
   return handleResponse(response);
@@ -96,30 +137,41 @@ export async function updateDecision(token, id, decisionData) {
 
 /**
  * Submits a draft decision for evaluation/review.
- * @param {string} token - JWT bearer token
- * @param {number|string} id - Decision ID
+ * Accepts either: submitDecision(id) OR submitDecision(token, id)
  */
-export async function submitDecision(token, id) {
+export async function submitDecision(idOrToken, maybeId = null) {
+  let id = idOrToken;
+  let token = null;
+
+  if (typeof idOrToken === 'string' && idOrToken.startsWith('ey')) {
+    token = idOrToken;
+    id = maybeId;
+  }
+
   const response = await fetch(`${API_BASE_URL}/decisions/${id}/submit`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getHeaders(token),
   });
   return handleResponse(response);
 }
 
 /**
  * Deletes a decision.
- * @param {string} token - JWT bearer token
- * @param {number|string} id - Decision ID
+ * Accepts either: deleteDecision(id) OR deleteDecision(token, id)
  */
-export async function deleteDecision(token, id) {
+export async function deleteDecision(idOrToken, maybeId = null) {
+  let id = idOrToken;
+  let token = null;
+
+  if (typeof idOrToken === 'string' && idOrToken.startsWith('ey')) {
+    token = idOrToken;
+    id = maybeId;
+  }
+
   const response = await fetch(`${API_BASE_URL}/decisions/${id}`, {
     method: 'DELETE',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${resolveToken(token)}`,
     },
   });
   return handleResponse(response);

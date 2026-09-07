@@ -1,7 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.alternative import AlternativeResponse
+from app.schemas.document import DocumentResponse
 
 
 class DecisionStatusEnum(str, Enum):
@@ -53,6 +56,8 @@ class DecisionResponse(BaseModel):
     status: str
     created_by: int
     creator: Optional[CreatorSummary] = None
+    alternatives: List[AlternativeResponse] = []
+    documents: List[DocumentResponse] = []
     created_at: datetime
     updated_at: datetime
 

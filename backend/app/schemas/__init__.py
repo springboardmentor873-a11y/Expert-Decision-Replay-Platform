@@ -6,6 +6,12 @@ from app.schemas.decision import (
     DecisionStatusEnum,
     DecisionUpdateRequest,
 )
+from app.schemas.decision_version import (
+    ChangerSummary,
+    DecisionVersionResponse,
+    FieldDifference,
+    VersionComparisonResponse,
+)
 from app.schemas.user import (
     RoleResponse,
     UserRegisterRequest,
@@ -28,4 +34,8 @@ __all__ = [
     "DecisionCreateRequest",
     "DecisionUpdateRequest",
     "DecisionResponse",
+    "ChangerSummary",
+    "DecisionVersionResponse",
+    "FieldDifference",
+    "VersionComparisonResponse",
 ]

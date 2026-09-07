@@ -14,8 +14,37 @@ from app.services.decision_service import (
     submit_decision,
     update_decision,
 )
+from app.api.routes import alternatives, documents, discussions, decision_versions
 
 router = APIRouter()
+
+# Mount alternatives sub-resource router
+router.include_router(
+    alternatives.router,
+    prefix="/{decision_id}/alternatives",
+    tags=["Alternative Comparison"]
+)
+
+# Mount documents sub-resource router
+router.include_router(
+    documents.router,
+    prefix="/{decision_id}/documents",
+    tags=["Document Management"]
+)
+
+# Mount discussions sub-resource router
+router.include_router(
+    discussions.router,
+    prefix="/{decision_id}/discussions",
+    tags=["Discussions & Collaboration"]
+)
+
+# Mount version tracking sub-resource router
+router.include_router(
+    decision_versions.router,
+    prefix="/{decision_id}/versions",
+    tags=["Version Tracking"]
+)
 
 
 @router.post("", response_model=DecisionResponse, status_code=status.HTTP_201_CREATED, summary="Create a new decision")

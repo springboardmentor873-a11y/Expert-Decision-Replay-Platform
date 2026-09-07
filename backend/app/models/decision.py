@@ -51,6 +51,30 @@ class Decision(Base):
 
     # Relationships
     creator = relationship("User", back_populates="decisions")
+    alternatives = relationship(
+        "Alternative",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="Alternative.id"
+    )
+    documents = relationship(
+        "Document",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="Document.id"
+    )
+    discussions = relationship(
+        "Discussion",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="Discussion.created_at.asc()"
+    )
+    versions = relationship(
+        "DecisionVersion",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="DecisionVersion.version_number.desc()"
+    )
 
     def __repr__(self):
         return f"<Decision(id={self.id}, title='{self.title}', status='{self.status}', created_by={self.created_by})>"

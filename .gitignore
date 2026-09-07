@@ -62,3 +62,8 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# File Uploads & Attachments
+backend/uploads/
+uploads/
+

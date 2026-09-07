@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day in minutes
 
+    # Upload & Document Storage Configuration
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit
+    ALLOWED_DOCUMENT_EXTENSIONS: List[str] = [
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ".txt", ".csv", ".png", ".jpg", ".jpeg"
+    ]
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

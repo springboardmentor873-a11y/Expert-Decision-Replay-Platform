@@ -2,223 +2,177 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getDecisions } from '../services/decisionService';
+import { DecisionsStatusChart } from '../components/DecisionsStatusChart';
+import { RecentDecisionsTable } from '../components/RecentDecisionsTable';
+import { TeamActivityCard } from '../components/TeamActivityCard';
+import { MyTeamsCard } from '../components/MyTeamsCard';
+import { RecentDiscussionsCard } from '../components/RecentDiscussionsCard';
 import {
   Layers,
-  FileText,
-  Send,
-  CheckCircle2,
-  PlusCircle,
-  ArrowRight,
-  ShieldCheck,
-  Sparkles,
-  RotateCcw,
-  Compass,
+  FileEdit,
   Clock,
-  Eye
+  CheckCircle2,
+  XCircle,
+  PlusCircle,
+  Compass,
+  Sparkles,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 export const Home = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    total: 0,
-    drafts: 0,
-    submitted: 0,
-    approved: 0,
-    loading: true
-  });
+  const [decisions, setDecisions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getDecisions();
+      setDecisions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load dashboard data.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchKPIs = async () => {
-      try {
-        const decisions = await getDecisions();
-        const total = decisions.length;
-        const drafts = decisions.filter(d => d.status === 'Draft').length;
-        const submitted = decisions.filter(d => d.status === 'Submitted').length;
-        const approved = decisions.filter(d => d.status === 'Approved').length;
-
-        setStats({
-          total,
-          drafts,
-          submitted,
-          approved,
-          loading: false
-        });
-      } catch (err) {
-        setStats(prev => ({ ...prev, loading: false }));
-      }
-    };
-
-    fetchKPIs();
+    fetchDashboardData();
   }, []);
 
-  const getRoleBadgeClass = (roleName) => {
-    switch (roleName?.toLowerCase()) {
-      case 'administrator':
-        return 'role-badge badge-admin';
-      case 'manager':
-        return 'role-badge badge-manager';
-      case 'reviewer':
-        return 'role-badge badge-reviewer';
-      default:
-        return 'role-badge badge-employee';
-    }
+  // Compute real statistics from fetched decisions
+  const total = decisions.length;
+  const drafts = decisions.filter((d) => d.status === 'Draft').length;
+  const submitted = decisions.filter((d) => d.status === 'Submitted').length;
+  const underReview = decisions.filter((d) => d.status === 'Under Review').length;
+  const approved = decisions.filter((d) => d.status === 'Approved').length;
+  const rejected = decisions.filter((d) => d.status === 'Rejected').length;
+
+  const stats = {
+    total,
+    drafts,
+    submitted,
+    underReview,
+    approved,
+    rejected
   };
 
   return (
     <div className="home-dashboard-container">
-      {/* Hero Welcome Banner */}
-      <section className="hero-welcome-card">
-        <div className="hero-text-side">
-          <div className="hero-eyebrow">
+      {/* Welcome & Platform Overview Hero Card */}
+      <section className="dashboard-hero-banner">
+        <div className="hero-banner-content">
+          <div className="hero-pill-badge">
             <Sparkles size={14} />
-            <span>Enterprise Decision Platform</span>
+            <span>Enterprise Decision Replay Platform</span>
           </div>
-          <h1 className="hero-heading">
-            Welcome back, {user?.full_name || 'User'}
+          <h1 className="hero-banner-title">
+            Welcome back, {user?.full_name || 'Expert'}
           </h1>
-          <p className="hero-subtext">
-            Capture, review and replay expert decisions across your organization.
+          <p className="hero-banner-subtitle">
+            Document architectural trade-offs, evaluate competing alternatives, and retain institutional decision memory.
           </p>
         </div>
 
-        <div className="hero-actions-side">
-          <Link to="/decisions/new" className="btn btn-primary btn-lg">
+        <div className="hero-banner-actions">
+          <Link to="/decisions/new" className="btn btn-primary">
             <PlusCircle size={18} />
-            <span>Create New Decision</span>
+            <span>Create Decision</span>
           </Link>
-          <Link to="/decisions" className="btn btn-secondary btn-lg">
+          <Link to="/decisions" className="btn btn-secondary">
             <Compass size={18} />
-            <span>View Decisions</span>
+            <span>Browse All Decisions</span>
           </Link>
         </div>
       </section>
 
-      {/* KPI Metric Cards Grid */}
-      <section className="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-icon-box kpi-icon-total">
-            <Layers size={24} />
+      {/* Error Alert */}
+      {error && (
+        <div className="alert alert-error">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+          <button className="btn btn-sm btn-secondary ml-auto" onClick={fetchDashboardData}>
+            <RefreshCw size={14} />
+            <span>Retry</span>
+          </button>
+        </div>
+      )}
+
+      {/* 5 KPI Metric Cards Grid */}
+      <section className="dashboard-kpi-grid">
+        {/* Total Decisions */}
+        <div className="kpi-metric-card">
+          <div className="kpi-icon-container icon-kpi-total">
+            <Layers size={22} />
           </div>
-          <div className="kpi-info">
-            <span className="kpi-number">{stats.loading ? '—' : stats.total}</span>
-            <span className="kpi-label">Total Decisions</span>
+          <div className="kpi-metric-details">
+            <span className="kpi-metric-val">{loading ? '—' : total}</span>
+            <span className="kpi-metric-title">Total Decisions</span>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-box kpi-icon-draft">
-            <FileText size={24} />
+        {/* Drafts */}
+        <div className="kpi-metric-card">
+          <div className="kpi-icon-container icon-kpi-draft">
+            <FileEdit size={22} />
           </div>
-          <div className="kpi-info">
-            <span className="kpi-number">{stats.loading ? '—' : stats.drafts}</span>
-            <span className="kpi-label">Draft</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon-box kpi-icon-submitted">
-            <Send size={24} />
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-number">{stats.loading ? '—' : stats.submitted}</span>
-            <span className="kpi-label">Submitted</span>
+          <div className="kpi-metric-details">
+            <span className="kpi-metric-val">{loading ? '—' : drafts}</span>
+            <span className="kpi-metric-title">Drafts</span>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-box kpi-icon-approved">
-            <CheckCircle2 size={24} />
+        {/* Under Review / Submitted */}
+        <div className="kpi-metric-card">
+          <div className="kpi-icon-container icon-kpi-review">
+            <Clock size={22} />
           </div>
-          <div className="kpi-info">
-            <span className="kpi-number">{stats.loading ? '—' : stats.approved}</span>
-            <span className="kpi-label">Approved</span>
+          <div className="kpi-metric-details">
+            <span className="kpi-metric-val">{loading ? '—' : submitted + underReview}</span>
+            <span className="kpi-metric-title">Under Review</span>
+          </div>
+        </div>
+
+        {/* Approved */}
+        <div className="kpi-metric-card">
+          <div className="kpi-icon-container icon-kpi-approved">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="kpi-metric-details">
+            <span className="kpi-metric-val">{loading ? '—' : approved}</span>
+            <span className="kpi-metric-title">Approved</span>
+          </div>
+        </div>
+
+        {/* Rejected */}
+        <div className="kpi-metric-card">
+          <div className="kpi-icon-container icon-kpi-rejected">
+            <XCircle size={22} />
+          </div>
+          <div className="kpi-metric-details">
+            <span className="kpi-metric-val">{loading ? '—' : rejected}</span>
+            <span className="kpi-metric-title">Rejected</span>
           </div>
         </div>
       </section>
 
-      {/* Main Dashboard 2-Column Section */}
-      <div className="dashboard-main-columns">
-        {/* Left: Decision Workflow */}
-        <section className="card how-it-works-card">
-          <div className="card-title-row">
-            <RotateCcw size={20} className="text-primary" />
-            <h3>Decision Workflow</h3>
-          </div>
+      {/* Main Two-Column Content Grid */}
+      <div className="dashboard-content-grid">
+        {/* Left Column (Wider): Recent Decisions & Team Activity */}
+        <div className="dashboard-col-left">
+          <RecentDecisionsTable decisions={decisions} />
+          <TeamActivityCard decisions={decisions} />
+        </div>
 
-          <div className="workflow-steps-horizontal">
-            <div className="step-card">
-              <div className="step-num-pill">1</div>
-              <span className="step-title">Capture</span>
-              <p className="step-desc">Document problem, context, and reasoning</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-num-pill">2</div>
-              <span className="step-title">Submit</span>
-              <p className="step-desc">Lock draft and send for evaluation</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-num-pill">3</div>
-              <span className="step-title">Review</span>
-              <p className="step-desc">Multi-criteria alternative analysis</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-num-pill">4</div>
-              <span className="step-title">Approve</span>
-              <p className="step-desc">Manager sign-off and outcome tracking</p>
-            </div>
-
-            <div className="step-card">
-              <div className="step-num-pill">5</div>
-              <span className="step-title">Replay</span>
-              <p className="step-desc">Institutional knowledge archive</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Right: Quick Actions & Account Card */}
-        <aside className="card profile-overview-card">
-          <div>
-            <div className="card-title-row">
-              <ShieldCheck size={20} />
-              <h3>Quick Actions & Account</h3>
-            </div>
-
-            <div className="profile-rows-stack">
-              <div className="profile-meta-row">
-                <span className="profile-meta-label">User Name</span>
-                <span className="profile-meta-val">{user?.full_name}</span>
-              </div>
-              <div className="profile-meta-row">
-                <span className="profile-meta-label">Email</span>
-                <span className="profile-meta-val">{user?.email}</span>
-              </div>
-              <div className="profile-meta-row">
-                <span className="profile-meta-label">Role</span>
-                <span className={getRoleBadgeClass(user?.role?.name)}>
-                  {user?.role?.name || 'Employee'}
-                </span>
-              </div>
-              <div className="profile-meta-row">
-                <span className="profile-meta-label">Status</span>
-                <span style={{ color: '#16a34a', fontWeight: 600 }}>Active</span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1rem' }}>
-            <Link to="/decisions/new" className="btn btn-primary btn-sm" style={{ width: '100%' }}>
-              <PlusCircle size={15} />
-              <span>Create New Decision</span>
-            </Link>
-            <Link to="/decisions" className="btn btn-outline btn-sm" style={{ width: '100%' }}>
-              <Layers size={15} />
-              <span>View Decisions</span>
-            </Link>
-          </div>
-        </aside>
+        {/* Right Column (Sidebar Widgets): Status Donut Chart, Teams, Discussions */}
+        <div className="dashboard-col-right">
+          <DecisionsStatusChart stats={stats} />
+          <MyTeamsCard />
+          <RecentDiscussionsCard />
+        </div>
       </div>
     </div>
   );
