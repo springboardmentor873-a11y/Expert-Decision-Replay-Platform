@@ -4272,3 +4272,36 @@ select:focus-visible {
     gap: 8px !important;
   }
 }
+
+/* FINAL FIX — compact non-detail modals (create/edit) */
+.dashboard-modal:not(:has(.decision-modal-hero)) {
+  width: min(100%, 860px) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(88vh, 820px) !important;
+  overflow-y: auto !important;
+  padding: 28px !important;
+}
+
+.dashboard-modal:not(:has(.decision-modal-hero)) .decision-create-form {
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+}
+
+.dashboard-modal:not(:has(.decision-modal-hero)) textarea {
+  min-height: 120px;
+}
+
+.dashboard-modal:not(:has(.decision-modal-hero)) .modal-actions {
+  margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .dashboard-modal:not(:has(.decision-modal-hero)) {
+    width: 100% !important;
+    height: auto !important;
+    max-height: calc(100vh - 24px) !important;
+    padding: 21px !important;
+  }
+}

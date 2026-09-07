@@ -103,9 +103,6 @@ const getDecisions = async (req, res) => {
     }
 
     const decisions = await prisma.decision.findMany({
-      where: {
-        createdById: userId,
-      },
       include: {
         createdBy: true,
         alternatives: true,
@@ -147,7 +144,6 @@ const getDecisionById = async (req, res) => {
     const decision = await prisma.decision.findFirst({
       where: {
         id: decisionId,
-        createdById: userId,
       },
       include: {
         createdBy: true,

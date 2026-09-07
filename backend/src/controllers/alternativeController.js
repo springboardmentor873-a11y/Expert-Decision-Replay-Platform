@@ -1,63 +1,18 @@
 import prisma from "../db/prisma.js";
 
-
-//Helpers
-
-
-const parseId = (value) => {
-  const id = Number(value);
-
-  if (!Number.isInteger(id) || id <= 0) {
-    return null;
-  }
-
-  return id;
-};
-
 const getOwnedDecision = async (decisionId, userId) => {
-  const id = parseId(decisionId);
-
-  if (!id || !userId) {
-    return null;
-  }
-
   return prisma.decision.findFirst({
     where: {
-      id,
+      id: Number(decisionId),
       createdById: userId,
     },
   });
 };
 
-
-//CREATE ALTERNATIVE
-
-
 const createAlternative = async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    const decisionId = parseId(req.params.decisionId);
-
-    if (!userId) {
-      return res.status(401).json({
-        message: "Authentication required",
-      });
-    }
-
-    if (!decisionId) {
-      return res.status(400).json({
-        message: "Invalid decision ID",
-      });
-    }
-
-    const {
-      name,
-      pros = "",
-      cons = "",
-      cost = "",
-      feasibility = "",
-      risk = "",
-    } = req.body;
+    const { name, pros = "", cons = "", cost = "", feasibility = "", risk = "" } = req.body;
+    const { decisionId } = req.params;
 
     if (!name?.trim()) {
       return res.status(400).json({
@@ -65,7 +20,7 @@ const createAlternative = async (req, res) => {
       });
     }
 
-    const decision = await getOwnedDecision(decisionId, userId);
+    const decision = await getOwnedDecision(decisionId, req.user.userId);
 
     if (!decision) {
       return res.status(404).json({
@@ -95,28 +50,14 @@ const createAlternative = async (req, res) => {
   }
 };
 
-
-//GET ALTERNATIVES
-
-
 const getAlternative = async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    const decisionId = parseId(req.params.decisionId);
+    const { decisionId } = req.params;
 
-    if (!userId) {
-      return res.status(401).json({
-        message: "Authentication required",
-      });
-    }
-
-    if (!decisionId) {
-      return res.status(400).json({
-        message: "Invalid decision ID",
-      });
-    }
-
-    const decision = await getOwnedDecision(decisionId, userId);
+    const decision = await prisma.decision.findUnique({
+      where: { id: Number(decisionId) },
+      select: { id: true },
+    });
 
     if (!decision) {
       return res.status(404).json({
@@ -143,29 +84,12 @@ const getAlternative = async (req, res) => {
   }
 };
 
-
-//UPDATE ALTERNATIVE
-
-
 const updateAlternative = async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    const decisionId = parseId(req.params.decisionId);
-    const alternativeId = parseId(req.params.alternativeId);
+    const { decisionId, alternativeId } = req.params;
+    const { name, pros, cons, cost, feasibility, risk } = req.body;
 
-    if (!userId) {
-      return res.status(401).json({
-        message: "Authentication required",
-      });
-    }
-
-    if (!decisionId || !alternativeId) {
-      return res.status(400).json({
-        message: "Invalid decision or alternative ID",
-      });
-    }
-
-    const decision = await getOwnedDecision(decisionId, userId);
+    const decision = await getOwnedDecision(decisionId, req.user.userId);
 
     if (!decision) {
       return res.status(404).json({
@@ -175,7 +99,7 @@ const updateAlternative = async (req, res) => {
 
     const existingAlternative = await prisma.alternative.findFirst({
       where: {
-        id: alternativeId,
+        id: Number(alternativeId),
         decisionId: decision.id,
       },
     });
@@ -186,8 +110,6 @@ const updateAlternative = async (req, res) => {
       });
     }
 
-    const { name, pros, cons, cost, feasibility, risk } = req.body;
-
     const data = {};
 
     if (name !== undefined) {
@@ -196,35 +118,14 @@ const updateAlternative = async (req, res) => {
           message: "Alternative name cannot be empty",
         });
       }
-
       data.name = name.trim();
     }
 
-    if (pros !== undefined) {
-      data.pros = pros;
-    }
-
-    if (cons !== undefined) {
-      data.cons = cons;
-    }
-
-    if (cost !== undefined) {
-      data.cost = cost;
-    }
-
-    if (feasibility !== undefined) {
-      data.feasibility = feasibility;
-    }
-
-    if (risk !== undefined) {
-      data.risk = risk;
-    }
-
-    if (Object.keys(data).length === 0) {
-      return res.status(400).json({
-        message: "No changes provided",
-      });
-    }
+    if (pros !== undefined) data.pros = pros;
+    if (cons !== undefined) data.cons = cons;
+    if (cost !== undefined) data.cost = cost;
+    if (feasibility !== undefined) data.feasibility = feasibility;
+    if (risk !== undefined) data.risk = risk;
 
     const alternative = await prisma.alternative.update({
       where: {
@@ -243,29 +144,11 @@ const updateAlternative = async (req, res) => {
   }
 };
 
-
-//DELETE ALTERNATIVE
-
-
 const deleteAlternative = async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    const decisionId = parseId(req.params.decisionId);
-    const alternativeId = parseId(req.params.alternativeId);
+    const { decisionId, alternativeId } = req.params;
 
-    if (!userId) {
-      return res.status(401).json({
-        message: "Authentication required",
-      });
-    }
-
-    if (!decisionId || !alternativeId) {
-      return res.status(400).json({
-        message: "Invalid decision or alternative ID",
-      });
-    }
-
-    const decision = await getOwnedDecision(decisionId, userId);
+    const decision = await getOwnedDecision(decisionId, req.user.userId);
 
     if (!decision) {
       return res.status(404).json({
@@ -275,7 +158,7 @@ const deleteAlternative = async (req, res) => {
 
     const existingAlternative = await prisma.alternative.findFirst({
       where: {
-        id: alternativeId,
+        id: Number(alternativeId),
         decisionId: decision.id,
       },
     });
