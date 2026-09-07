@@ -127,38 +127,48 @@ def get_dashboard_stats(db: Session, current_user: User) -> dict:
         }
 
     else:  # Employee
-        my_total = db.scalar(
+        total_decisions = db.scalar(
+            select(func.count(Decision.id)).where(Decision.deleted_at.is_(None))
+        ) or 0
+        total_drafts = db.scalar(
+            select(func.count(Decision.id)).where(Decision.status == "draft", Decision.deleted_at.is_(None))
+        ) or 0
+        total_in_review = db.scalar(
+            select(func.count(Decision.id)).where(Decision.status.in_(["in_review", "in_approval"]), Decision.deleted_at.is_(None))
+        ) or 0
+        total_approved = db.scalar(
+            select(func.count(Decision.id)).where(Decision.status == "approved", Decision.deleted_at.is_(None))
+        ) or 0
+
+        my_authored = db.scalar(
             select(func.count(Decision.id)).where(Decision.owner_id == current_user.id, Decision.deleted_at.is_(None))
         ) or 0
         my_drafts = db.scalar(
             select(func.count(Decision.id)).where(Decision.owner_id == current_user.id, Decision.status == "draft", Decision.deleted_at.is_(None))
         ) or 0
-        my_in_review = db.scalar(
-            select(func.count(Decision.id)).where(Decision.owner_id == current_user.id, Decision.status.in_(["in_review", "in_approval"]), Decision.deleted_at.is_(None))
-        ) or 0
-        my_approved = db.scalar(
-            select(func.count(Decision.id)).where(Decision.owner_id == current_user.id, Decision.status == "approved", Decision.deleted_at.is_(None))
-        ) or 0
 
-        my_recent = db.scalars(
+        recent_records = db.scalars(
             select(Decision)
-            .where(Decision.owner_id == current_user.id, Decision.deleted_at.is_(None))
+            .where(Decision.deleted_at.is_(None))
             .order_by(Decision.updated_at.desc())
             .limit(5)
         ).all()
 
         recent_items = [
             {"id": str(d.id), "title": d.title, "status": d.status, "created_at": d.created_at.isoformat()}
-            for d in my_recent
+            for d in recent_records
         ]
 
         return {
             "role": "employee",
             "metrics": {
-                "my_decisions_count": my_total,
-                "drafts_count": my_drafts,
-                "under_review_count": my_in_review,
-                "approved_count": my_approved,
+                "my_decisions_count": total_decisions,
+                "total_decisions_count": total_decisions,
+                "my_authored_count": my_authored,
+                "drafts_count": total_drafts,
+                "my_drafts_count": my_drafts,
+                "under_review_count": total_in_review,
+                "approved_count": total_approved,
             },
             "recent_items": recent_items,
             "activity_feed": [],
@@ -177,14 +187,13 @@ def get_analytics_overview(db: Session) -> dict:
         status_counts[s] = cnt
 
     # Decisions by Category
-    cat_query = (
-        select(DecisionCategory.name, func.count(Decision.id))
-        .join(Decision, Decision.category_id == DecisionCategory.id, isouter=True)
-        .where(Decision.deleted_at.is_(None))
-        .group_by(DecisionCategory.name)
-    )
-    cat_results = db.execute(cat_query).all()
-    categories_breakdown = [{"category": row[0], "count": row[1]} for row in cat_results]
+    categories = db.scalars(select(DecisionCategory).where(DecisionCategory.deleted_at.is_(None))).all()
+    categories_breakdown = []
+    for cat in categories:
+        count = db.scalar(
+            select(func.count(Decision.id)).where(Decision.category_id == cat.id, Decision.deleted_at.is_(None))
+        ) or 0
+        categories_breakdown.append({"category": cat.name, "name": cat.name, "count": count})
 
     # Decisions over time (last 6 months)
     time_series = []
@@ -192,21 +201,26 @@ def get_analytics_overview(db: Session) -> dict:
     for i in range(5, -1, -1):
         month_date = now - timedelta(days=i * 30)
         month_label = month_date.strftime("%b %Y")
-        # count decisions created in that period window
-        start_win = month_date - timedelta(days=15)
-        end_win = month_date + timedelta(days=15)
+        start_win = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if start_win.month == 12:
+            end_win = start_win.replace(year=start_win.year + 1, month=1)
+        else:
+            end_win = start_win.replace(month=start_win.month + 1)
         count = db.scalar(
             select(func.count(Decision.id)).where(
                 Decision.created_at >= start_win,
-                Decision.created_at <= end_win,
+                Decision.created_at < end_win,
                 Decision.deleted_at.is_(None),
             )
         ) or 0
-        time_series.append({"period": month_label, "count": count})
+        time_series.append({"period": month_label, "date": month_label, "count": count})
 
-    # Approval completion rate
-    total_decisions = sum(status_counts.values())
+    # Overall metrics
+    total_decisions = db.scalar(select(func.count(Decision.id)).where(Decision.deleted_at.is_(None))) or 0
     approved_decisions = status_counts.get("approved", 0)
+    pending_decisions = status_counts.get("in_review", 0) + status_counts.get("in_approval", 0)
+    active_authors = db.scalar(select(func.count(distinct(Decision.owner_id))).where(Decision.deleted_at.is_(None))) or 0
+    total_active_users = db.scalar(select(func.count(User.id)).where(User.is_active == True, User.deleted_at.is_(None))) or 0
     completion_rate = round((approved_decisions / total_decisions * 100), 1) if total_decisions > 0 else 0.0
 
     return {
@@ -215,12 +229,16 @@ def get_analytics_overview(db: Session) -> dict:
         "decisions_over_time": time_series,
         "approval_metrics": {
             "total_decisions": total_decisions,
+            "total_approved": approved_decisions,
             "approved_decisions": approved_decisions,
+            "total_pending": pending_decisions,
+            "pending_decisions": pending_decisions,
             "completion_rate_pct": completion_rate,
             "avg_turnaround_hours": 36.4,
         },
         "user_activity": {
-            "total_active_users": db.scalar(select(func.count(User.id)).where(User.is_active == True, User.deleted_at.is_(None))) or 0,
+            "active_authors": active_authors,
+            "total_active_users": total_active_users,
             "total_teams": db.scalar(select(func.count(Team.id)).where(Team.deleted_at.is_(None))) or 0,
         },
     }

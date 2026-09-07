@@ -41,7 +41,7 @@ export const RepositoryPage = () => {
       if (selectedTag) params.tag_id = selectedTag;
       if (selectedStatus) params.status = selectedStatus;
 
-      const res = await api.get('/repository/search', { params });
+      const res = await api.get('/repository', { params });
       setDecisions(res.data);
     } catch (err) {
       console.error('Error searching knowledge repository:', err);
@@ -57,6 +57,13 @@ export const RepositoryPage = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     searchRepository();
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setSelectedCategory('');
+    setSelectedTag('');
+    setSelectedStatus('');
   };
 
   return (
@@ -134,6 +141,15 @@ export const RepositoryPage = () => {
             <option value="in_approval">In Approval</option>
             <option value="draft">Draft</option>
           </select>
+
+          {(selectedCategory || selectedTag || selectedStatus || search) && (
+            <button
+              onClick={handleResetFilters}
+              className="text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-2 rounded-lg font-semibold transition-colors"
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
       </div>
 

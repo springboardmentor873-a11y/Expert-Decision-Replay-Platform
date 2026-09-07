@@ -45,17 +45,27 @@ export const AnalyticsPage = () => {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-  const statusData = Object.entries(data.decisions_by_status || {}).map(([key, val]) => ({
-    name: key.replace('_', ' ').toUpperCase(),
-    value: val,
-  }));
+  const statusData = Object.entries(data.decisions_by_status || {})
+    .filter(([_, val]) => val > 0)
+    .map(([key, val]) => ({
+      name: key.replace('_', ' ').toUpperCase(),
+      value: val,
+    }));
 
-  const categoryData = Object.entries(data.decisions_by_category || {}).map(([key, val]) => ({
-    name: key,
-    count: val,
-  }));
+  const categoryData = Array.isArray(data.decisions_by_category)
+    ? data.decisions_by_category.map((item) => ({
+        name: item.name || item.category || 'Uncategorized',
+        count: item.count || 0,
+      }))
+    : Object.entries(data.decisions_by_category || {}).map(([key, val]) => ({
+        name: key,
+        count: val,
+      }));
 
-  const timelineData = data.decisions_over_time || [];
+  const timelineData = (data.decisions_over_time || []).map((t) => ({
+    date: t.date || t.period || '',
+    count: t.count || 0,
+  }));
 
   return (
     <div className="space-y-8">
@@ -75,7 +85,9 @@ export const AnalyticsPage = () => {
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mt-3">{data.approval_metrics?.total_approved || 0}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-3">
+            {data.approval_metrics?.total_approved ?? data.approval_metrics?.approved_decisions ?? 0}
+          </p>
           <p className="text-xs text-slate-400 mt-1">Decisions successfully signed off</p>
         </div>
 
@@ -86,7 +98,9 @@ export const AnalyticsPage = () => {
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mt-3">{data.approval_metrics?.total_pending || 0}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-3">
+            {data.approval_metrics?.total_pending ?? data.approval_metrics?.pending_decisions ?? 0}
+          </p>
           <p className="text-xs text-slate-400 mt-1">In active evaluation</p>
         </div>
 
@@ -97,7 +111,9 @@ export const AnalyticsPage = () => {
               <Award className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 mt-3">{data.user_activity?.active_authors || 0}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-3">
+            {data.user_activity?.active_authors ?? data.user_activity?.total_active_users ?? 0}
+          </p>
           <p className="text-xs text-slate-400 mt-1">Contributing stakeholders</p>
         </div>
       </div>

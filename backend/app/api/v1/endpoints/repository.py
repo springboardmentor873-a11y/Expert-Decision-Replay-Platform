@@ -15,6 +15,7 @@ router = APIRouter(prefix="/repository", tags=["knowledge repository"])
 
 
 @router.get("", response_model=list[DecisionOut])
+@router.get("/search", response_model=list[DecisionOut])
 def search_repository(
     search: str | None = None,
     category_id: UUID | None = None,

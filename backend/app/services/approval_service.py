@@ -23,41 +23,40 @@ def get_default_or_first_workflow(db: Session) -> ApprovalWorkflow | None:
 
 
 def ensure_default_workflow_exists(db: Session) -> ApprovalWorkflow:
-    """Ensure standard 2-step workflow (Reviewer -> Manager) exists in DB."""
-    wf = get_default_or_first_workflow(db)
-    if wf:
-        return wf
-
+    """Ensure standard 3-tier enterprise workflow (Reviewer -> Manager -> Administrator) exists in DB."""
     reviewer_role = db.scalar(select(Role).where(Role.code == "reviewer"))
     manager_role = db.scalar(select(Role).where(Role.code == "manager"))
+    admin_role = db.scalar(select(Role).where(Role.code == "administrator"))
 
-    wf = ApprovalWorkflow(
-        name="Standard Two-Tier Review & Management Approval",
-        description="Standard enterprise workflow: Peer Reviewer verification followed by Department Manager authorization.",
-        is_default=True,
-    )
-    db.add(wf)
-    db.flush()
-
-    if reviewer_role:
-        step1 = ApprovalStep(
-            workflow_id=wf.id,
-            step_order=1,
-            name="Peer & Technical Review",
-            required_role_id=reviewer_role.id,
+    wf = get_default_or_first_workflow(db)
+    if not wf:
+        wf = ApprovalWorkflow(
+            name="Standard Three-Tier Enterprise Review & Administrator Sign-off",
+            description="Enterprise workflow: Technical Peer Review, followed by Management Review, finalized by Administrator Authorization.",
+            is_default=True,
         )
-        db.add(step1)
+        db.add(wf)
+        db.flush()
 
-    if manager_role:
-        step2 = ApprovalStep(
-            workflow_id=wf.id,
-            step_order=2,
-            name="Management & Executive Sign-off",
-            required_role_id=manager_role.id,
-        )
-        db.add(step2)
+    steps = db.scalars(
+        select(ApprovalStep).where(ApprovalStep.workflow_id == wf.id).order_by(ApprovalStep.step_order)
+    ).all()
 
-    db.flush()
+    if len(steps) < 3 and admin_role:
+        if not steps:
+            if reviewer_role:
+                db.add(ApprovalStep(workflow_id=wf.id, step_order=1, name="Peer & Technical Architecture Review", required_role_id=reviewer_role.id))
+            if manager_role:
+                db.add(ApprovalStep(workflow_id=wf.id, step_order=2, name="Department Management Evaluation", required_role_id=manager_role.id))
+            if admin_role:
+                db.add(ApprovalStep(workflow_id=wf.id, step_order=3, name="Executive Administrator Final Authorization", required_role_id=admin_role.id))
+        else:
+            has_admin = any(s.required_role_id == admin_role.id for s in steps)
+            if not has_admin:
+                next_order = max([s.step_order for s in steps], default=0) + 1
+                db.add(ApprovalStep(workflow_id=wf.id, step_order=next_order, name="Executive Administrator Final Authorization", required_role_id=admin_role.id))
+        db.flush()
+
     return wf
 
 
@@ -68,11 +67,12 @@ def submit_decision_for_review(db: Session, decision_id: UUID, current_user: Use
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
 
     user_role = db.scalar(select(Role).where(Role.id == current_user.role_id))
-    is_admin = user_role and user_role.code == "administrator"
-    if decision.owner_id != current_user.id and not is_admin:
+    role_code = user_role.code if user_role else "employee"
+    is_authorized = (decision.owner_id == current_user.id) or (role_code in ("administrator", "manager", "reviewer"))
+    if not is_authorized:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the decision owner or administrator can submit for review.",
+            detail="You do not have permission to submit this decision for review.",
         )
 
     if decision.status not in ("draft", "changes_requested"):

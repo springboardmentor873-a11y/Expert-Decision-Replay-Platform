@@ -5,6 +5,21 @@ export const OverviewTab = ({ decision, approvals, setActiveTab }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
+        {/* Draft Notice Banner */}
+        {decision.status === 'draft' && (
+          <div className="bg-blue-50/80 p-4 rounded-xl border border-blue-200 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold text-xs mt-0.5">
+              1
+            </div>
+            <div className="text-xs text-slate-700 space-y-1">
+              <h4 className="font-bold text-slate-900 text-sm">Decision Case in Draft</h4>
+              <p className="text-slate-600 leading-relaxed">
+                This case is currently in draft. Once candidate alternatives and criteria are configured, click the blue <strong>"Submit for Review"</strong> button in the top-right toolbar to launch the multi-tier peer review and executive approval workflow.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Problem Statement */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">

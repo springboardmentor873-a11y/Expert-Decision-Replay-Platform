@@ -51,33 +51,36 @@ export const ReviewsPage = () => {
               <thead className="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-6">Decision Case</th>
-                  <th className="py-3.5 px-4">Approval Step</th>
+                  <th className="py-3.5 px-4">Category</th>
+                  <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4">Author</th>
                   <th className="py-3.5 px-4">Submitted</th>
                   <th className="py-3.5 px-6 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {reviews.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                {reviews.map((d) => (
+                  <tr key={d.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-4 px-6 min-w-[280px]">
-                      <Link to={`/decisions/${r.decision_id}`} className="font-bold text-slate-900 hover:text-blue-600">
-                        {r.decision_title}
+                      <Link to={`/decisions/${d.id}`} className="font-bold text-slate-900 hover:text-blue-600">
+                        {d.title}
                       </Link>
                     </td>
+                    <td className="py-4 px-4 text-xs font-semibold text-slate-700">
+                      {d.category?.name || 'General'}
+                    </td>
                     <td className="py-4 px-4">
-                      <span className="font-semibold text-xs text-slate-800">{r.step_name}</span>
-                      <span className="block text-[10px] text-slate-400 uppercase">Step {r.step_order}</span>
+                      <DecisionStatusBadge status={d.status} />
                     </td>
                     <td className="py-4 px-4 text-xs font-medium text-slate-700">
-                      {r.decision_owner_name}
+                      {d.owner_name || d.owner_email}
                     </td>
                     <td className="py-4 px-4 text-xs text-slate-500">
-                      {new Date(r.created_at).toLocaleDateString()}
+                      {new Date(d.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-4 px-6 text-right">
                       <Link
-                        to={`/decisions/${r.decision_id}`}
+                        to={`/decisions/${d.id}`}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-1.5 rounded-lg shadow-xs transition-colors"
                       >
                         <span>Review Case</span>

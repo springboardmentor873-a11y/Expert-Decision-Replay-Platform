@@ -336,7 +336,7 @@ export const DecisionDetailsPage = () => {
   }
 
   const isOwner = decision.owner_id === user?.id;
-  const canEdit = isOwner || isAdmin;
+  const canEdit = isOwner || isAdmin || isReviewer || isManager;
   const isDraftOrChanges = decision.status === 'draft' || decision.status === 'changes_requested';
 
   const currentPendingStep = approvals?.steps?.find((s) => s.status === 'pending');
@@ -395,10 +395,10 @@ export const DecisionDetailsPage = () => {
 
         {/* Action Toolbar */}
         <div className="flex flex-wrap items-center gap-2.5 pt-2 lg:pt-0">
-          {isDraftOrChanges && (isOwner || isAdmin) && (
+          {isDraftOrChanges && (isOwner || isAdmin || isReviewer || isManager) && (
             <button
               onClick={handleSubmitForReview}
-              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow-xs transition-colors ring-2 ring-blue-400/30"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Submit for Review</span>
