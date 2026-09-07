@@ -1,175 +1,260 @@
-Expert Decision Replay Platform
-📌 Project Overview
+# Expert Decision Replay Platform
 
-The Expert Decision Replay Platform is a web-based Decision Intelligence Platform designed to help organizations create, document, analyze, discuss, review, and track important decisions.
+## 📌 Project Overview
 
-The platform provides a centralized place where users can record the reasoning behind decisions, compare alternatives, manage discussions, upload supporting documents, and track outcomes.
+The **Expert Decision Replay Platform** is a web-based Decision Intelligence Platform designed to help organizations create, manage, review, discuss, track, and replay important business decisions.
 
-🎯 Objectives
-Centralize organizational decisions.
-Record the problem and reasoning behind each decision.
-Compare and evaluate different alternatives.
-Enable team discussions and comments.
-Manage decision evidence and supporting documents.
-Track decision status, priority, and outcomes.
-Provide role-based access.
-Maintain a structured database for decision information.
-Support decision review and replay.
-🚀 Main Features
-Milestone 1 – User Management & Authentication
-1. User Registration
+The platform provides a centralized place where users can record decision information, compare alternatives, discuss decisions, upload supporting documents, track implementation, and review final outcomes.
 
-Users can create an account by providing their required information.
+---
 
-2. User Login
+## 🎯 Project Objectives
 
-Registered users can securely log in to the platform.
+- Centralize organizational decisions
+- Record the reasoning behind decisions
+- Compare different alternatives
+- Support discussions and collaboration
+- Manage decision-related documents
+- Track decision implementation
+- Record decision outcomes
+- Maintain decision history
+- Provide secure user authentication
+- Support different user roles and teams
+- Enable decision replay for future learning
 
-3. JWT Authentication
+---
 
-JSON Web Tokens are used to authenticate users and protect API endpoints.
+# 🚀 Milestone 1 – User & Access Management
 
-4. Role Management
+Milestone 1 focuses on the basic user management and authentication system.
 
-The system supports different user roles such as:
+## Features
 
-Employee
-Reviewer
-Manager
-Administrator
-5. Team Management
+### 1. User Registration
 
-Users can be associated with teams such as:
+New users can create an account by providing:
 
-Data Science
-Software Development
-AI and Machine Learning
-Management
-6. User Profiles
+- Name
+- Email
+- Password
+- Role
+- Team
 
-User profile information can be maintained separately from authentication information.
+### 2. User Login
 
-Milestone 2 – Decision Management
-1. Decision Creation
+Registered users can securely log in using their email and password.
 
-Users can create and document new organizational decisions.
+The system uses authentication tokens to protect the application.
 
-A decision can contain information such as:
+### 3. Role Management
 
-Title
-Problem Statement
-Description
-Priority
-Status
-Recommended Alternative
-Stakeholders
-Risks
-Evaluation Criteria
-Implementation Information
-Outcome
-2. Problem Statement
+The platform supports different user roles:
 
-The problem or situation that requires a decision can be clearly documented.
+- Employee
+- Reviewer
+- Manager
+- Administrator
 
-3. Alternative Analysis
+### 4. Team Management
 
-Multiple alternatives can be added and compared before selecting the recommended option.
+Users can belong to different teams:
 
-The system supports:
+- Data Science
+- Software Development
+- AI and Machine Learning
+- Management
 
-Alternative creation
-Alternative description
-Evaluation
-Comparison
-Recommended alternative
-4. Discussion Module
+### 5. User Profiles
 
-Team members can participate in discussions related to a decision.
+User profile information is stored separately and can be used to manage additional user details.
 
-Users can:
+### 6. JWT Authentication
 
-Add comments
-View discussions
-Share opinions
-Respond to decision-related information
+The backend uses JWT-based authentication to protect APIs and ensure that only authenticated users can access protected resources.
 
-This helps maintain the reasoning and communication behind a decision.
+---
 
-5. Document Upload
+# 📊 Milestone 2 – Decision Management
 
-Supporting documents can be associated with decisions.
+Milestone 2 extends the platform with decision management and collaboration functionality.
+
+## Features
+
+### 1. Decision Creation
+
+Users can create a new decision by providing important information such as:
+
+- Decision title
+- Problem statement
+- Description
+- Priority
+- Status
+- Owner
+- Assigned person
+- Stakeholders
+- Recommended alternative
+
+### 2. Problem Statement
+
+Each decision contains a clear description of the problem that needs to be solved.
+
+This helps users understand why the decision was required.
+
+### 3. Alternative Analysis
+
+Users can create and compare multiple alternatives for a decision.
+
+Each alternative can contain:
+
+- Alternative name
+- Description
+- Advantages
+- Disadvantages
+- Cost
+- Risk
+- Evaluation
+- Recommendation
+
+This helps decision makers select the most suitable option.
+
+### 4. Decision Evaluation
+
+Different alternatives can be evaluated using relevant criteria.
+
+This allows users to compare available options before selecting the final recommendation.
+
+### 5. Risk Management
+
+Important risks related to a decision can be recorded and monitored.
 
 Examples include:
 
-Reports
-Research documents
-PDFs
-Supporting evidence
-Reference documents
-6. Decision Profiles
+- Technical risk
+- Financial risk
+- Operational risk
+- Implementation risk
 
-Decision-related profile information can be maintained and managed through the platform.
+### 6. Stakeholder Management
 
-7. Decision Tracking
+Important people involved in the decision can be recorded.
 
-Important decision information can be tracked throughout its lifecycle.
+Stakeholders can include:
 
-Examples:
+- Decision owner
+- Team members
+- Managers
+- Reviewers
+- Other responsible users
 
-Draft
-Under Review
-Approved
-Implemented
-Completed
-8. Decision Review
+### 7. Discussion Module
 
-Decisions can be reviewed by authorized users to improve transparency and accountability.
+Users can discuss decisions using comments and discussions.
 
-9. Decision Replay
+The discussion section helps team members:
 
-The platform is designed to preserve the information behind a decision so that users can later understand:
+- Ask questions
+- Share opinions
+- Provide suggestions
+- Clarify information
+- Collaborate on decisions
 
-What was decided → Why it was decided → What alternatives were considered → What happened after implementation
+### 8. Decision Approval
 
-🏗️ System Architecture
-                 ┌─────────────────────────┐
-                 │       React Frontend    │
-                 │                         │
-                 │  Login / Register       │
-                 │  Dashboard              │
-                 │  Decisions              │
-                 │  Alternatives           │
-                 │  Discussions            │
-                 │  Documents              │
-                 └────────────┬────────────┘
-                              │
-                              │ REST API
-                              ▼
-                 ┌─────────────────────────┐
-                 │      FastAPI Backend    │
-                 │                         │
-                 │ Authentication          │
-                 │ Users                    │
-                 │ Roles                    │
-                 │ Teams                    │
-                 │ Decisions                │
-                 │ Alternatives             │
-                 │ Discussions              │
-                 │ Documents                │
-                 └────────────┬────────────┘
-                              │
-                              ▼
-                 ┌─────────────────────────┐
-                 │     PostgreSQL Database │
-                 │                         │
-                 │ Users                    │
-                 │ Roles                    │
-                 │ Teams                    │
-                 │ Decisions                │
-                 │ Alternatives             │
-                 │ Discussions              │
-                 │ Documents                │
-                 └─────────────────────────┘
+Important decisions can go through a review and approval process.
+
+Reviewers and managers can evaluate the decision before it is finalized.
+
+### 9. Document Upload
+
+Users can upload documents related to decisions.
+
+Examples include:
+
+- Reports
+- PDFs
+- Supporting documents
+- Analysis files
+- Reference materials
+
+Documents provide additional evidence for the decision.
+
+### 10. Decision Tracking
+
+Users can track the progress of decisions after they are created.
+
+The system can maintain information such as:
+
+- Current status
+- Assigned person
+- Priority
+- Progress
+- Important updates
+
+### 11. Decision Outcomes
+
+After implementation, the result of the decision can be recorded.
+
+This helps organizations understand whether the decision achieved its expected result.
+
+### 12. Decision Replay
+
+The platform allows users to review the complete decision history.
+
+Users can understand:
+
+- What problem existed
+- What alternatives were considered
+- Why an option was selected
+- Who participated
+- What discussions happened
+- What risks were identified
+- What the final outcome was
+
+This helps organizations learn from previous decisions.
+
+---
+
+# 🏗️ System Architecture
+
+The application follows a three-layer architecture:
+
+```text
+React Frontend
+       ↓
+FastAPI REST API
+       ↓
+PostgreSQL Database
+
+Frontend
+
+The frontend provides the user interface for:
+
+Login
+Registration
+Dashboard
+Decision creation
+Decision viewing
+Alternative analysis
+Discussions
+Document management
+Decision tracking
+Backend
+
+The backend provides REST APIs for:
+
+Authentication
+Users
+Roles
+Teams
+Decisions
+Alternatives
+Discussions
+Documents
+Profiles
+Database
+
+PostgreSQL is used for persistent storage of application data.
+
 🛠️ Technology Stack
 Frontend
 React
@@ -188,19 +273,19 @@ Development Tools
 Visual Studio Code
 Git
 GitHub
-npm
-Python Virtual Environment
+Postman
 📁 Project Structure
 Expert-Decision-Replay-Platform/
 │
 ├── backend/
+│   │
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── auth.py
-│   │   ├── database.py
 │   │   ├── main.py
+│   │   ├── database.py
 │   │   ├── models.py
 │   │   ├── schemas.py
+│   │   ├── auth.py
 │   │   │
 │   │   └── routes/
 │   │       ├── __init__.py
@@ -208,125 +293,111 @@ Expert-Decision-Replay-Platform/
 │   │       ├── users.py
 │   │       ├── roles.py
 │   │       ├── teams.py
-│   │       ├── profiles.py
 │   │       ├── decisions.py
 │   │       ├── alternatives.py
 │   │       ├── discussion.py
-│   │       └── documents.py
+│   │       ├── documents.py
+│   │       └── profiles.py
 │   │
 │   └── requirements.txt
 │
-├── database/
-│   ├── schema.sql
-│   ├── milestone2_alternative_analysis.sql
-│   ├── milestone2_discussion_module.sql
-│   └── milestone2_document_uploads.sql
-│
 ├── frontend/
-│   ├── public/
+│   │
 │   ├── src/
 │   │   ├── assets/
 │   │   ├── App.jsx
 │   │   ├── App.css
-│   │   ├── index.css
 │   │   ├── main.jsx
-│   │   └── translations.js
+│   │   └── index.css
 │   │
-│   ├── index.html
 │   ├── package.json
-│   ├── package-lock.json
-│   └── vite.config.js
+│   └── package-lock.json
+│
+├── database/
+│   ├── database-design/
+│   ├── milestone2_alternative_analysis.sql
+│   ├── milestone2_discussion_module.sql
+│   └── milestone2_document_uploads.sql
 │
 ├── uploads/
 │
-└── .gitignore
+├── database-schema.sql
+├── .gitignore
+└── README.md
 🗄️ Database
 
-The project uses PostgreSQL for storing application data.
+The project uses PostgreSQL as the primary database.
 
-The database contains tables for:
+The database contains tables for managing:
 
 Users
 Roles
 Teams
-User Profiles
+User profiles
 Decisions
-Decision Alternatives
+Decision versions
+Decision steps
+Alternatives
+Evidence
+Feedback
+Reviews
+Outcomes
+Tags
 Discussions
 Documents
-Decision Evidence
-Decision Reviews
-Decision Outcomes
-Decision Versions
-Decision Tags
-Decision Feedback
-Decision Steps
 ⚙️ Installation & Setup
 1. Clone the Repository
-git clone -b Sameeksha https://github.com/springboardmentor873-a11y/Expert-Decision-Replay-Platform.git
+git clone https://github.com/springboardmentor873-a11y/Expert-Decision-Replay-Platform.git
 cd Expert-Decision-Replay-Platform
-🐍 Backend Setup
-2. Create a Virtual Environment
 
-From the project root:
+Switch to the project branch if required:
+
+git checkout Sameeksha
+🐍 Backend Setup
+
+Open PowerShell or Command Prompt and go to the backend folder:
 
 cd backend
 
-Create the virtual environment:
+Create a virtual environment:
 
 python -m venv venv
 
-Activate it:
+Activate the virtual environment.
 
+Windows PowerShell
 .\venv\Scripts\Activate.ps1
+Windows Command Prompt
+venv\Scripts\activate
 
-If PowerShell blocks activation, you can use:
+Install the required packages:
 
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-Then activate again:
-
-.\venv\Scripts\Activate.ps1
-3. Install Backend Dependencies
 pip install -r requirements.txt
-🗄️ PostgreSQL Configuration
-
-Create a PostgreSQL database:
-
-expert_decision_replay
-
-Then execute the SQL schema:
-
-database/schema.sql
-
-The Milestone 2 SQL files can also be executed as required:
-
-database/milestone2_alternative_analysis.sql
-database/milestone2_discussion_module.sql
-database/milestone2_document_uploads.sql
 🔐 Environment Variables
 
-Create a .env file locally.
+Create a .env file inside the backend folder.
 
 Example:
 
 DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/expert_decision_replay
 SECRET_KEY=your_secret_key
 
-Replace:
+Replace YOUR_PASSWORD with your PostgreSQL password.
 
-YOUR_PASSWORD
+Do not upload the .env file to GitHub.
 
-with your PostgreSQL password.
+The .gitignore file is configured to ignore environment files.
 
-Important
+🐘 PostgreSQL Setup
 
-The .env file contains sensitive configuration and should not be uploaded to GitHub.
+Create the database:
 
-The project .gitignore already contains:
+CREATE DATABASE expert_decision_replay;
 
-.env
-*.env
+Then execute the required SQL schema files.
+
+Make sure PostgreSQL is running before starting the backend.
+
 ▶️ Run the Backend
 
 From the backend directory:
@@ -337,14 +408,14 @@ The backend will normally run at:
 
 http://127.0.0.1:8000
 
-FastAPI documentation:
+FastAPI API documentation is available at:
 
 http://127.0.0.1:8000/docs
 ⚛️ Frontend Setup
 
-Open another PowerShell terminal.
+Open another terminal.
 
-From the project root:
+Go to the frontend directory:
 
 cd frontend
 
@@ -356,34 +427,187 @@ Start the React development server:
 
 npm run dev
 
-The frontend will normally run at:
+The frontend will normally be available at:
 
 http://localhost:5173
 🔄 Application Flow
-Register
-   ↓
-Login
-   ↓
+User
+ ↓
+Login / Registration
+ ↓
 Authentication
-   ↓
+ ↓
 Dashboard
-   ↓
+ ↓
 Create / View Decision
-   ↓
+ ↓
 Problem Statement
-   ↓
-Add Alternatives
-   ↓
-Evaluate Alternatives
-   ↓
+ ↓
+Alternative Analysis
+ ↓
 Discussion
-   ↓
-Upload Supporting Documents
-   ↓
+ ↓
 Review / Approval
-   ↓
+ ↓
 Implementation
-   ↓
-Track Outcome
-   ↓
+ ↓
+Outcome
+ ↓
 Decision Replay
+👥 User Roles
+Employee
+
+Employees can:
+
+Create decisions
+Participate in discussions
+View relevant decisions
+Provide information and feedback
+Reviewer
+
+Reviewers can:
+
+Review decisions
+Evaluate alternatives
+Provide feedback
+Participate in discussions
+Manager
+
+Managers can:
+
+Review important decisions
+Approve decisions
+Monitor implementation
+Review outcomes
+Administrator
+
+Administrators can:
+
+Manage users
+Manage roles
+Manage teams
+Maintain the platform
+🔒 Security
+
+The platform includes security features such as:
+
+JWT authentication
+Password hashing
+Protected API endpoints
+Role-based access
+Environment variables for sensitive configuration
+Database authentication
+CORS configuration
+
+Sensitive credentials should never be committed to GitHub.
+
+🧪 Testing
+
+The backend APIs can be tested using:
+
+FastAPI Swagger UI
+Postman
+Browser API requests
+
+Swagger documentation:
+
+http://127.0.0.1:8000/docs
+
+Important API areas include:
+
+Authentication
+Users
+Roles
+Teams
+Decisions
+Alternatives
+Discussions
+Documents
+Profiles
+📌 Milestone Summary
+Milestone 1
+
+Focus: User and Access Management
+
+Completed functionality:
+
+User registration
+User login
+JWT authentication
+Role management
+Team management
+User profiles
+Protected APIs
+Milestone 2
+
+Focus: Decision Management and Collaboration
+
+Completed functionality:
+
+Decision creation
+Problem statement
+Alternative analysis
+Evaluation
+Risk information
+Stakeholders
+Discussion
+Documents
+Review and approval
+Decision tracking
+Outcomes
+Decision replay
+🌟 Key Benefits
+
+The platform helps organizations:
+
+Make decisions systematically
+Keep decision information in one place
+Compare alternatives
+Improve team collaboration
+Maintain decision history
+Track implementation
+Learn from previous decisions
+Improve future decision-making
+🔮 Future Enhancements
+
+Possible future improvements include:
+
+Advanced analytics dashboard
+AI-based decision recommendations
+Automated risk analysis
+Decision quality scoring
+Advanced search
+Notifications
+Email integration
+Multilingual support
+Mobile application
+AI-powered decision replay
+Advanced reporting
+👩‍💻 Project Information
+
+Project: Expert Decision Replay Platform
+
+Type: Decision Intelligence Platform
+
+Frontend: React + Vite
+
+Backend: FastAPI + Python
+
+Database: PostgreSQL
+
+Authentication: JWT
+
+Version Control: Git + GitHub
+
+📄 License
+
+This project is developed for educational and internship purposes.
+
+
+### After pasting
+
+Click **Preview** in GitHub. You should see the README properly formatted with headings, bullet points, code boxes, and the project structure.
+
+Then select:
+
+**Commit directly to the `Sameeksha` branch → Commit changes**.
