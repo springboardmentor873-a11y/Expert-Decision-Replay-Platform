@@ -3,10 +3,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import { Dashboard } from './pages/Dashboard';
-import { AdminUsers } from './pages/AdminUsers';
+import { LoginPage as Login } from './pages/LoginPage';
+import { RegisterPage as Register } from './pages/RegisterPage';
+import { DashboardPage as Dashboard } from './pages/DashboardPage';
+import { DecisionsPage } from './pages/DecisionsPage';
+import { DecisionDetailPage } from './pages/DecisionDetailPage';
+import { TeamsPage } from './pages/TeamsPage';
+import { AdminUsersPage as AdminUsers } from './pages/AdminUsersPage';
 import { Unauthorized } from './pages/Unauthorized';
 
 function App() {
@@ -28,6 +31,32 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Milestone 2 Routes */}
+              <Route
+                path="/decisions"
+                element={
+                  <ProtectedRoute>
+                    <DecisionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/decisions/:id"
+                element={
+                  <ProtectedRoute>
+                    <DecisionDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teams"
+                element={
+                  <ProtectedRoute>
+                    <TeamsPage />
                   </ProtectedRoute>
                 }
               />

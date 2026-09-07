@@ -59,6 +59,30 @@ export const Navbar = () => {
                   Dashboard
                 </Link>
 
+                <Link
+                  to="/decisions"
+                  className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                    isActive('/decisions') || location.pathname.startsWith('/decisions/')
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <Layers className="h-4 w-4" />
+                  Decisions
+                </Link>
+
+                <Link
+                  to="/teams"
+                  className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                    isActive('/teams')
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <Building2 className="h-4 w-4" />
+                  Teams
+                </Link>
+
                 {user.role === 'ADMINISTRATOR' && (
                   <Link
                     to="/admin/users"

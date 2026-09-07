@@ -7,7 +7,7 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.models import User, Team, RoleEnum
 from app.auth import get_password_hash
-from app.routers import auth, users, teams
+from app.routers import auth, users, teams, decisions, discussions, alternatives, attachments
 
 
 def seed_initial_data(db: Session):
@@ -88,7 +88,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Backend API for the Expert Decision Replay Platform - Milestone 1",
+    description="Backend API for the Expert Decision Replay Platform - Milestone 2",
     lifespan=lifespan
 )
 
@@ -105,6 +105,10 @@ app.add_middleware(
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(users.router, prefix=settings.API_V1_STR)
 app.include_router(teams.router, prefix=settings.API_V1_STR)
+app.include_router(decisions.router, prefix=settings.API_V1_STR)
+app.include_router(discussions.router, prefix=settings.API_V1_STR)
+app.include_router(alternatives.router, prefix=settings.API_V1_STR)
+app.include_router(attachments.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

@@ -73,14 +73,22 @@ def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-        user_id_str: str = payload.get("sub")
-        if user_id_str is None:
+        sub_val = payload.get("sub")
+        user_id_val = payload.get("user_id")
+        if sub_val is None and user_id_val is None:
             raise credentials_exception
-        token_data = TokenPayload(sub=user_id_str, role=payload.get("role"))
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == int(token_data.sub)).first()
+    user = None
+    if user_id_val is not None:
+        user = db.query(User).filter(User.id == int(user_id_val)).first()
+    elif sub_val:
+        if str(sub_val).isdigit():
+            user = db.query(User).filter(User.id == int(sub_val)).first()
+        else:
+            user = db.query(User).filter(User.email == str(sub_val)).first()
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -112,3 +120,14 @@ def require_role(allowed_roles: List[RoleEnum]):
         return current_user
 
     return role_checker
+
+
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency to retrieve active authenticated user."""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive. Please contact your administrator."
+        )
+    return current_user
+
