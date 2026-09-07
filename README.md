@@ -1,6 +1,6 @@
 # 🧠 Expert Decision Replay Platform
 
-> A comprehensive enterprise platform for capturing, managing, reviewing, and replaying expert decision-making processes with automated version history, trade-off analysis, threaded discussions, and file attachments.
+> **Completed Milestone 1 & Milestone 2**: A unified enterprise platform for capturing, managing, reviewing, and replaying expert decision-making processes with role-based authentication, automated version history, trade-off comparison matrices, threaded discussions, and file attachments.
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
@@ -9,154 +9,60 @@
 ![PostgreSQL](https://img.shields.io/badge/Database-SQLite%20%2F%20PostgreSQL-336791?logo=postgresql)
 ![JWT](https://img.shields.io/badge/Auth-JWT%20Tokens-black?logo=jsonwebtokens)
 ![RBAC](https://img.shields.io/badge/Security-RBAC%20Enabled-green)
-![Milestone 2](https://img.shields.io/badge/Milestone%202-Complete-success)
+![Milestone 1 & 2](https://img.shields.io/badge/Milestone%201%20%26%202-Completed-success)
 
 ---
 
-## 🚀 Key Platform Features
+## 🌐 Quick Application & UI Navigation Links
 
-### 🔐 Milestone 1: Authentication & Role-Based Access Control (RBAC)
-- **JWT Bearer Token Authentication**: Secure token-based user authentication.
-- **Granular RBAC System**: Distinct capabilities for **ADMINISTRATOR**, **MANAGER**, **REVIEWER**, and **EMPLOYEE**.
-- **User & Team Management**: Multi-team organizational structures and role assignments.
+When running the application locally, access the interactive user interfaces and backend documentation via the following links:
 
-### 🏛️ Milestone 2: Core Decision Engine, Versioning & Collaboration
-- **Decision Lifecycle Management**: Create, update, and manage decisions across states (*Draft*, *Under Review*, *Approved*, *Rejected*, *Archived*).
-- **Automated Version History Snapshots**: Every modification creates an immutable snapshot version (v1, v2, v3...) tracking author, timestamp, and change summary.
-- **Alternatives Analysis & Side-by-Side Comparison Matrix**: Compare alternative solutions with pros/cons lists, feasibility scores (1-10), estimated costs, and automated metrics (lowest cost, highest feasibility, total cost).
-- **Threaded Discussion Engine**: Hierarchical comment threads supporting **General Comments**, **Meeting Notes**, and **Rationale Tags**.
-- **Document & Attachment Manager**: Upload, store, and download supporting specifications and decision artifacts.
-
----
-
-## 🏛️ System Architecture & Roles
-
-### User Roles (RBAC Matrix)
-- **ADMINISTRATOR**: Full control over user accounts, role reassignments, system configuration, and governance.
-- **MANAGER**: Team oversight, decision creation/approval, alternative analysis, and comment moderation.
-- **REVIEWER**: Technical alternative analysis, feasibility score checks, and rationale reviews.
-- **EMPLOYEE**: Standard member creating decisions, contributing alternatives, and engaging in discussions.
+| Module / Screen | URL Link | Description | Access Rights |
+| :--- | :--- | :--- | :--- |
+| 🔑 **User Sign In** | [`http://localhost:5173/login`](http://localhost:5173/login) | Public login portal with 1-click test fill buttons | All Users / Public |
+| 📝 **User Registration** | [`http://localhost:5173/register`](http://localhost:5173/register) | Account registration with team & role selection | All Users / Public |
+| 📊 **User Dashboard** | [`http://localhost:5173/dashboard`](http://localhost:5173/dashboard) | Central dashboard displaying active decisions & metrics | Authenticated Users |
+| 🧠 **Decisions Directory** | [`http://localhost:5173/decisions`](http://localhost:5173/decisions) | Decision tracker with state & category filtering | Authenticated Users |
+| 🔍 **Decision Detail View** | [`http://localhost:5173/decisions/1`](http://localhost:5173/decisions/1) | Version history, alternatives matrix, discussions & attachments | Authenticated Users |
+| 🏢 **Teams Workspace** | [`http://localhost:5173/teams`](http://localhost:5173/teams) | Organizational team directory and member allocations | Authenticated Users |
+| 🛡️ **User & Role Admin** | [`http://localhost:5173/admin/users`](http://localhost:5173/admin/users) | RBAC management panel & account activation | Administrator Only |
+| 📖 **Swagger API Docs** | [`http://localhost:8000/docs`](http://localhost:8000/docs) | Interactive FastAPI OpenAPI documentation & test runner | All Developers |
+| 📚 **ReDoc API Docs** | [`http://localhost:8000/redoc`](http://localhost:8000/redoc) | Clean formatted API reference documentation | All Developers |
 
 ---
 
-## 📁 Directory Structure
+## 🚀 Completed Milestones Overview
 
 ```text
-Decision-replay-plotform/
-├── backend/
-│   ├── alembic/                  # Database migration scripts
-│   │   └── versions/
-│   │       └── 001_initial_schema.py
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── config.py             # Application settings & JWT configuration
-│   │   ├── database.py           # SQLAlchemy engine & session maker
-│   │   ├── models.py             # User, Team, Decision, Version, Alternative, Comment & Attachment ORM models
-│   │   ├── schemas.py            # Pydantic validation & response schemas
-│   │   ├── auth.py               # Password hashing, JWT utils, RBAC guards
-│   │   ├── routers/
-│   │   │   ├── auth.py           # /auth/register, /auth/login, /auth/me
-│   │   │   ├── users.py          # /users CRUD & role management
-│   │   │   ├── teams.py          # /teams CRUD
-│   │   │   ├── decisions.py      # Decision lifecycle & version snapshots
-│   │   │   ├── alternatives.py   # Alternatives CRUD & comparison matrix
-│   │   │   ├── discussions.py   # Threaded comments & rationale tags
-│   │   │   └── attachments.py   # File upload & download endpoints
-│   │   └── services/             # Business logic layer
-│   │       ├── decision_service.py
-│   │       ├── alternative_service.py
-│   │       ├── discussion_service.py
-│   │       └── file_service.py
-│   ├── tests/
-│   │   ├── conftest.py           # Pytest fixtures & isolated test client setup
-│   │   └── test_milestone2.py   # End-to-end Milestone 2 test suites
-│   ├── uploads/                  # Local storage directory for file attachments
-│   ├── .env.example
-│   ├── alembic.ini
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── api/                  # Axios HTTP clients & service modules
-│   │   ├── components/           # Reusable UI elements (Navbar, Badges, ProtectedRoute)
-│   │   ├── context/              # AuthContext & global state
-│   │   ├── pages/                # Page components
-│   │   │   ├── LoginPage.jsx
-│   │   │   ├── RegisterPage.jsx
-│   │   │   ├── DashboardPage.jsx
-│   │   │   ├── DecisionsPage.jsx
-│   │   │   ├── DecisionDetailPage.jsx
-│   │   │   ├── TeamsPage.jsx
-│   │   │   └── AdminUsersPage.jsx
-│   │   ├── App.jsx               # React Router layout & guarded routes
-│   │   ├── main.jsx
-│   │   └── index.css             # Tailwind CSS styles
-│   ├── index.html
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── vite.config.js
-├── Milestone2_Presentation.html # Interactive HTML presentation deck for Milestone 2
-├── test_output.py               # Terminal verification script
-└── README.md
+===================================================================================================
+                       EXPERT DECISION REPLAY PLATFORM ARCHITECTURE
+===================================================================================================
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ MILESTONE 1: AUTHENTICATION & RBAC GOVERNANCE                                                   │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  • JWT Bearer Authentication (Passlib & PyJWT)                                                  │
+│  • Role-Based Access Control: ADMINISTRATOR, MANAGER, REVIEWER, EMPLOYEE                       │
+│  • User Management, Account Activation, & Multi-Team Organizational Structuring                 │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ MILESTONE 2: CORE DECISION ENGINE, VERSIONING & COLLABORATION                                   │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  • Decision Lifecycle Management (Draft, Under Review, Approved, Rejected, Archived)            │
+│  • Automated Version Snapshotting (v1 -> v2 -> v3 immutable change audit trail)                 │
+│  • Side-by-Side Alternatives Comparison Matrix (Pros/Cons, Feasibility, Cost & Metrics)         │
+│  • Threaded Discussion Engine (General Comments, Meeting Notes, Rationale Tags)                │
+│  • File Attachment & Artifact Management (Upload, Validate, Download)                           │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+===================================================================================================
 ```
-
----
-
-## 🚀 Step-by-Step Setup Instructions
-
-### 1. Backend Setup (FastAPI)
-
-1. Open a terminal and navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a Python virtual environment:
-   - **Windows (PowerShell)**:
-     ```powershell
-     python -m venv venv
-     .\venv\Scripts\Activate.ps1
-     ```
-   - **Linux / macOS**:
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-3. Install backend dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Start the FastAPI development server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-5. Interactive API Documentation:
-   - **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-   - **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
----
-
-### 2. Frontend Setup (React + Vite + Tailwind CSS)
-
-1. Open another terminal and navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install npm dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite dev server:
-   ```bash
-   npm run dev
-   ```
-4. Access the application in your browser:
-   - **Frontend URL**: [http://localhost:5173](http://localhost:5173)
 
 ---
 
 ## 🔑 Pre-Seeded Demo Accounts (Instant 1-Click Testing)
 
-When the backend starts up for the first time, it automatically creates sample teams and four pre-configured test users:
+The database automatically seeds four pre-configured test users covering every role:
 
 | Role | Email | Password | Pre-assigned Team |
 | :--- | :--- | :--- | :--- |
@@ -165,49 +71,78 @@ When the backend starts up for the first time, it automatically creates sample t
 | **Reviewer** | `reviewer@decisionreplay.com` | `Reviewer@123` | Product Strategy & UX |
 | **Employee** | `employee@decisionreplay.com` | `Employee@123` | Platform Architecture & Engineering |
 
+*(The frontend login screen includes 1-click auto-fill buttons for these accounts.)*
+
 ---
 
-## 🛡️ Complete Backend API Endpoints
+## 🚀 Step-by-Step Execution Guide
+
+### 1. Backend Launch (FastAPI Server)
+
+```bash
+cd backend
+python -m venv venv
+# Windows:
+.\venv\Scripts\Activate.ps1
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+### 2. Frontend Launch (React + Vite Client)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open your browser at [`http://localhost:5173`](http://localhost:5173).
+
+---
+
+## 🛡️ Complete API Endpoints (Milestone 1 & 2)
 
 ### 🔐 Authentication (`/api/v1/auth`)
-- `POST /api/v1/auth/register` - Register a new user account
-- `POST /api/v1/auth/login` - Authenticate credentials and receive JWT access token
-- `GET /api/v1/auth/me` - Retrieve current user profile
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - Authenticate and receive JWT access token
+- `GET /api/v1/auth/me` - Get profile of logged-in user
 
-### 👥 Users & Roles (`/api/v1/users`)
-- `GET /api/v1/users` - List all users (*Search, filter by role/team*)
-- `GET /api/v1/users/{id}` - Fetch user details
-- `PUT /api/v1/users/{id}` - Update user profile
-- `PUT /api/v1/users/{id}/role` - Reassign user role (*Admin only*)
-- `PUT /api/v1/users/{id}/status` - Activate / Deactivate user account (*Admin only*)
+### 👥 User & Role Administration (`/api/v1/users`)
+- `GET /api/v1/users` - List all users (*Search & filter*)
+- `GET /api/v1/users/{id}` - Get user details
+- `PUT /api/v1/users/{id}` - Update profile
+- `PUT /api/v1/users/{id}/role` - Assign role (*Admin only*)
+- `PUT /api/v1/users/{id}/status` - Activate / Deactivate account (*Admin only*)
 
 ### 🏢 Teams Management (`/api/v1/teams`)
 - `GET /api/v1/teams` - List organizational teams
-- `POST /api/v1/teams` - Create a team (*Manager / Admin only*)
-- `GET /api/v1/teams/{id}` - Fetch team details
+- `POST /api/v1/teams` - Create team (*Manager / Admin only*)
 
 ### 🧠 Decisions Engine & Versioning (`/api/v1/decisions`)
-- `POST /api/v1/decisions` - Create new decision & auto-initialize Version 1
-- `GET /api/v1/decisions` - List decisions (*Filter by status, category, search*)
-- `GET /api/v1/decisions/{id}` - Comprehensive decision detail view (*Versions, alternatives, comments, attachments*)
-- `PUT /api/v1/decisions/{id}` - Update decision details & auto-generate new version snapshot
-- `GET /api/v1/decisions/{id}/versions` - Get full version snapshot history
+- `POST /api/v1/decisions` - Create decision & initialize Version 1
+- `GET /api/v1/decisions` - List decisions (*Filter by status & category*)
+- `GET /api/v1/decisions/{id}` - Decision detail view with versions, alternatives, comments & attachments
+- `PUT /api/v1/decisions/{id}` - Update decision & auto-create new version snapshot
+- `GET /api/v1/decisions/{id}/versions` - Get version snapshot history
 
-### 📊 Alternatives Analysis (`/api/v1/decisions/{id}/alternatives`)
-- `POST /api/v1/decisions/{id}/alternatives` - Add alternative option & record version update
-- `GET /api/v1/decisions/{id}/alternatives` - List alternatives for a decision
-- `GET /api/v1/decisions/{id}/alternatives/compare` - Get side-by-side comparison matrix with metrics
+### 📊 Alternatives & Comparison Matrix (`/api/v1/decisions/{id}/alternatives`)
+- `POST /api/v1/decisions/{id}/alternatives` - Add alternative option
+- `GET /api/v1/decisions/{id}/alternatives` - List alternatives
+- `GET /api/v1/decisions/{id}/alternatives/compare` - Get comparison matrix & metrics
 - `PUT /api/v1/decisions/{id}/alternatives/{alt_id}` - Update alternative option
 - `DELETE /api/v1/decisions/{id}/alternatives/{alt_id}` - Delete alternative option
 
 ### 💬 Threaded Discussions (`/api/v1/decisions/{id}/comments`)
-- `POST /api/v1/decisions/{id}/comments` - Create comment/reply with type (*general_comment*, *meeting_note*, *rationale*)
-- `GET /api/v1/decisions/{id}/comments` - Get hierarchical comment trees with replies
+- `POST /api/v1/decisions/{id}/comments` - Add comment/reply (*general_comment*, *meeting_note*, *rationale*)
+- `GET /api/v1/decisions/{id}/comments` - Get hierarchical comment tree
 - `DELETE /api/v1/decisions/{id}/comments/{comment_id}` - Delete comment
 
 ### 📎 Document Attachments (`/api/v1/decisions/{id}/attachments`)
-- `POST /api/v1/decisions/{id}/attachments` - Upload supporting document (multipart/form-data)
-- `GET /api/v1/decisions/{id}/attachments` - List attachments for a decision
+- `POST /api/v1/decisions/{id}/attachments` - Upload supporting document
+- `GET /api/v1/decisions/{id}/attachments` - List attachments
 - `GET /api/v1/decisions/{id}/attachments/{att_id}/download` - Download attached file
 
 ---
@@ -215,14 +150,12 @@ When the backend starts up for the first time, it automatically creates sample t
 ## 🧪 Testing & Verification
 
 ### Automated Pytest Suite
-Run the full backend test suite covering decision creation, versioning, comparison matrices, comments, and file uploads:
 ```bash
 $env:PYTHONPATH="backend"
 python -m pytest backend/tests/test_milestone2.py
 ```
 
 ### Verification Script
-Run the interactive terminal verification script to validate live endpoints against a running server:
 ```bash
 python test_output.py
 ```
