@@ -322,6 +322,40 @@ Milestone 1 focuses on establishing the basic authentication and user-management
 
 ---
 
+## 🎯 Milestone 2
+
+Milestone 2 establishes core Decision Management, Alternative Comparison & Trade-off Analysis, Document Management, Discussion Threads with Meeting Notes, Version Tracking, and the Knowledge Repository with an interactive Knowledge Graph and Insights engine.
+
+### Completed
+
+- **Decision Management**:
+  - Full CRUD operations for organizational decisions (`/decisions`, `/decisions/{id}`)
+  - Lifecycle state machine: `Draft`, `Under Review`, `Approved`, `Rejected`, `Archived`
+  - Multi-attribute tracking: Problem statement, Objective, Context, Category, Priority, Owner, Team
+  - Multi-step Decision Creation wizard
+- **Alternative Analysis Matrix**:
+  - Structured alternative modeling (`DecisionAlternative`)
+  - Comparative metrics: Pros, Cons, Cost estimate, Feasibility score (1-10), Risk level & Mitigation plan
+  - Solution selection mechanism with formal executive decision rationale recording
+- **Document Management & File Uploads**:
+  - File upload engine with local storage (`uploads/`)
+  - Document categorization, tagging, and direct linking to decisions
+  - Direct file download and in-browser metadata preview modal
+- **Discussion Module & Meeting Minutes**:
+  - Threaded discussions and stakeholder comments
+  - Formal meeting minutes tracker with attendees logging and decision conclusions
+- **Version Tracking & Decision Replay**:
+  - Automatic snapshot generation upon every decision modification (`decision_versions`)
+  - Full audit trail recording changed fields, timestamps, and contributing author
+- **Knowledge Repository & Graph Visualizer**:
+  - High-fidelity interface matching DecisionIntel design
+  - Summary metric cards (Total Documents, Decision Documents, Teams Contributed, Recently Added)
+  - Interactive SVG node-link Knowledge Graph visualizing relationships between Decisions, Alternatives, People, Teams, Documents, and Outcome states
+  - Related Insights engine (Similar decisions, Common factors, Recommended reading)
+  - Popular topics filter pills and real-time recent activity stream
+
+---
+
 ## 🛠️ Technologies Used
 
 ### Frontend

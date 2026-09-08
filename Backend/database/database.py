@@ -11,12 +11,12 @@ try:
     if DATABASE_URL.startswith("sqlite"):
         engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
     else:
-        engine = create_engine(DATABASE_URL)
+        engine = create_engine(DATABASE_URL, connect_args={"connect_timeout": 2})
         # Test connection
         with engine.connect() as conn:
             pass
 except Exception as e:
-    print(f"PostgreSQL connection error ({e}). Falling back to local SQLite database.")
+    print(f"PostgreSQL connection note: {e}. Using local SQLite database.")
     DATABASE_URL = "sqlite:///./expert_decision_replay.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 

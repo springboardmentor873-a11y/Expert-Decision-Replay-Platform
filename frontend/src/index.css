@@ -1,3 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bg-main: #f8fafc;
+  --bg-sidebar: #0f172a;
+  --bg-sidebar-hover: #1e293b;
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --primary-blue: #2563eb;
+  --primary-blue-hover: #1d4ed8;
+  --primary-blue-light: #eff6ff;
+  --accent-cyan: #06b6d4;
+  --accent-purple: #8b5cf6;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -5,137 +27,63 @@
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f4f6fb;
+  font-family: var(--font-sans);
+  background-color: var(--bg-main);
+  color: var(--text-main);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Main login container */
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Login card */
-.login-card {
-  width: 100%;
-  max-width: 480px;
-  background: white;
-  padding: 45px 40px;
-  border-radius: 20px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Heading */
-.login-card h1 {
-  text-align: center;
-  font-size: 32px;
-  margin-bottom: 35px;
-  color: #1f2937;
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
 }
 
-/* Form */
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-/* Each input section */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* Smooth transitions */
+button, input, select, textarea {
+  font-family: inherit;
 }
 
-/* Labels */
-.form-group label {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-/* Inputs */
-.form-group input {
-  width: 100%;
-  padding: 14px 16px;
-  font-size: 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  outline: none;
-  transition: 0.2s;
-}
-
-.form-group input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
-}
-
-/* Login button */
-.login-button {
-  width: 100%;
-  padding: 15px;
-  margin-top: 5px;
-
-  border: none;
-  border-radius: 10px;
-
-  background: #4f46e5;
-  color: white;
-
-  font-size: 17px;
-  font-weight: 600;
-
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.login-button:hover {
-  background: #4338ca;
-}
-
-.login-button:active {
-  transform: scale(0.99);
-}
-
-/* Register text */
-.register-text {
-  text-align: center;
-  margin-top: 25px;
-  color: #6b7280;
-  font-size: 15px;
-}
-
-.register-link {
-  color: #4f46e5;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.register-link:hover {
-  text-decoration: underline;
-}
-
-/* Error message */
-.error-message {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  text-align: center;
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-  .login-card {
-    padding: 35px 25px;
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
-
-  .login-card h1 {
-    font-size: 27px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2.5s infinite;
 }
