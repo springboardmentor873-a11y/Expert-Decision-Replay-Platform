@@ -1,23 +1,137 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --bg-main: #f8fafc;
-  --bg-sidebar: #0f172a;
-  --bg-sidebar-hover: #1e293b;
-  --bg-card: #ffffff;
-  --border-color: #e2e8f0;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-light: #94a3b8;
-  --primary-blue: #2563eb;
-  --primary-blue-hover: #1d4ed8;
-  --primary-blue-light: #eff6ff;
-  --accent-cyan: #06b6d4;
-  --accent-purple: #8b5cf6;
-  --accent-green: #10b981;
-  --accent-amber: #f59e0b;
-  --accent-red: #ef4444;
+  /* ==========================================================================
+     MATERIAL YOU (MATERIAL DESIGN 3) DESIGN TOKENS
+     Canonical Purple / Violet Seed Palette (#6750A4)
+     ========================================================================== */
+
+  /* Typography */
+  --font-sans: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --md-sys-typescale-font-family: var(--font-sans);
+
+  /* Primary Palette (Violet / Purple Seed #6750A4) */
+  --primary: #6750A4;
+  --primary-hover: #563F91;
+  --primary-active: #47337A;
+  --primary-container: #EADDFF;
+  --primary-subtle: #EADDFF;
+  --on-primary: #FFFFFF;
+  --on-primary-container: #21005D;
+  --primary-glow: rgba(103, 80, 164, 0.28);
+
+  /* Secondary Palette (Slate Violet / Lavender) */
+  --secondary: #625B71;
+  --secondary-container: #E8DEF8;
+  --on-secondary: #FFFFFF;
+  --on-secondary-container: #1D192B;
+
+  /* Tertiary Palette (Mauve / Dusty Rose) */
+  --tertiary: #7D5260;
+  --tertiary-container: #FFD8E4;
+  --on-tertiary: #FFFFFF;
+  --on-tertiary-container: #31111D;
+
+  /* Surface & Tonal Containers (Warm Off-Whites, NEVER Stark White) */
+  --bg-canvas: #FFFBFE;
+  --bg-surface: #FFFBFE;
+  --bg-surface-glass: rgba(255, 251, 254, 0.9);
+  --bg-surface-container-lowest: #FFFFFF;
+  --bg-surface-container-low: #F7F2FA;
+  --bg-surface-container: #F3EDF7;
+  --bg-surface-container-high: #ECE6F0;
+  --bg-surface-container-highest: #E6E0E9;
+  --bg-elevated: #F3EDF7;
+  --bg-elevated-glass: rgba(243, 237, 247, 0.85);
+  --bg-card: #F3EDF7;
+  --bg-hover: rgba(103, 80, 164, 0.08);
+  --bg-active: rgba(103, 80, 164, 0.12);
+
+  /* Text & Foreground */
+  --text-primary: #1C1B1F;
+  --text-main: #1C1B1F;
+  --text-secondary: #49454F;
+  --text-muted: #79747E;
+  --text-light: #79747E;
+  --text-inverse: #FFFFFF;
+
+  /* Borders & Outlines */
+  --border-subtle: #E7E0EC;
+  --border-muted: #CAC4D0;
+  --border-bright: #79747E;
+  --border-focus: #6750A4;
+  --border-glow: rgba(103, 80, 164, 0.35);
+
+  /* Accents & Status */
+  --accent-purple: #6750A4;
+  --accent-purple-light: #EADDFF;
+  --accent-cyan: #0284C7;
+  --accent-cyan-subtle: rgba(2, 132, 199, 0.12);
+  --accent-emerald: #16A34A;
+  --accent-emerald-subtle: rgba(22, 163, 74, 0.12);
+  --accent-amber: #D97706;
+  --accent-amber-subtle: rgba(217, 119, 6, 0.12);
+  --accent-rose: #B3261E;
+  --accent-rose-subtle: #F9DEDC;
+
+  /* Organic Shape Radii (MD3 Specifications) */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 28px;
+  --radius-2xl: 32px;
+  --radius-hero: 48px;
+  --radius-full: 9999px;
+
+  /* Elevation Shadows (Soft & Diffuse) */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(103, 80, 164, 0.14), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 24px -4px rgba(103, 80, 164, 0.18), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 20px 32px -6px rgba(103, 80, 164, 0.22), 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 24px -2px rgba(103, 80, 164, 0.3);
+  --shadow-card: var(--shadow-sm);
+
+  /* Motion: Canonical MD3 Emphasized Decelerate */
+  --md3-easing: cubic-bezier(0.2, 0, 0, 1);
+  --md3-duration-short: 200ms;
+  --md3-duration-normal: 300ms;
+  --md3-duration-long: 450ms;
+  --transition-fast: 200ms var(--md3-easing);
+  --transition-normal: 300ms var(--md3-easing);
+
+  /* Legacy & MD3 Direct Mapping Bridges */
+  --md-sys-color-primary: var(--primary);
+  --md-sys-color-on-primary: var(--on-primary);
+  --md-sys-color-primary-container: var(--primary-container);
+  --md-sys-color-on-primary-container: var(--on-primary-container);
+  --md-sys-color-secondary: var(--secondary);
+  --md-sys-color-secondary-container: var(--secondary-container);
+  --md-sys-color-on-secondary-container: var(--on-secondary-container);
+  --md-sys-color-tertiary: var(--tertiary);
+  --md-sys-color-tertiary-container: var(--tertiary-container);
+  --md-sys-color-on-tertiary-container: var(--on-tertiary-container);
+  --md-sys-color-surface: var(--bg-surface);
+  --md-sys-color-on-surface: var(--text-primary);
+  --md-sys-color-surface-container-low: var(--bg-surface-container-low);
+  --md-sys-color-surface-container: var(--bg-surface-container);
+  --md-sys-color-surface-container-high: var(--bg-surface-container-high);
+  --md-sys-color-surface-container-highest: var(--bg-surface-container-highest);
+  --md-sys-color-on-surface-variant: var(--text-secondary);
+  --md-sys-color-outline: var(--border-bright);
+  --md-sys-color-outline-variant: var(--border-muted);
+  --md-sys-color-error: var(--accent-rose);
+  --md-sys-color-error-container: var(--accent-rose-subtle);
+  --md-sys-color-on-error-container: #410E0B;
+
+  /* Backward Compatibility Tokens */
+  --bg-main: var(--bg-canvas);
+  --bg-sidebar: var(--bg-surface-container-low);
+  --bg-sidebar-hover: var(--bg-surface-container-high);
+  --border-color: var(--border-subtle);
+  --primary-blue: var(--primary);
+  --primary-blue-hover: var(--primary-hover);
+  --primary-blue-light: var(--primary-container);
 }
 
 * {
@@ -28,62 +142,76 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-main);
-  color: var(--text-main);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-/* Custom modern scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Smooth transitions */
+/* Material You Tactile Feedback */
 button, input, select, textarea {
   font-family: inherit;
 }
 
-/* Animations */
-@keyframes fadeIn {
+/* Smooth custom scrollbars in tonal theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface-container-low);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-muted);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-bright);
+}
+
+/* Material You Signature Easing Fade Animation */
+@keyframes md3FadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: md3FadeIn 0.3s var(--md3-easing) forwards;
 }
 
-@keyframes pulseGlow {
+/* Material You Pulse Aura Glow */
+@keyframes md3PulseGlow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
+    box-shadow: 0 0 0 0 rgba(103, 80, 164, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+    box-shadow: 0 0 0 10px rgba(103, 80, 164, 0);
   }
 }
 
 .pulse-glow {
-  animation: pulseGlow 2.5s infinite;
+  animation: md3PulseGlow 3s infinite var(--md3-easing);
+}
+
+/* Accessibility: Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

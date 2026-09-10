@@ -13,11 +13,19 @@ import {
   LogOut,
   ChevronDown,
   Brain,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles,
+  ArrowRight,
+  TrendingUp,
+  CheckCircle2,
+  Activity,
+  Check,
 } from "lucide-react";
 import KnowledgeRepository from "./components/KnowledgeRepository";
 import DecisionsHub from "./components/DecisionsHub";
 import DiscussionsView from "./components/DiscussionsView";
+import MD3Button from "./components/md3/MD3Button";
+import MD3Card from "./components/md3/MD3Card";
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -45,25 +53,31 @@ function Dashboard({ user, onLogout }) {
         .slice(0, 2)
         .join("")
         .toUpperCase()
-    : "IP";
+    : "AU";
 
   return (
     <div style={styles.layout}>
-      {/* Left Sidebar */}
+      {/* =========================================================================
+          MATERIAL YOU (MD3) NAVIGATION DRAWER
+          ========================================================================= */}
       <aside style={styles.sidebar}>
         {/* Brand Header */}
         <div style={styles.brand}>
           <div style={styles.brandIconWrap}>
-            <Brain size={26} color="#38bdf8" />
+            <Brain size={22} color="var(--primary)" />
           </div>
-          <div>
-            <div style={styles.brandTitle}>DecisionIntel</div>
-            <div style={styles.brandTagline}>Smarter Decisions Together</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={styles.brandTitle}>DecisionIntel</span>
+              <span style={styles.versionBadge}>MD3</span>
+            </div>
+            <div style={styles.brandTagline}>Expert Decision Platform</div>
           </div>
         </div>
 
-        {/* Navigation Items */}
+        {/* Navigation Items (Full Pill MD3 Chips) */}
         <nav style={styles.nav}>
+          <div style={styles.navSectionLabel}>PLATFORM</div>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.name;
@@ -72,76 +86,136 @@ function Dashboard({ user, onLogout }) {
                 key={item.name}
                 style={{
                   ...styles.navItem,
-                  backgroundColor: isActive ? "#1d4ed8" : "transparent",
-                  color: isActive ? "#ffffff" : "#94a3b8",
+                  backgroundColor: isActive
+                    ? "var(--secondary-container)"
+                    : "transparent",
+                  color: isActive
+                    ? "var(--on-secondary-container)"
+                    : "var(--text-secondary)",
                   fontWeight: isActive ? "600" : "500",
                 }}
                 onClick={() => setActiveNav(item.name)}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "rgba(103, 80, 164, 0.08)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "var(--text-secondary)";
+                  }
+                }}
               >
-                <Icon size={18} color={isActive ? "#ffffff" : "#94a3b8"} />
-                <span>{item.name}</span>
-                {isActive && <div style={styles.activeIndicator} />}
+                <div style={styles.navIconBox}>
+                  <Icon
+                    size={18}
+                    color={isActive ? "var(--primary)" : "var(--text-secondary)"}
+                  />
+                </div>
+                <span style={{ flex: 1 }}>{item.name}</span>
+                {isActive && <div style={styles.activeGlowPip} />}
               </button>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer Milestone Indicator */}
+        {/* Sidebar Footer (Material You Tonal Telemetry Card) */}
         <div style={styles.sidebarFooter}>
-          <div style={styles.milestoneBadge}>
-            <ShieldCheck size={14} color="#38bdf8" />
-            <span>Milestone 2 Active</span>
+          <div style={styles.milestoneCard}>
+            <div style={styles.milestoneBadge}>
+              <div style={styles.statusDotLive} />
+              <span>Cluster Synced</span>
+              <span style={styles.latencyTag}>12ms</span>
+            </div>
+            <p style={styles.milestoneDesc}>
+              Material You runtime & Replay Engine active.
+            </p>
           </div>
-          <p style={styles.milestoneDesc}>
-            Knowledge Graph & Alternative Replay enabled.
-          </p>
         </div>
       </aside>
 
-      {/* Main App Container */}
+      {/* =========================================================================
+          MAIN APPLICATION SHELL
+          ========================================================================= */}
       <div style={styles.mainWrapper}>
-        {/* Top Header Bar */}
+        {/* Top App Bar with Frosted Tonal Glass & Pill Controls */}
         <header style={styles.header}>
-          {/* Global Search */}
+          {/* Material You Pill Search Field */}
           <div style={styles.searchBar}>
-            <Search size={16} color="#94a3b8" />
+            <Search size={17} color="var(--primary)" />
             <input
               type="text"
-              placeholder="Search documents, decisions, topics, people..."
+              placeholder="Search documents, decisions, topics, or audit logs..."
               style={styles.searchInput}
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
             />
+            <div style={styles.shortcutKbd}>
+              <span style={{ fontSize: "10.5px", fontWeight: "600" }}>Ctrl</span>
+              <span style={{ fontSize: "10.5px", fontWeight: "600" }}>K</span>
+            </div>
           </div>
 
           {/* Right Header Actions */}
           <div style={styles.headerRight}>
-            {/* Notification Bell */}
-            <div style={styles.notificationBtn} title="Notifications">
-              <Bell size={18} color="#64748b" />
+            {/* Circular Notification Button */}
+            <button
+              type="button"
+              style={styles.notificationBtn}
+              title="Notifications"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--secondary-container)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--bg-surface-container-high)";
+              }}
+            >
+              <Bell size={18} color="var(--text-secondary)" />
               <div style={styles.notificationDot} />
-            </div>
+            </button>
 
-            {/* User Profile Chip */}
+            {/* User Profile Pill Chip */}
             <div style={styles.profileWrapper}>
               <div
                 style={styles.profileChip}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--secondary-container)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--bg-surface-container-high)";
+                }}
               >
                 <div style={styles.avatarCircle}>{initials}</div>
                 <div style={styles.profileInfo}>
-                  <span style={styles.profileName}>{user?.name || "Ipsita Priyadarshini"}</span>
-                  <span style={styles.profileRole}>{user?.role_name || "Employee"}</span>
+                  <span style={styles.profileName}>
+                    {user?.name || "Admin User"}
+                  </span>
+                  <span style={styles.profileRole}>
+                    {user?.role_name || "Employee"}
+                  </span>
                 </div>
-                <ChevronDown size={14} color="#94a3b8" />
+                <ChevronDown size={15} color="var(--text-secondary)" />
               </div>
 
-              {/* Profile Dropdown */}
+              {/* Profile Dropdown Sheet with MD3 Organic Radius */}
               {showProfileMenu && (
                 <div style={styles.dropdownMenu} className="animate-fade-in">
                   <div style={styles.dropdownHeader}>
-                    <div style={{ fontWeight: "600", color: "#0f172a" }}>{user?.name}</div>
-                    <div style={{ fontSize: "12px", color: "#64748b" }}>{user?.email}</div>
+                    <div style={{ fontWeight: "600", color: "var(--text-primary)" }}>
+                      {user?.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "var(--text-secondary)",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {user?.email}
+                    </div>
                   </div>
                   <button
                     style={styles.dropdownItem}
@@ -149,15 +223,50 @@ function Dashboard({ user, onLogout }) {
                       setActiveNav("Profile");
                       setShowProfileMenu(false);
                     }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor =
+                        "var(--bg-surface-container)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
                   >
-                    <User size={15} />
+                    <User size={16} color="var(--primary)" />
                     <span>My Profile</span>
                   </button>
                   <button
-                    style={{ ...styles.dropdownItem, color: "#dc2626" }}
-                    onClick={onLogout}
+                    style={styles.dropdownItem}
+                    onClick={() => {
+                      setActiveNav("Settings");
+                      setShowProfileMenu(false);
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor =
+                        "var(--bg-surface-container)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
                   >
-                    <LogOut size={15} />
+                    <Settings size={16} color="var(--primary)" />
+                    <span>Settings & Config</span>
+                  </button>
+                  <div style={styles.dropdownDivider} />
+                  <button
+                    style={{
+                      ...styles.dropdownItem,
+                      color: "var(--accent-rose)",
+                    }}
+                    onClick={onLogout}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor =
+                        "var(--accent-rose-subtle)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
+                  >
+                    <LogOut size={16} />
                     <span>Sign Out</span>
                   </button>
                 </div>
@@ -187,100 +296,206 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
+          {/* =====================================================================
+              DASHBOARD OVERVIEW HOME (MATERIAL YOU TONAL HERO & CARDS)
+              ===================================================================== */}
           {activeNav === "Dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+              {/* Material You 36px Hero Banner */}
               <div style={styles.overviewBanner}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "22px" }}>
                   <div style={styles.avatarLarge}>{initials}</div>
                   <div>
-                    <h1 style={{ margin: "0 0 4px 0", fontSize: "24px", color: "#0f172a" }}>
+                    <div style={styles.bannerBadge}>
+                      <Sparkles size={13} color="var(--primary)" />
+                      <span>DECISION INTELLIGENCE PLATFORM</span>
+                    </div>
+                    <h1 style={styles.bannerTitle}>
                       Welcome back, {user?.name || "User"}!
                     </h1>
-                    <p style={{ margin: 0, color: "#64748b", fontSize: "14px" }}>
-                      Expert Decision Intelligence Platform &bull; Organization Workspace
+                    <p style={styles.bannerSubtitle}>
+                      Capture organizational memory, replay strategic alternatives, and explore the knowledge graph.
                     </p>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button
-                    style={styles.actionBtnPrimary}
+
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  <MD3Button
+                    variant="filled"
+                    size="md"
                     onClick={() => setActiveNav("Knowledge Repository")}
+                    icon={<BookOpen size={17} />}
                   >
-                    <BookOpen size={16} />
-                    <span>Knowledge Repository</span>
-                  </button>
-                  <button
-                    style={styles.actionBtnSecondary}
+                    Knowledge Hub
+                  </MD3Button>
+                  <MD3Button
+                    variant="tonal"
+                    size="md"
                     onClick={() => setActiveNav("My Decisions")}
+                    icon={<GitPullRequest size={17} />}
                   >
-                    <GitPullRequest size={16} />
-                    <span>My Decisions</span>
-                  </button>
+                    My Decisions
+                  </MD3Button>
                 </div>
               </div>
 
-              {/* Quick links & summary */}
+              {/* Material You Feature Cards Grid (24px Organic Cards) */}
               <div style={styles.dashboardGrid}>
-                <div style={styles.dashCard}>
+                <div
+                  style={styles.dashCard}
+                  onClick={() => setActiveNav("My Decisions")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                  }}
+                >
+                  <div style={styles.cardIconWrapIndigo}>
+                    <GitPullRequest size={22} color="var(--primary)" />
+                  </div>
                   <h3 style={styles.dashCardTitle}>Decision Replay Engine</h3>
                   <p style={styles.dashCardText}>
-                    Capture organizational decisions, evaluate competing alternatives, and retain complete audit history.
+                    Capture organizational decisions, evaluate competing alternatives, and retain comprehensive audit trails.
                   </p>
-                  <button
-                    style={styles.cardLinkBtn}
-                    onClick={() => setActiveNav("My Decisions")}
-                  >
-                    Open Decision Manager &rarr;
-                  </button>
+                  <div style={styles.cardActionLinkIndigo}>
+                    <span>Open Decision Manager</span>
+                    <ArrowRight size={15} />
+                  </div>
                 </div>
 
-                <div style={styles.dashCard}>
-                  <h3 style={styles.dashCardTitle}>Knowledge Graph Visualizer</h3>
+                <div
+                  style={styles.dashCard}
+                  onClick={() => setActiveNav("Knowledge Repository")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                  }}
+                >
+                  <div style={styles.cardIconWrapCyan}>
+                    <BookOpen size={22} color="var(--secondary)" />
+                  </div>
+                  <h3 style={styles.dashCardTitle}>Knowledge Graph Engine</h3>
                   <p style={styles.dashCardText}>
-                    Explore node-link graphs connecting teams, documents, decisions, and outcomes across past projects.
+                    Traverse relationships linking teams, documents, decisions, and outcomes across historical projects.
                   </p>
-                  <button
-                    style={styles.cardLinkBtn}
-                    onClick={() => setActiveNav("Knowledge Repository")}
-                  >
-                    View Knowledge Graph &rarr;
-                  </button>
+                  <div style={styles.cardActionLinkCyan}>
+                    <span>Explore Knowledge Graph</span>
+                    <ArrowRight size={15} />
+                  </div>
                 </div>
 
-                <div style={styles.dashCard}>
-                  <h3 style={styles.dashCardTitle}>Collaboration & Meeting Notes</h3>
+                <div
+                  style={styles.dashCard}
+                  onClick={() => setActiveNav("Discussions")}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                  }}
+                >
+                  <div style={styles.cardIconWrapEmerald}>
+                    <MessageSquare size={22} color="var(--tertiary)" />
+                  </div>
+                  <h3 style={styles.dashCardTitle}>Collaboration & Rationale</h3>
                   <p style={styles.dashCardText}>
-                    Threaded discussions, stakeholder review logs, and executive rationale documentation.
+                    Review stakeholder meetings, recorded consensus arguments, and executive decision rationale.
                   </p>
-                  <button
-                    style={styles.cardLinkBtn}
-                    onClick={() => setActiveNav("Discussions")}
-                  >
-                    Open Discussions &rarr;
-                  </button>
+                  <div style={styles.cardActionLinkEmerald}>
+                    <span>View Discussions</span>
+                    <ArrowRight size={15} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Platform Vital Stats (Tonal Metric Cards) */}
+              <div style={{ marginTop: "6px" }}>
+                <h3 style={styles.sectionHeader}>Platform Vital Stats</h3>
+                <div style={styles.statsGrid}>
+                  <div style={styles.statBox}>
+                    <div style={styles.statTopRow}>
+                      <span style={styles.statLabel}>Consensus Rate</span>
+                      <div style={styles.statIconBadgeEmerald}>
+                        <CheckCircle2 size={16} color="var(--accent-emerald)" />
+                      </div>
+                    </div>
+                    <div style={styles.statNum}>92.4%</div>
+                    <div style={styles.statSub}>
+                      <span style={styles.trendUp}>+4.2%</span> cross-functional alignment
+                    </div>
+                  </div>
+
+                  <div style={styles.statBox}>
+                    <div style={styles.statTopRow}>
+                      <span style={styles.statLabel}>Avg. Turnaround</span>
+                      <div style={styles.statIconBadgeIndigo}>
+                        <TrendingUp size={16} color="var(--primary)" />
+                      </div>
+                    </div>
+                    <div style={styles.statNum}>3.4 Days</div>
+                    <div style={styles.statSub}>
+                      <span style={styles.trendUp}>-1.2d</span> fast approval velocity
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
+          {/* =====================================================================
+              TEAMS VIEW (MATERIAL YOU)
+              ===================================================================== */}
           {activeNav === "Teams" && (
-            <div style={styles.dashCard}>
-              <h2 style={{ margin: "0 0 8px 0" }}>Enterprise Teams & Departments</h2>
-              <p style={{ color: "#64748b", fontSize: "14px", margin: "0 0 20px 0" }}>
-                Active organizational units contributing to expert decisions.
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+            <div style={styles.subviewCard}>
+              <div style={{ marginBottom: "24px" }}>
+                <h2 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
+                  Enterprise Teams & Working Groups
+                </h2>
+                <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: 0 }}>
+                  Active organizational departments contributing to expert knowledge bases.
+                </p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
                 {[
-                  { name: "AI Team", lead: "Rahul Mehta", count: 8, decisions: 14 },
-                  { name: "Architecture", lead: "Sarah Khan", count: 12, decisions: 26 },
-                  { name: "Cloud Infrastructure", lead: "Vikram Singh", count: 15, decisions: 32 },
-                  { name: "Security & Compliance", lead: "John Doe", count: 7, decisions: 19 },
+                  { name: "AI Team", lead: "Employee User", count: 8, decisions: 14, tag: "Machine Learning" },
+                  { name: "Architecture", lead: "Admin User", count: 12, decisions: 26, tag: "System Design" },
+                  { name: "Cloud Infrastructure", lead: "Employee User", count: 15, decisions: 32, tag: "DevOps & SRE" },
+                  { name: "Security & Compliance", lead: "Admin User", count: 7, decisions: 19, tag: "InfoSec" },
                 ].map((t, idx) => (
-                  <div key={idx} style={{ padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}>
-                    <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", color: "#0f172a" }}>{t.name}</h3>
-                    <div style={{ fontSize: "13px", color: "#64748b" }}>Team Lead: {t.lead}</div>
-                    <div style={{ fontSize: "12px", color: "#2563eb", marginTop: "8px", fontWeight: "600" }}>
-                      {t.decisions} Decisions Captured &bull; {t.count} Members
+                  <div
+                    key={idx}
+                    style={styles.teamCard}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-3px)";
+                      e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "none";
+                      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                      <span style={styles.teamTagPill}>{t.tag}</span>
+                      <Users size={18} color="var(--primary)" />
+                    </div>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: "17px", fontWeight: "600", color: "var(--text-primary)" }}>
+                      {t.name}
+                    </h3>
+                    <div style={{ fontSize: "13.5px", color: "var(--text-secondary)" }}>
+                      Lead: <strong style={{ color: "var(--text-primary)" }}>{t.lead}</strong>
+                    </div>
+                    <div style={{ fontSize: "12.5px", color: "var(--primary)", marginTop: "14px", fontWeight: "600" }}>
+                      {t.decisions} Decisions Documented &bull; {t.count} Members
                     </div>
                   </div>
                 ))}
@@ -288,26 +503,34 @@ function Dashboard({ user, onLogout }) {
             </div>
           )}
 
+          {/* =====================================================================
+              ANALYTICS VIEW (MATERIAL YOU)
+              ===================================================================== */}
           {activeNav === "Analytics" && (
-            <div style={styles.dashCard}>
-              <h2 style={{ margin: "0 0 8px 0" }}>Decision Analytics & Velocity</h2>
-              <p style={{ color: "#64748b", fontSize: "14px", margin: "0 0 20px 0" }}>
-                Key performance metrics across decision approval turnaround and stakeholder participation.
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-                <div style={styles.statBox}>
+            <div style={styles.subviewCard}>
+              <div style={{ marginBottom: "24px" }}>
+                <h2 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
+                  Decision Analytics & Performance
+                </h2>
+                <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: 0 }}>
+                  Key governance indicators across approval velocity, alternatives consideration, and compliance.
+                </p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "18px" }}>
+                <div style={styles.analyticsBox}>
                   <div style={styles.statNum}>3.4 days</div>
-                  <div style={styles.statSub}>Avg. Approval Turnaround</div>
+                  <div style={styles.statSub}>Avg. Turnaround Time</div>
                 </div>
-                <div style={styles.statBox}>
+                <div style={styles.analyticsBox}>
                   <div style={styles.statNum}>92.4%</div>
                   <div style={styles.statSub}>Consensus Rate</div>
                 </div>
-                <div style={styles.statBox}>
+                <div style={styles.analyticsBox}>
                   <div style={styles.statNum}>100%</div>
-                  <div style={styles.statSub}>Audit Log Integrity</div>
+                  <div style={styles.statSub}>Audit Traceability</div>
                 </div>
-                <div style={styles.statBox}>
+                <div style={styles.analyticsBox}>
                   <div style={styles.statNum}>2.8</div>
                   <div style={styles.statSub}>Avg. Alternatives per Decision</div>
                 </div>
@@ -315,55 +538,82 @@ function Dashboard({ user, onLogout }) {
             </div>
           )}
 
+          {/* =====================================================================
+              PROFILE VIEW (MATERIAL YOU)
+              ===================================================================== */}
           {activeNav === "Profile" && (
-            <div style={{ ...styles.dashCard, maxWidth: "600px" }}>
-              <h2 style={{ margin: "0 0 16px 0" }}>User Profile & Role</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+            <div style={{ ...styles.subviewCard, maxWidth: "660px" }}>
+              <h2 style={{ margin: "0 0 22px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
+                User Profile & Account
+              </h2>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "18px", marginBottom: "26px" }}>
                 <div style={styles.avatarLarge}>{initials}</div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>{user?.name}</h3>
-                  <div style={{ fontSize: "13px", color: "#64748b" }}>{user?.email}</div>
+                  <h3 style={{ margin: "0 0 4px 0", fontSize: "19px", fontWeight: "600", color: "var(--text-primary)" }}>
+                    {user?.name}
+                  </h3>
+                  <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    {user?.email}
+                  </div>
                   <span style={styles.userRoleBadge}>{user?.role_name || "Employee"}</span>
                 </div>
               </div>
+
               <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Account ID:</span>
+                <span style={styles.profileLabel}>User ID:</span>
                 <span style={styles.profileValue}>#{user?.id}</span>
               </div>
               <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Assigned Team:</span>
+                <span style={styles.profileLabel}>Department Team:</span>
                 <span style={styles.profileValue}>{user?.team_name || "AI Team"}</span>
               </div>
               <div style={styles.profileRow}>
                 <span style={styles.profileLabel}>Role Level:</span>
-                <span style={styles.profileValue}>{user?.role_name} (ID: {user?.role_id})</span>
+                <span style={styles.profileValue}>{user?.role_name} (Role ID: {user?.role_id})</span>
               </div>
-              <div style={{ marginTop: "24px" }}>
-                <button style={styles.logoutBtn} onClick={onLogout}>
-                  <LogOut size={16} />
-                  <span>Sign Out</span>
-                </button>
+
+              <div style={{ marginTop: "28px" }}>
+                <MD3Button
+                  variant="outlined"
+                  size="md"
+                  onClick={onLogout}
+                  icon={<LogOut size={16} />}
+                  style={{ color: "var(--accent-rose)", borderColor: "var(--accent-rose-subtle)" }}
+                >
+                  Sign Out
+                </MD3Button>
               </div>
             </div>
           )}
 
+          {/* =====================================================================
+              SETTINGS VIEW (MATERIAL YOU)
+              ===================================================================== */}
           {activeNav === "Settings" && (
-            <div style={{ ...styles.dashCard, maxWidth: "600px" }}>
-              <h2 style={{ margin: "0 0 8px 0" }}>Platform Settings</h2>
-              <p style={{ color: "#64748b", fontSize: "14px", margin: "0 0 20px 0" }}>
-                System configuration, API endpoints, and knowledge graph preferences.
+            <div style={{ ...styles.subviewCard, maxWidth: "660px" }}>
+              <h2 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
+                System Configuration
+              </h2>
+              <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: "0 0 24px 0" }}>
+                Active backend services, design tokens, and runtime environments.
               </p>
+
               <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>FastAPI Backend:</span>
+                <span style={styles.profileLabel}>FastAPI REST Endpoint:</span>
                 <span style={styles.profileValue}>{API_BASE}</span>
               </div>
               <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Milestone Version:</span>
-                <span style={styles.profileValue}>Milestone 2 (Week 3-4 Complete)</span>
+                <span style={styles.profileLabel}>Active Design System:</span>
+                <span style={styles.profileValue}>Material You (MD3 Purple Seed #6750A4)</span>
               </div>
               <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Local Storage Engine:</span>
-                <span style={styles.profileValue}>Local Disk (uploads/)</span>
+                <span style={styles.profileLabel}>Platform Milestone:</span>
+                <span style={styles.profileValue}>Milestone 2 (Alternative Replay Active)</span>
+              </div>
+              <div style={styles.profileRow}>
+                <span style={styles.profileLabel}>Storage Engine:</span>
+                <span style={styles.profileValue}>SQLite Database & Local Disk</span>
               </div>
             </div>
           )}
@@ -377,149 +627,211 @@ const styles = {
   layout: {
     display: "flex",
     minHeight: "100vh",
-    backgroundColor: "#f8fafc",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    backgroundColor: "var(--bg-canvas)",
+    color: "var(--text-primary)",
+    fontFamily: "var(--font-sans)",
   },
   sidebar: {
-    width: "240px",
-    backgroundColor: "#0f172a",
-    color: "#f8fafc",
+    width: "270px",
+    backgroundColor: "var(--bg-surface-container-low)",
+    borderRight: "1px solid var(--border-subtle)",
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
-    borderRight: "1px solid #1e293b",
+    boxSizing: "border-box",
   },
   brand: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    padding: "20px 20px",
-    borderBottom: "1px solid #1e293b",
+    padding: "24px 20px",
+    borderBottom: "1px solid var(--border-subtle)",
   },
   brandIconWrap: {
-    width: "40px",
-    height: "40px",
-    borderRadius: "10px",
-    backgroundColor: "rgba(56, 189, 248, 0.1)",
+    width: "42px",
+    height: "42px",
+    borderRadius: "14px",
+    backgroundColor: "var(--primary-container)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    boxShadow: "var(--shadow-sm)",
   },
   brandTitle: {
     fontSize: "17px",
     fontWeight: "700",
-    color: "#ffffff",
-    letterSpacing: "-0.3px",
+    color: "var(--text-primary)",
+    letterSpacing: "-0.2px",
+  },
+  versionBadge: {
+    fontSize: "11px",
+    fontWeight: "600",
+    padding: "2px 8px",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--secondary-container)",
+    color: "var(--on-secondary-container)",
   },
   brandTagline: {
-    fontSize: "11px",
-    color: "#94a3b8",
-    marginTop: "1px",
+    fontSize: "12px",
+    color: "var(--text-secondary)",
+    marginTop: "2px",
   },
   nav: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
-    padding: "16px 12px",
+    gap: "6px",
+    padding: "20px 14px",
     flex: 1,
+  },
+  navSectionLabel: {
+    fontSize: "11px",
+    fontWeight: "700",
+    letterSpacing: "0.6px",
+    color: "var(--text-muted)",
+    padding: "0 16px 8px 16px",
   },
   navItem: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "11px 14px",
+    gap: "14px",
+    padding: "11px 18px",
     border: "none",
-    borderRadius: "8px",
-    fontSize: "13.5px",
+    borderRadius: "var(--radius-full)",
+    fontSize: "14px",
     cursor: "pointer",
-    position: "relative",
-    transition: "all 0.15s ease",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
     textAlign: "left",
     width: "100%",
+    outline: "none",
+    boxSizing: "border-box",
+    fontFamily: "var(--font-sans)",
   },
-  activeIndicator: {
-    position: "absolute",
-    right: "0",
-    width: "3px",
-    height: "18px",
-    backgroundColor: "#38bdf8",
-    borderRadius: "2px 0 0 2px",
+  navIconBox: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "22px",
+    height: "22px",
+  },
+  activeGlowPip: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    backgroundColor: "var(--primary)",
   },
   sidebarFooter: {
-    padding: "16px",
-    borderTop: "1px solid #1e293b",
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    padding: "18px 14px",
+    borderTop: "1px solid var(--border-subtle)",
+  },
+  milestoneCard: {
+    padding: "14px 16px",
+    borderRadius: "var(--radius-md)",
+    backgroundColor: "var(--bg-surface-container)",
+    border: "1px solid var(--border-subtle)",
   },
   milestoneBadge: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "8px",
     fontSize: "12px",
-    fontWeight: "700",
-    color: "#38bdf8",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     marginBottom: "4px",
   },
-  milestoneDesc: {
+  statusDotLive: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    backgroundColor: "var(--accent-emerald)",
+  },
+  latencyTag: {
+    marginLeft: "auto",
     fontSize: "11px",
-    color: "#64748b",
+    color: "var(--primary)",
+    fontWeight: "600",
+  },
+  milestoneDesc: {
+    fontSize: "11.5px",
+    color: "var(--text-secondary)",
     margin: 0,
-    lineHeight: 1.3,
+    lineHeight: 1.4,
   },
   mainWrapper: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     overflowX: "hidden",
+    backgroundColor: "var(--bg-canvas)",
   },
   header: {
-    height: "64px",
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
+    height: "70px",
+    backgroundColor: "var(--bg-surface-glass)",
+    backdropFilter: "blur(16px)",
+    borderBottom: "1px solid var(--border-subtle)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 32px",
+    padding: "0 36px",
     position: "sticky",
     top: 0,
     zIndex: 100,
+    boxSizing: "border-box",
   },
   searchBar: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: "20px",
-    padding: "8px 16px",
+    backgroundColor: "var(--bg-surface-container-high)",
+    borderRadius: "var(--radius-full)",
+    padding: "9px 18px",
     width: "420px",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
   },
   searchInput: {
     border: "none",
     outline: "none",
     background: "transparent",
-    fontSize: "13px",
+    fontSize: "14px",
     width: "100%",
-    color: "#0f172a",
+    color: "var(--text-primary)",
+    fontFamily: "var(--font-sans)",
+  },
+  shortcutKbd: {
+    display: "flex",
+    gap: "3px",
+    padding: "2px 7px",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--bg-surface)",
+    color: "var(--text-muted)",
+    boxShadow: "var(--shadow-sm)",
   },
   headerRight: {
     display: "flex",
     alignItems: "center",
-    gap: "20px",
+    gap: "16px",
   },
   notificationBtn: {
     position: "relative",
     cursor: "pointer",
-    padding: "6px",
-    borderRadius: "8px",
+    width: "42px",
+    height: "42px",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--bg-surface-container-high)",
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
+    outline: "none",
   },
   notificationDot: {
     position: "absolute",
-    top: "5px",
-    right: "6px",
-    width: "7px",
-    height: "7px",
+    top: "10px",
+    right: "10px",
+    width: "8px",
+    height: "8px",
     borderRadius: "50%",
-    backgroundColor: "#ef4444",
+    backgroundColor: "var(--accent-rose)",
   },
   profileWrapper: {
     position: "relative",
@@ -527,22 +839,24 @@ const styles = {
   profileChip: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "12px",
     cursor: "pointer",
-    padding: "4px 8px",
-    borderRadius: "8px",
-    transition: "background 0.15s ease",
+    padding: "6px 14px 6px 6px",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--bg-surface-container-high)",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
+    userSelect: "none",
   },
   avatarCircle: {
-    width: "36px",
-    height: "36px",
+    width: "32px",
+    height: "32px",
     borderRadius: "50%",
-    backgroundColor: "#1e3a8a",
-    color: "#ffffff",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: "13px",
   },
   profileInfo: {
@@ -552,182 +866,309 @@ const styles = {
   profileName: {
     fontSize: "13.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
   },
   profileRole: {
-    fontSize: "11px",
-    color: "#64748b",
+    fontSize: "11.5px",
+    color: "var(--text-muted)",
   },
   dropdownMenu: {
     position: "absolute",
     right: 0,
     top: "48px",
-    width: "200px",
-    backgroundColor: "#ffffff",
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-    padding: "6px",
+    width: "230px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    boxShadow: "var(--shadow-lg)",
+    padding: "8px",
     zIndex: 1000,
+    border: "1px solid var(--border-subtle)",
   },
   dropdownHeader: {
-    padding: "10px 12px",
-    borderBottom: "1px solid #f1f5f9",
-    marginBottom: "4px",
+    padding: "12px 14px",
+  },
+  dropdownDivider: {
+    height: "1px",
+    backgroundColor: "var(--border-subtle)",
+    margin: "6px 0",
   },
   dropdownItem: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "12px",
     width: "100%",
-    padding: "8px 12px",
+    padding: "10px 14px",
     border: "none",
     background: "none",
-    fontSize: "13px",
-    color: "#334155",
+    fontSize: "13.5px",
+    color: "var(--text-primary)",
     cursor: "pointer",
-    borderRadius: "6px",
+    borderRadius: "var(--radius-full)",
     textAlign: "left",
+    transition: "background-color var(--md3-duration-short) var(--md3-easing)",
+    fontFamily: "var(--font-sans)",
   },
   contentArea: {
-    padding: "28px 32px 60px 32px",
+    padding: "36px 40px 60px 40px",
     flex: 1,
+    boxSizing: "border-box",
   },
   overviewBanner: {
-    backgroundColor: "#ffffff",
-    padding: "24px",
-    borderRadius: "14px",
-    border: "1px solid #e2e8f0",
+    padding: "32px 36px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: "16px",
+    gap: "24px",
+    borderRadius: "var(--radius-2xl)",
+    backgroundColor: "var(--bg-surface-container)",
+    boxShadow: "var(--shadow-sm)",
   },
   avatarLarge: {
-    width: "56px",
-    height: "56px",
-    borderRadius: "50%",
-    backgroundColor: "#1e3a8a",
-    color: "#ffffff",
+    width: "60px",
+    height: "60px",
+    borderRadius: "20px",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "700",
-    fontSize: "20px",
+    fontSize: "22px",
+    boxShadow: "var(--shadow-sm)",
   },
-  actionBtnPrimary: {
-    display: "flex",
+  bannerBadge: {
+    display: "inline-flex",
     alignItems: "center",
     gap: "6px",
-    padding: "10px 18px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "8px",
-    fontWeight: "600",
-    fontSize: "13px",
-    cursor: "pointer",
+    fontSize: "11.5px",
+    fontWeight: "700",
+    letterSpacing: "0.5px",
+    color: "var(--primary)",
+    backgroundColor: "var(--primary-container)",
+    padding: "3px 12px",
+    borderRadius: "var(--radius-full)",
+    marginBottom: "8px",
   },
-  actionBtnSecondary: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "10px 18px",
-    backgroundColor: "#eff6ff",
-    color: "#2563eb",
-    border: "1px solid #bfdbfe",
-    borderRadius: "8px",
+  bannerTitle: {
+    margin: "0 0 4px 0",
+    fontSize: "26px",
     fontWeight: "600",
-    fontSize: "13px",
-    cursor: "pointer",
+    color: "var(--text-primary)",
+    letterSpacing: "-0.3px",
+  },
+  bannerSubtitle: {
+    margin: 0,
+    color: "var(--text-secondary)",
+    fontSize: "14px",
+    lineHeight: 1.5,
   },
   dashboardGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "20px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
+    gap: "22px",
   },
   dashCard: {
-    backgroundColor: "#ffffff",
-    padding: "24px",
-    borderRadius: "14px",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+    padding: "26px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    boxShadow: "var(--shadow-card)",
+    display: "flex",
+    flexDirection: "column",
+    cursor: "pointer",
+    transition: "all var(--md3-duration-normal) var(--md3-easing)",
+    border: "1px solid var(--border-subtle)",
+  },
+  cardIconWrapIndigo: {
+    width: "46px",
+    height: "46px",
+    borderRadius: "16px",
+    backgroundColor: "var(--primary-container)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "18px",
+  },
+  cardIconWrapCyan: {
+    width: "46px",
+    height: "46px",
+    borderRadius: "16px",
+    backgroundColor: "var(--secondary-container)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "18px",
+  },
+  cardIconWrapEmerald: {
+    width: "46px",
+    height: "46px",
+    borderRadius: "16px",
+    backgroundColor: "var(--tertiary-container)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "18px",
   },
   dashCardTitle: {
-    margin: "0 0 6px 0",
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#0f172a",
+    margin: "0 0 8px 0",
+    fontSize: "17.5px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
   },
   dashCardText: {
-    fontSize: "13px",
-    color: "#64748b",
+    fontSize: "13.5px",
+    color: "var(--text-secondary)",
     lineHeight: 1.5,
+    margin: "0 0 20px 0",
+    flex: 1,
+  },
+  cardActionLinkIndigo: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    color: "var(--primary)",
+    fontWeight: "600",
+    fontSize: "13.5px",
+  },
+  cardActionLinkCyan: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    color: "var(--secondary)",
+    fontWeight: "600",
+    fontSize: "13.5px",
+  },
+  cardActionLinkEmerald: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    color: "var(--tertiary)",
+    fontWeight: "600",
+    fontSize: "13.5px",
+  },
+  sectionHeader: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: "0 0 16px 0",
   },
-  cardLinkBtn: {
-    background: "none",
-    border: "none",
-    color: "#2563eb",
-    fontWeight: "600",
-    fontSize: "13px",
-    cursor: "pointer",
-    padding: 0,
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+    gap: "18px",
   },
   statBox: {
-    padding: "16px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    textAlign: "center",
+    padding: "22px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-card)",
+  },
+  statTopRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
+  },
+  statLabel: {
+    fontSize: "13px",
+    fontWeight: "500",
+    color: "var(--text-secondary)",
+  },
+  statIconBadgeEmerald: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "rgba(22, 163, 74, 0.12)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statIconBadgeIndigo: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "var(--primary-container)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statIconBadgeCyan: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "var(--secondary-container)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   statNum: {
-    fontSize: "24px",
+    fontSize: "28px",
     fontWeight: "700",
-    color: "#2563eb",
+    color: "var(--text-primary)",
+    letterSpacing: "-0.5px",
   },
   statSub: {
-    fontSize: "12px",
-    color: "#64748b",
+    fontSize: "12.5px",
+    color: "var(--text-muted)",
     marginTop: "4px",
+  },
+  trendUp: {
+    color: "var(--accent-emerald)",
+    fontWeight: "600",
+  },
+  subviewCard: {
+    padding: "32px",
+    borderRadius: "var(--radius-2xl)",
+    backgroundColor: "var(--bg-surface)",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-card)",
+  },
+  teamCard: {
+    padding: "22px",
+    borderRadius: "var(--radius-md)",
+    backgroundColor: "var(--bg-surface-container)",
+    border: "1px solid var(--border-subtle)",
+    transition: "all var(--md3-duration-normal) var(--md3-easing)",
+  },
+  teamTagPill: {
+    fontSize: "11.5px",
+    fontWeight: "600",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
+    padding: "3px 10px",
+    borderRadius: "var(--radius-full)",
+  },
+  analyticsBox: {
+    padding: "24px",
+    backgroundColor: "var(--bg-surface-container)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    textAlign: "center",
   },
   userRoleBadge: {
     display: "inline-block",
-    padding: "2px 8px",
-    backgroundColor: "#eff6ff",
-    color: "#2563eb",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "700",
-    marginTop: "4px",
+    padding: "4px 12px",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
+    borderRadius: "var(--radius-full)",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    marginTop: "8px",
   },
   profileRow: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "12px 0",
-    borderBottom: "1px solid #f1f5f9",
+    padding: "16px 0",
+    borderBottom: "1px solid var(--border-subtle)",
     fontSize: "14px",
   },
   profileLabel: {
-    color: "#64748b",
+    color: "var(--text-secondary)",
   },
   profileValue: {
     fontWeight: "600",
-    color: "#0f172a",
-  },
-  logoutBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "8px 16px",
-    backgroundColor: "#fee2e2",
-    color: "#dc2626",
-    border: "none",
-    borderRadius: "8px",
-    fontWeight: "600",
-    fontSize: "13px",
-    cursor: "pointer",
+    color: "var(--text-primary)",
   },
 };
 

@@ -117,7 +117,7 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
                   y1={node.y}
                   x2={centerNode.x}
                   y2={centerNode.y}
-                  stroke={isHighlighted ? "#2563eb" : "#cbd5e1"}
+                  stroke={isHighlighted ? "#6366F1" : "rgba(255, 255, 255, 0.12)"}
                   strokeWidth={isHighlighted ? 2.5 : 1.5}
                   strokeDasharray={node.type === "influence" || node.type === "topic" ? "4 3" : "none"}
                   style={{ transition: "stroke 0.2s, stroke-width 0.2s" }}
@@ -129,8 +129,8 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
                   width="52"
                   height="16"
                   rx="8"
-                  fill="#ffffff"
-                  stroke="#e2e8f0"
+                  fill="#1E293B"
+                  stroke="rgba(255, 255, 255, 0.15)"
                   strokeWidth="1"
                 />
                 <text
@@ -138,7 +138,7 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
                   y={midY + 3.5}
                   textAnchor="middle"
                   fontSize="8"
-                  fill="#64748b"
+                  fill="#94A3B8"
                   fontWeight="500"
                   style={{ pointerEvents: "none" }}
                 >
@@ -212,7 +212,7 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
                   textAnchor="middle"
                   fontSize="9.5"
                   fontWeight="600"
-                  fill="#1e293b"
+                  fill="var(--text-primary)"
                   style={{ pointerEvents: "none" }}
                 >
                   {node.label.split("\n")[0]}
@@ -223,7 +223,7 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
                     textAnchor="middle"
                     fontSize="9"
                     fontWeight="500"
-                    fill="#64748b"
+                    fill="var(--text-secondary)"
                     style={{ pointerEvents: "none" }}
                   >
                     {node.label.split("\n")[1]}
@@ -247,11 +247,12 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
               y="-32"
               width="76"
               height="64"
-              rx="12"
-              fill="#2563eb"
-              filter="url(#centerGlow)"
+              rx="16"
+              fill="var(--primary)"
+              stroke="var(--border-subtle)"
+              strokeWidth="1"
             />
-            {/* White document icon icon */}
+            {/* White document icon */}
             <g transform="translate(-10, -22)" color="#ffffff">
               <FileText size={20} color="#ffffff" />
             </g>
@@ -289,45 +290,46 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
 
 const styles = {
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: "14px",
-    border: "1px solid #e2e8f0",
-    padding: "18px",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "20px",
+    boxShadow: "var(--shadow-card)",
     position: "relative",
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: "8px",
+    marginBottom: "10px",
   },
   title: {
-    fontSize: "15px",
-    fontWeight: "700",
-    color: "#0f172a",
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: 0,
   },
   subtitle: {
-    fontSize: "12px",
-    color: "#64748b",
+    fontSize: "12.5px",
+    color: "var(--text-secondary)",
     margin: "3px 0 0 0",
     lineHeight: 1.4,
   },
   controls: {
     display: "flex",
-    gap: "4px",
+    gap: "6px",
   },
   ctrlBtn: {
-    background: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    padding: "5px",
-    color: "#64748b",
+    background: "var(--bg-surface-container-high)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
+    padding: "6px",
+    color: "var(--text-secondary)",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
   },
   graphContainer: {
     width: "100%",
@@ -342,22 +344,24 @@ const styles = {
     position: "absolute",
     bottom: "12px",
     left: "18px",
-    backgroundColor: "#0f172a",
-    color: "#ffffff",
-    padding: "4px 10px",
-    borderRadius: "6px",
-    fontSize: "11px",
+    backgroundColor: "var(--bg-surface)",
+    color: "var(--text-primary)",
+    padding: "6px 12px",
+    borderRadius: "var(--radius-md)",
+    fontSize: "12px",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+    gap: "8px",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-md)",
     pointerEvents: "none",
   },
   tooltipBadge: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    padding: "2px 6px",
-    borderRadius: "4px",
-    fontSize: "10px",
+    backgroundColor: "var(--secondary-container)",
+    color: "var(--on-secondary-container)",
+    padding: "2px 8px",
+    borderRadius: "var(--radius-full)",
+    fontSize: "10.5px",
     textTransform: "uppercase",
     fontWeight: "600",
   },

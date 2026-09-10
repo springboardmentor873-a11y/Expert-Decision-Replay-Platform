@@ -326,9 +326,10 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
                 key={st}
                 style={{
                   ...styles.statusBtn,
-                  backgroundColor: isActive ? "#2563eb" : "#ffffff",
-                  color: isActive ? "#ffffff" : "#475569",
-                  borderColor: isActive ? "#2563eb" : "#e2e8f0",
+                  backgroundColor: isActive ? "var(--primary)" : "var(--bg-surface-container)",
+                  color: isActive ? "var(--on-primary)" : "var(--text-secondary)",
+                  borderColor: isActive ? "var(--primary)" : "var(--border-subtle)",
+                  boxShadow: isActive ? "0 2px 8px rgba(103, 80, 164, 0.28)" : "none",
                 }}
                 onClick={() => setStatusFilter(st)}
               >
@@ -369,9 +370,9 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
       <div style={styles.decisionsList}>
         {filteredDecisions.length === 0 ? (
           <div style={styles.emptyCard}>
-            <FileText size={48} color="#cbd5e1" />
-            <h3 style={{ margin: "12px 0 4px 0", color: "#334155" }}>No Decisions Found</h3>
-            <p style={{ color: "#64748b", fontSize: "13px" }}>
+            <FileText size={48} color="var(--primary)" style={{ opacity: 0.5 }} />
+            <h3 style={{ margin: "12px 0 4px 0", color: "var(--text-primary)" }}>No Decisions Found</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
               Try adjusting your filters or create a new decision record.
             </p>
           </div>
@@ -526,8 +527,8 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               <button
                 style={{
                   ...styles.detailTabBtn,
-                  borderBottom: activeDetailTab === "overview" ? "2px solid #2563eb" : "none",
-                  color: activeDetailTab === "overview" ? "#2563eb" : "#64748b",
+                  borderBottom: activeDetailTab === "overview" ? "3px solid var(--primary)" : "none",
+                  color: activeDetailTab === "overview" ? "var(--primary)" : "var(--text-secondary)",
                   fontWeight: activeDetailTab === "overview" ? "600" : "500",
                 }}
                 onClick={() => setActiveDetailTab("overview")}
@@ -537,8 +538,8 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               <button
                 style={{
                   ...styles.detailTabBtn,
-                  borderBottom: activeDetailTab === "alternatives" ? "2px solid #2563eb" : "none",
-                  color: activeDetailTab === "alternatives" ? "#2563eb" : "#64748b",
+                  borderBottom: activeDetailTab === "alternatives" ? "3px solid var(--primary)" : "none",
+                  color: activeDetailTab === "alternatives" ? "var(--primary)" : "var(--text-secondary)",
                   fontWeight: activeDetailTab === "alternatives" ? "600" : "500",
                 }}
                 onClick={() => setActiveDetailTab("alternatives")}
@@ -548,8 +549,8 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               <button
                 style={{
                   ...styles.detailTabBtn,
-                  borderBottom: activeDetailTab === "discussion" ? "2px solid #2563eb" : "none",
-                  color: activeDetailTab === "discussion" ? "#2563eb" : "#64748b",
+                  borderBottom: activeDetailTab === "discussion" ? "3px solid var(--primary)" : "none",
+                  color: activeDetailTab === "discussion" ? "var(--primary)" : "var(--text-secondary)",
                   fontWeight: activeDetailTab === "discussion" ? "600" : "500",
                 }}
                 onClick={() => setActiveDetailTab("discussion")}
@@ -559,8 +560,8 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               <button
                 style={{
                   ...styles.detailTabBtn,
-                  borderBottom: activeDetailTab === "versions" ? "2px solid #2563eb" : "none",
-                  color: activeDetailTab === "versions" ? "#2563eb" : "#64748b",
+                  borderBottom: activeDetailTab === "versions" ? "3px solid var(--primary)" : "none",
+                  color: activeDetailTab === "versions" ? "var(--primary)" : "var(--text-secondary)",
                   fontWeight: activeDetailTab === "versions" ? "600" : "500",
                 }}
                 onClick={() => setActiveDetailTab("versions")}
@@ -570,8 +571,8 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               <button
                 style={{
                   ...styles.detailTabBtn,
-                  borderBottom: activeDetailTab === "documents" ? "2px solid #2563eb" : "none",
-                  color: activeDetailTab === "documents" ? "#2563eb" : "#64748b",
+                  borderBottom: activeDetailTab === "documents" ? "3px solid var(--primary)" : "none",
+                  color: activeDetailTab === "documents" ? "var(--primary)" : "var(--text-secondary)",
                   fontWeight: activeDetailTab === "documents" ? "600" : "500",
                 }}
                 onClick={() => setActiveDetailTab("documents")}
@@ -606,10 +607,10 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
 
                   {selectedDecision.decision_rationale && (
                     <div style={styles.rationaleCard}>
-                      <h4 style={{ ...styles.sectionHeader, color: "#1e40af", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <h4 style={{ ...styles.sectionHeader, color: "var(--on-primary-container)", display: "flex", alignItems: "center", gap: "6px" }}>
                         <CheckCircle size={16} /> Official Decision Rationale
                       </h4>
-                      <p style={{ ...styles.paragraph, color: "#1e3a8a" }}>
+                      <p style={{ ...styles.paragraph, color: "var(--on-primary-container)" }}>
                         {selectedDecision.decision_rationale}
                       </p>
                     </div>
@@ -652,7 +653,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               {activeDetailTab === "discussion" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h4 style={{ margin: 0, fontSize: "15px", color: "#0f172a" }}>Stakeholder Discussion & Minutes</h4>
+                    <h4 style={{ margin: 0, fontSize: "15px", color: "var(--text-primary)" }}>Stakeholder Discussion & Minutes</h4>
                     <button
                       style={styles.toggleMeetingBtn}
                       onClick={() => setIsAddingMeetingNote(!isAddingMeetingNote)}
@@ -665,7 +666,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
                   {/* Form for Meeting Note */}
                   {isAddingMeetingNote && (
                     <form onSubmit={handlePostMeetingNote} style={styles.meetingForm} className="animate-fade-in">
-                      <h5 style={{ margin: "0 0 8px 0", color: "#0f172a" }}>Record Formal Meeting Note</h5>
+                      <h5 style={{ margin: "0 0 8px 0", color: "var(--text-primary)" }}>Record Formal Meeting Note</h5>
                       <div>
                         <label style={styles.inputLabel}>Attendees (e.g. Sarah Khan, Vikram Singh)</label>
                         <input
@@ -755,7 +756,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               {/* 4. Versions Timeline */}
               {activeDetailTab === "versions" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <h4 style={{ margin: 0, fontSize: "15px", color: "#0f172a" }}>Audit History & Decision Replay</h4>
+                  <h4 style={{ margin: 0, fontSize: "15px", color: "var(--text-primary)" }}>Audit History & Decision Replay</h4>
                   <div style={styles.timeline}>
                     {selectedDecision.versions?.map((v, i) => (
                       <div key={v.id || i} style={styles.timelineItem}>
@@ -781,19 +782,19 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               {/* 5. Supporting Documents */}
               {activeDetailTab === "documents" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                  <h4 style={{ margin: 0, fontSize: "15px", color: "#0f172a" }}>Attached Technical Files</h4>
+                  <h4 style={{ margin: 0, fontSize: "15px", color: "var(--text-primary)" }}>Attached Technical Files</h4>
                   {selectedDecision.documents?.length === 0 ? (
-                    <p style={{ color: "#94a3b8", fontSize: "13px" }}>No documents linked to this decision.</p>
+                    <p style={{ color: "var(--text-secondary)", fontSize: "13px" }}>No documents linked to this decision.</p>
                   ) : (
                     selectedDecision.documents?.map((doc) => (
                       <div key={doc.id} style={styles.docItemRow}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <FileText size={20} color="#2563eb" />
+                          <FileText size={20} color="var(--primary)" />
                           <div>
-                            <div style={{ fontWeight: "600", fontSize: "14px", color: "#0f172a" }}>
+                            <div style={{ fontWeight: "600", fontSize: "14px", color: "var(--text-primary)" }}>
                               {doc.title}
                             </div>
-                            <div style={{ fontSize: "12px", color: "#64748b" }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                               {doc.category} &bull; Uploaded by {doc.uploader_name}
                             </div>
                           </div>
@@ -1034,7 +1035,7 @@ const styles = {
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "22px",
     maxWidth: "1400px",
     margin: "0 auto",
   },
@@ -1048,95 +1049,104 @@ const styles = {
   title: {
     fontSize: "24px",
     fontWeight: "700",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     margin: 0,
-    letterSpacing: "-0.5px",
+    letterSpacing: "-0.4px",
   },
   subtitle: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     margin: "4px 0 0 0",
+    lineHeight: "1.5",
   },
   createBtn: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "8px",
     padding: "10px 20px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "var(--radius-full)",
     fontWeight: "600",
-    fontSize: "14px",
+    fontSize: "13.5px",
     cursor: "pointer",
-    boxShadow: "0 1px 3px rgba(37, 99, 235, 0.3)",
+    boxShadow: "0 2px 8px rgba(103, 80, 164, 0.28)",
+    transition: "all 0.18s cubic-bezier(0.2, 0, 0, 1)",
   },
   toolbar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: "12px",
-    backgroundColor: "#ffffff",
-    padding: "12px 16px",
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
+    gap: "14px",
+    backgroundColor: "var(--bg-surface)",
+    padding: "14px 20px",
+    borderRadius: "var(--radius-xl)",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-card)",
   },
   statusPills: {
     display: "flex",
-    gap: "6px",
+    gap: "8px",
     flexWrap: "wrap",
   },
   statusBtn: {
-    padding: "6px 12px",
-    borderRadius: "6px",
-    border: "1px solid",
-    fontSize: "12px",
+    padding: "8px 16px",
+    borderRadius: "var(--radius-full)",
+    border: "1px solid var(--border-subtle)",
+    fontSize: "12.5px",
     fontWeight: "600",
     cursor: "pointer",
+    transition: "all 0.18s cubic-bezier(0.2, 0, 0, 1)",
+    fontFamily: "var(--font-sans)",
   },
   searchBox: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "6px 12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    backgroundColor: "#f8fafc",
-    width: "220px",
+    gap: "10px",
+    padding: "8px 16px",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--bg-surface-container)",
+    width: "240px",
   },
   searchInput: {
     border: "none",
     outline: "none",
     background: "transparent",
-    fontSize: "13px",
+    fontSize: "13.5px",
     width: "100%",
+    color: "var(--text-primary)",
+    fontFamily: "var(--font-sans)",
   },
   select: {
-    padding: "6px 12px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
+    padding: "8px 16px",
+    borderRadius: "var(--radius-full)",
+    border: "1px solid var(--border-subtle)",
     fontSize: "13px",
-    color: "#334155",
-    backgroundColor: "#ffffff",
+    color: "var(--text-primary)",
+    backgroundColor: "var(--bg-surface-container)",
     outline: "none",
+    cursor: "pointer",
+    fontFamily: "var(--font-sans)",
   },
   decisionsList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "14px",
   },
   decisionCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    border: "1px solid #e2e8f0",
-    padding: "20px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "22px 24px",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "12px",
     cursor: "pointer",
-    transition: "all 0.15s ease",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+    transition: "all 0.18s cubic-bezier(0.2, 0, 0, 1)",
+    boxShadow: "var(--shadow-card)",
   },
   cardTop: {
     display: "flex",
@@ -1144,62 +1154,63 @@ const styles = {
     alignItems: "center",
   },
   statusBadge: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
-    gap: "4px",
-    padding: "3px 8px",
-    borderRadius: "4px",
+    gap: "5px",
+    padding: "3px 10px",
+    borderRadius: "var(--radius-full)",
     border: "1px solid",
-    fontSize: "11px",
-    fontWeight: "700",
+    fontSize: "11.5px",
+    fontWeight: "600",
   },
   categoryBadge: {
-    padding: "3px 8px",
-    backgroundColor: "#f1f5f9",
-    color: "#475569",
-    borderRadius: "4px",
-    fontSize: "11px",
+    padding: "3px 10px",
+    backgroundColor: "var(--secondary-container)",
+    color: "var(--on-secondary-container)",
+    borderRadius: "var(--radius-full)",
+    fontSize: "11.5px",
     fontWeight: "600",
   },
   versionBadge: {
-    padding: "3px 7px",
-    backgroundColor: "#eff6ff",
-    color: "#2563eb",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "700",
+    padding: "3px 9px",
+    backgroundColor: "var(--tertiary-container)",
+    color: "var(--on-tertiary-container)",
+    borderRadius: "var(--radius-full)",
+    fontSize: "11.5px",
+    fontWeight: "600",
   },
   priorityBadge: {
-    fontSize: "11px",
-    fontWeight: "600",
-    color: "#64748b",
+    fontSize: "12px",
+    fontWeight: "500",
+    color: "var(--text-muted)",
   },
   decisionTitle: {
-    fontSize: "16px",
-    fontWeight: "700",
-    color: "#0f172a",
+    fontSize: "17px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: 0,
+    letterSpacing: "-0.2px",
   },
   decisionProblem: {
-    fontSize: "13px",
-    color: "#475569",
-    lineHeight: 1.5,
+    fontSize: "13.5px",
+    color: "var(--text-secondary)",
+    lineHeight: 1.55,
     margin: 0,
   },
   rationaleSnippet: {
-    fontSize: "12px",
-    color: "#1e40af",
-    backgroundColor: "#eff6ff",
-    padding: "8px 12px",
-    borderRadius: "6px",
-    borderLeft: "3px solid #2563eb",
+    fontSize: "12.5px",
+    color: "var(--on-primary-container)",
+    backgroundColor: "var(--primary-container)",
+    padding: "10px 14px",
+    borderRadius: "var(--radius-md)",
+    borderLeft: "3px solid var(--primary)",
   },
   cardBottom: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    borderTop: "1px solid #f1f5f9",
-    paddingTop: "12px",
+    borderTop: "1px solid var(--border-subtle)",
+    paddingTop: "14px",
     marginTop: "4px",
     flexWrap: "wrap",
     gap: "10px",
@@ -1208,41 +1219,42 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    fontSize: "12px",
-    color: "#64748b",
+    fontSize: "12.5px",
+    color: "var(--text-secondary)",
   },
   cardStats: {
     display: "flex",
     alignItems: "center",
-    gap: "14px",
-    fontSize: "12px",
-    color: "#64748b",
+    gap: "16px",
+    fontSize: "12.5px",
+    color: "var(--text-secondary)",
   },
   replayBtn: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "4px",
-    background: "none",
+    backgroundColor: "var(--primary-container)",
     border: "none",
-    color: "#2563eb",
+    color: "var(--on-primary-container)",
     fontWeight: "600",
-    fontSize: "12px",
+    fontSize: "12.5px",
     cursor: "pointer",
-    padding: "4px 8px",
-    borderRadius: "4px",
+    padding: "6px 14px",
+    borderRadius: "var(--radius-full)",
+    transition: "all 0.15s ease",
   },
   emptyCard: {
-    padding: "60px",
+    padding: "64px 24px",
     textAlign: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    border: "1px dashed #cbd5e1",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-xl)",
+    border: "1px dashed var(--border-subtle)",
   },
   modalBackdrop: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    backdropFilter: "blur(4px)",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backdropFilter: "blur(6px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1250,13 +1262,13 @@ const styles = {
     padding: "20px",
   },
   detailModal: {
-    backgroundColor: "#ffffff",
-    borderRadius: "16px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-2xl)",
     width: "100%",
     maxWidth: "960px",
     maxHeight: "90vh",
-    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-    border: "1px solid #e2e8f0",
+    boxShadow: "var(--shadow-xl)",
+    border: "1px solid var(--border-subtle)",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -1266,46 +1278,51 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     padding: "20px 24px",
-    borderBottom: "1px solid #f1f5f9",
+    borderBottom: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface)",
   },
   detailTitle: {
     fontSize: "20px",
-    fontWeight: "700",
-    color: "#0f172a",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: 0,
   },
   teamTag: {
-    fontSize: "11px",
-    color: "#64748b",
-    backgroundColor: "#f8fafc",
-    padding: "2px 8px",
-    borderRadius: "4px",
-    border: "1px solid #e2e8f0",
+    fontSize: "11.5px",
+    color: "var(--on-secondary-container)",
+    backgroundColor: "var(--secondary-container)",
+    padding: "3px 10px",
+    borderRadius: "var(--radius-full)",
+    border: "none",
+    fontWeight: "600",
   },
   closeBtn: {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#94a3b8",
-    padding: "4px",
+    color: "var(--text-muted)",
+    padding: "6px",
+    borderRadius: "var(--radius-full)",
     display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   workflowBar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "10px 24px",
-    backgroundColor: "#f8fafc",
-    borderBottom: "1px solid #e2e8f0",
+    padding: "12px 24px",
+    backgroundColor: "var(--bg-surface-container-low)",
+    borderBottom: "1px solid var(--border-subtle)",
   },
   wfActionBtn: {
     display: "flex",
     alignItems: "center",
-    gap: "5px",
-    padding: "6px 12px",
-    borderRadius: "6px",
-    border: "1px solid",
-    fontSize: "12px",
+    gap: "6px",
+    padding: "7px 14px",
+    borderRadius: "var(--radius-full)",
+    border: "1px solid var(--border-subtle)",
+    fontSize: "12.5px",
     fontWeight: "600",
     cursor: "pointer",
   },
@@ -1313,8 +1330,8 @@ const styles = {
     display: "flex",
     gap: "20px",
     padding: "0 24px",
-    borderBottom: "1px solid #e2e8f0",
-    backgroundColor: "#ffffff",
+    borderBottom: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface)",
   },
   detailTabBtn: {
     background: "none",
@@ -1322,70 +1339,72 @@ const styles = {
     padding: "14px 4px",
     fontSize: "13px",
     cursor: "pointer",
+    fontFamily: "var(--font-sans)",
   },
   detailBody: {
     padding: "24px",
     overflowY: "auto",
     flex: 1,
+    backgroundColor: "var(--bg-surface)",
   },
   sectionHeader: {
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: "700",
-    color: "#475569",
+    color: "var(--text-muted)",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     margin: "0 0 6px 0",
   },
   paragraph: {
     fontSize: "14px",
-    color: "#334155",
+    color: "var(--text-primary)",
     lineHeight: 1.6,
     margin: 0,
   },
   rationaleCard: {
-    backgroundColor: "#eff6ff",
-    border: "1px solid #bfdbfe",
-    borderRadius: "8px",
-    padding: "16px",
+    backgroundColor: "var(--primary-container)",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-lg)",
+    padding: "16px 20px",
   },
   metadataGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gap: "12px",
-    backgroundColor: "#f8fafc",
-    padding: "14px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
+    backgroundColor: "var(--bg-surface-container)",
+    padding: "16px",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
     marginTop: "8px",
   },
   metaLabel: {
     display: "block",
-    fontSize: "11px",
-    color: "#64748b",
+    fontSize: "11.5px",
+    color: "var(--text-muted)",
   },
   metaVal: {
-    fontSize: "13px",
+    fontSize: "13.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
   },
   toggleMeetingBtn: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
-    gap: "5px",
-    padding: "6px 12px",
-    backgroundColor: "#f0fdf4",
-    color: "#166534",
-    border: "1px solid #bbf7d0",
-    borderRadius: "6px",
+    gap: "6px",
+    padding: "6px 14px",
+    backgroundColor: "rgba(22, 163, 74, 0.12)",
+    color: "#15803D",
+    border: "1px solid rgba(22, 163, 74, 0.25)",
+    borderRadius: "var(--radius-full)",
     fontSize: "12px",
     fontWeight: "600",
     cursor: "pointer",
   },
   meetingForm: {
-    backgroundColor: "#f8fafc",
-    padding: "16px",
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
+    backgroundColor: "var(--bg-surface-container)",
+    padding: "18px",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
   },
   commentsList: {
     display: "flex",
@@ -1393,9 +1412,10 @@ const styles = {
     gap: "12px",
   },
   commentCard: {
-    padding: "14px",
-    borderRadius: "8px",
-    border: "1px solid",
+    padding: "16px 18px",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface-container)",
   },
   commentHeader: {
     display: "flex",
@@ -1404,64 +1424,67 @@ const styles = {
     marginBottom: "6px",
   },
   commentAuthor: {
-    fontWeight: "700",
-    fontSize: "13px",
-    color: "#0f172a",
+    fontWeight: "600",
+    fontSize: "14px",
+    color: "var(--text-primary)",
   },
   meetingBadge: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "4px",
-    padding: "2px 6px",
-    backgroundColor: "#dcfce7",
-    color: "#15803d",
-    borderRadius: "4px",
+    padding: "2px 8px",
+    backgroundColor: "rgba(22, 163, 74, 0.12)",
+    color: "#15803D",
+    borderRadius: "var(--radius-full)",
     fontSize: "11px",
-    fontWeight: "700",
+    fontWeight: "600",
   },
   commentDate: {
-    fontSize: "11px",
-    color: "#94a3b8",
+    fontSize: "11.5px",
+    color: "var(--text-muted)",
   },
   attendeesRow: {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    fontSize: "12px",
-    color: "#065f46",
+    fontSize: "12.5px",
+    color: "#15803D",
     marginBottom: "6px",
   },
   commentContent: {
-    fontSize: "13px",
-    color: "#334155",
-    lineHeight: 1.4,
+    fontSize: "13.5px",
+    color: "var(--text-primary)",
+    lineHeight: 1.5,
     margin: 0,
   },
   commentInputRow: {
     display: "flex",
     gap: "10px",
-    marginTop: "8px",
   },
   commentInput: {
     flex: 1,
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #cbd5e1",
-    fontSize: "13px",
+    padding: "10px 16px",
+    borderRadius: "var(--radius-full)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface-container)",
+    color: "var(--text-primary)",
+    fontSize: "13.5px",
     outline: "none",
+    fontFamily: "var(--font-sans)",
   },
   commentSendBtn: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "6px",
-    padding: "10px 18px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    padding: "10px 20px",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "var(--radius-full)",
     fontWeight: "600",
     fontSize: "13px",
     cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(103, 80, 164, 0.28)",
   },
   timeline: {
     display: "flex",
@@ -1478,21 +1501,21 @@ const styles = {
     width: "36px",
     height: "36px",
     borderRadius: "50%",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "11px",
+    fontSize: "12px",
     fontWeight: "700",
     flexShrink: 0,
   },
   timelineContent: {
     flex: 1,
-    backgroundColor: "#f8fafc",
-    padding: "14px",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
+    backgroundColor: "var(--bg-surface-container)",
+    padding: "16px",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
   },
   timelineHeader: {
     display: "flex",
@@ -1500,91 +1523,98 @@ const styles = {
     marginBottom: "4px",
   },
   timelineTitle: {
-    fontWeight: "700",
-    fontSize: "13px",
-    color: "#0f172a",
+    fontWeight: "600",
+    fontSize: "14px",
+    color: "var(--text-primary)",
   },
   timelineDate: {
-    fontSize: "11px",
-    color: "#94a3b8",
+    fontSize: "11.5px",
+    color: "var(--text-muted)",
   },
   timelineSummary: {
-    fontSize: "13px",
-    color: "#334155",
+    fontSize: "13.5px",
+    color: "var(--text-primary)",
     margin: "4px 0",
   },
   timelineAuthor: {
-    fontSize: "11px",
-    color: "#64748b",
+    fontSize: "11.5px",
+    color: "var(--text-secondary)",
   },
   docItemRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "12px 14px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
+    padding: "14px 18px",
+    backgroundColor: "var(--bg-surface-container)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
   },
   downloadDocBtn: {
-    padding: "6px 12px",
-    backgroundColor: "#ffffff",
-    color: "#2563eb",
-    border: "1px solid #bfdbfe",
-    borderRadius: "6px",
-    fontSize: "12px",
+    padding: "6px 14px",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
+    borderRadius: "var(--radius-full)",
+    fontSize: "12.5px",
     fontWeight: "600",
     textDecoration: "none",
+    border: "none",
   },
   inputLabel: {
     fontSize: "12px",
     fontWeight: "600",
-    color: "#334155",
-    marginBottom: "4px",
+    color: "var(--text-secondary)",
+    marginBottom: "6px",
     display: "block",
   },
   input: {
     width: "100%",
-    padding: "9px 12px",
-    borderRadius: "6px",
-    border: "1px solid #cbd5e1",
-    fontSize: "13px",
+    padding: "10px 14px",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface-container)",
+    color: "var(--text-primary)",
+    fontSize: "13.5px",
     boxSizing: "border-box",
+    fontFamily: "var(--font-sans)",
   },
   textarea: {
     width: "100%",
-    padding: "9px 12px",
-    borderRadius: "6px",
-    border: "1px solid #cbd5e1",
-    fontSize: "13px",
+    padding: "10px 14px",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface-container)",
+    color: "var(--text-primary)",
+    fontSize: "13.5px",
     boxSizing: "border-box",
     resize: "vertical",
+    fontFamily: "var(--font-sans)",
   },
   cancelBtn: {
-    padding: "8px 16px",
-    backgroundColor: "#f1f5f9",
-    color: "#475569",
-    border: "none",
-    borderRadius: "6px",
+    padding: "8px 18px",
+    backgroundColor: "var(--bg-surface-container)",
+    color: "var(--text-secondary)",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-full)",
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
   },
   primaryBtn: {
-    padding: "8px 18px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    padding: "9px 20px",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "var(--radius-full)",
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
+    boxShadow: "0 2px 8px rgba(103, 80, 164, 0.28)",
   },
   wizardAltCard: {
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    padding: "14px",
+    backgroundColor: "var(--bg-surface-container)",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-lg)",
+    padding: "16px",
   },
 };
 

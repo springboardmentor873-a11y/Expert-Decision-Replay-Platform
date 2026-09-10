@@ -1298,8 +1298,8 @@ def get_recent_activity(db: Session = Depends(get_db)):
         {
             "id": 1,
             "type": "upload",
-            "user_name": "Rahul Mehta",
-            "avatar_text": "RM",
+            "user_name": "Employee User",
+            "avatar_text": "EU",
             "action": "uploaded a document",
             "target": "AI Model Evaluation Report.pdf",
             "timestamp": "2 hours ago"
@@ -1307,8 +1307,8 @@ def get_recent_activity(db: Session = Depends(get_db)):
         {
             "id": 2,
             "type": "comment",
-            "user_name": "Anika Sharma",
-            "avatar_text": "AS",
+            "user_name": "Employee User",
+            "avatar_text": "EU",
             "action": "commented",
             "target": '"This is very helpful for our analysis."',
             "timestamp": "5 hours ago"
@@ -1316,8 +1316,8 @@ def get_recent_activity(db: Session = Depends(get_db)):
         {
             "id": 3,
             "type": "approval",
-            "user_name": "Vikram Singh",
-            "avatar_text": "VS",
+            "user_name": "Admin User",
+            "avatar_text": "AU",
             "action": "approved decision",
             "target": "Enterprise AI Model Selection",
             "timestamp": "1 day ago"
@@ -1325,8 +1325,8 @@ def get_recent_activity(db: Session = Depends(get_db)):
         {
             "id": 4,
             "type": "upload",
-            "user_name": "Sarah Khan",
-            "avatar_text": "SK",
+            "user_name": "Admin User",
+            "avatar_text": "AU",
             "action": "uploaded a document",
             "target": "Database Comparison.docx",
             "timestamp": "2 days ago"

@@ -72,16 +72,11 @@ def seed_database():
                 db.refresh(team)
             teams[name] = team
 
-        # 3. Users
+        # 3. Users - Only admin@company.com and emp@company.com
         default_pwd = hash_password("password123")
         users_data = [
-            ("Ipsita Priyadarshini", "ipsita@company.com", roles["Employee"].id, teams["AI Team"].id),
-            ("Rahul Mehta", "rahul@company.com", roles["Reviewer"].id, teams["AI Team"].id),
-            ("Sarah Khan", "sarah@company.com", roles["Reviewer"].id, teams["Architecture"].id),
-            ("Anika Sharma", "anika@company.com", roles["Employee"].id, teams["Cloud Infrastructure"].id),
-            ("Vikram Singh", "vikram@company.com", roles["Manager"].id, teams["Cloud Infrastructure"].id),
-            ("John Doe", "john@company.com", roles["Employee"].id, teams["Security & Compliance"].id),
-            ("Admin User", "admin@decisionreplay.com", roles["Administrator"].id, teams["Architecture"].id),
+            ("Admin User", "admin@company.com", roles["Administrator"].id, teams["Architecture"].id),
+            ("Employee User", "emp@company.com", roles["Employee"].id, teams["AI Team"].id),
         ]
         users = {}
         for name, email, role_id, team_id in users_data:
@@ -116,7 +111,7 @@ def seed_database():
             category="AI",
             status="Approved",
             priority="Critical",
-            created_by_id=users["ipsita@company.com"].id,
+            created_by_id=users["emp@company.com"].id,
             team_id=teams["AI Team"].id,
             current_version=2,
             decision_rationale="The hybrid enterprise gateway provides top-tier benchmark accuracy with zero maintenance delay, meeting our compliance standards at 50% lower initial monthly cost.",
@@ -184,7 +179,7 @@ def seed_database():
             category="Database",
             status="Approved",
             priority="High",
-            created_by_id=users["sarah@company.com"].id,
+            created_by_id=users["admin@company.com"].id,
             team_id=teams["Architecture"].id,
             current_version=1,
             decision_rationale="Managed PostgreSQL Aurora provides automated backups, pgvector compatibility, and reduces DBA operational load.",
@@ -236,7 +231,7 @@ def seed_database():
             category="Cloud",
             status="Under Review",
             priority="High",
-            created_by_id=users["vikram@company.com"].id,
+            created_by_id=users["emp@company.com"].id,
             team_id=teams["Cloud Infrastructure"].id,
             current_version=1,
             created_at=datetime.utcnow() - timedelta(days=6)
@@ -271,7 +266,7 @@ def seed_database():
             category="Security",
             status="Approved",
             priority="Critical",
-            created_by_id=users["john@company.com"].id,
+            created_by_id=users["admin@company.com"].id,
             team_id=teams["Security & Compliance"].id,
             current_version=1,
             decision_rationale="Adopting centralized tamper-evident audit logs with automated quarterly reviews satisfies SOC2 compliance criteria.",
@@ -290,7 +285,7 @@ def seed_database():
             category="Architecture",
             status="Draft",
             priority="Medium",
-            created_by_id=users["anika@company.com"].id,
+            created_by_id=users["emp@company.com"].id,
             team_id=teams["Architecture"].id,
             current_version=1,
             created_at=datetime.utcnow() - timedelta(days=2)
@@ -318,7 +313,7 @@ def seed_database():
                 tags=json.dumps(["AI", "Evaluation", "Research"]),
                 description="Comprehensive evaluation of proprietary and open-weight models across reasoning, speed, and cost metrics.",
                 decision_id=d1.id,
-                uploaded_by_id=users["rahul@company.com"].id,
+                uploaded_by_id=users["emp@company.com"].id,
                 created_at=datetime.utcnow() - timedelta(hours=2)
             ),
             Document(
@@ -332,7 +327,7 @@ def seed_database():
                 tags=json.dumps(["Database", "Architecture", "Technical"]),
                 description="Technical comparison matrix between PostgreSQL Aurora, MySQL, and MongoDB for graph relational workloads.",
                 decision_id=d2.id,
-                uploaded_by_id=users["sarah@company.com"].id,
+                uploaded_by_id=users["admin@company.com"].id,
                 created_at=datetime.utcnow() - timedelta(days=2)
             ),
             Document(
@@ -346,7 +341,7 @@ def seed_database():
                 tags=json.dumps(["Requirements", "Planning"]),
                 description="Detailed functional and non-functional requirements for the Expert Decision Replay Platform.",
                 decision_id=d5.id,
-                uploaded_by_id=users["anika@company.com"].id,
+                uploaded_by_id=users["emp@company.com"].id,
                 created_at=datetime.utcnow() - timedelta(days=3)
             ),
             Document(
@@ -360,7 +355,7 @@ def seed_database():
                 tags=json.dumps(["Cloud", "Deployment", "Strategy"]),
                 description="Multi-region cloud infrastructure architecture diagrams, network topology, and disaster recovery roadmap.",
                 decision_id=d3.id,
-                uploaded_by_id=users["vikram@company.com"].id,
+                uploaded_by_id=users["emp@company.com"].id,
                 created_at=datetime.utcnow() - timedelta(days=5)
             ),
             Document(
@@ -374,7 +369,7 @@ def seed_database():
                 tags=json.dumps(["Security", "Compliance", "Policy"]),
                 description="Mandatory organizational security policies, encryption-at-rest specifications, and SOC2 audit procedures.",
                 decision_id=d4.id,
-                uploaded_by_id=users["john@company.com"].id,
+                uploaded_by_id=users["admin@company.com"].id,
                 created_at=datetime.utcnow() - timedelta(days=7)
             )
         ]
@@ -384,22 +379,22 @@ def seed_database():
         # 6. Comments & Meeting Notes
         c1 = Comment(
             decision_id=d1.id,
-            user_id=users["sarah@company.com"].id,
+            user_id=users["admin@company.com"].id,
             content="Benchmark results confirm the private gateway handles 150 concurrent queries without latency degradation.",
             created_at=datetime.utcnow() - timedelta(hours=6)
         )
         c2 = Comment(
             decision_id=d1.id,
-            user_id=users["anika@company.com"].id,
+            user_id=users["emp@company.com"].id,
             content="This is very helpful for our analysis. Let's ensure the failover router is stress-tested before full release.",
             created_at=datetime.utcnow() - timedelta(hours=5)
         )
         c3 = Comment(
             decision_id=d1.id,
-            user_id=users["vikram@company.com"].id,
+            user_id=users["admin@company.com"].id,
             is_meeting_note=True,
             meeting_date=datetime.utcnow() - timedelta(days=1),
-            meeting_attendees="Vikram Singh, Rahul Mehta, Sarah Khan, Ipsita Priyadarshini",
+            meeting_attendees="Admin User, Employee User",
             content="Stakeholder Review Meeting: Reviewed SLA guarantees, network topology, and compliance certificates. Unanimously agreed on Option B with private VPC connector.",
             created_at=datetime.utcnow() - timedelta(days=1)
         )
@@ -422,7 +417,7 @@ def seed_database():
         v1 = DecisionVersion(
             decision_id=d1.id,
             version_number=1,
-            changed_by_id=users["ipsita@company.com"].id,
+            changed_by_id=users["emp@company.com"].id,
             change_summary="Initial decision formulation with 2 primary alternatives.",
             snapshot=json.dumps(v1_snapshot),
             created_at=datetime.utcnow() - timedelta(days=7)
@@ -446,7 +441,7 @@ def seed_database():
         v2 = DecisionVersion(
             decision_id=d1.id,
             version_number=2,
-            changed_by_id=users["vikram@company.com"].id,
+            changed_by_id=users["admin@company.com"].id,
             change_summary="Added on-premise hardware evaluation, finalized approval, and selected Enterprise Gateway.",
             snapshot=json.dumps(v2_snapshot),
             created_at=datetime.utcnow() - timedelta(days=2)

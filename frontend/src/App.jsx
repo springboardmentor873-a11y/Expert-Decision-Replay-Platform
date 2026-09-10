@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
 import Dashboard from "./Dashboard";
+import { Brain, Mail, Lock, User, Shield, Briefcase, Sparkles, ArrowRight } from "lucide-react";
+import MD3Button from "./components/md3/MD3Button";
+import MD3Card from "./components/md3/MD3Card";
+import MD3TextField from "./components/md3/MD3TextField";
+import MD3AmbientBackground from "./components/md3/MD3AmbientBackground";
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -46,7 +51,7 @@ function App() {
   }, []);
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setLoading(true);
     setMessage({ text: "", isError: false });
 
@@ -69,7 +74,57 @@ function App() {
 
       localStorage.setItem("token", data.access_token);
 
-      // Fetch user profile
+      const meResponse = await fetch(`${API_BASE}/me`, {
+        headers: { Authorization: `Bearer ${data.access_token}` },
+      });
+
+      const meData = await meResponse.json();
+      if (!meResponse.ok) {
+        setMessage({
+          text: meData.detail || "Failed to retrieve user profile",
+          isError: true,
+        });
+        return;
+      }
+
+      setUser(meData);
+      setLoggedIn(true);
+    } catch (error) {
+      console.error(error);
+      setMessage({
+        text: "Could not connect to the backend server.",
+        isError: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (quickEmail, quickPassword = "password123") => {
+    setEmail(quickEmail);
+    setPassword(quickPassword);
+    setLoading(true);
+    setMessage({ text: "", isError: false });
+
+    try {
+      const response = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: quickEmail, password: quickPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage({
+          text: data.detail || "Invalid email or password",
+          isError: true,
+        });
+        return;
+      }
+
+      localStorage.setItem("token", data.access_token);
+
       const meResponse = await fetch(`${API_BASE}/me`, {
         headers: { Authorization: `Bearer ${data.access_token}` },
       });
@@ -124,11 +179,10 @@ function App() {
       }
 
       setMessage({
-        text: "Account created successfully! Logging you in...",
+        text: "Account created successfully! Signing in...",
         isError: false,
       });
 
-      // Auto login after registration
       const loginRes = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -172,9 +226,37 @@ function App() {
 
   if (initialChecking) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
-        <p style={{ color: "#94a3b8", marginTop: "16px" }}>Loading session...</p>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "var(--bg-canvas)",
+          fontFamily: "var(--font-sans)",
+        }}
+      >
+        <div
+          style={{
+            width: "42px",
+            height: "42px",
+            border: "4px solid var(--secondary-container)",
+            borderTopColor: "var(--primary)",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        <p
+          style={{
+            color: "var(--text-secondary)",
+            marginTop: "18px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
+          Loading Decision Replay Platform...
+        </p>
       </div>
     );
   }
@@ -184,278 +266,273 @@ function App() {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.brandHeader}>
-          <span style={styles.brandIcon}>🧠</span>
-          <h1 style={styles.title}>Expert Decision Replay</h1>
-          <p style={styles.subtitle}>
+    <div
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "24px 16px",
+        boxSizing: "border-box",
+        position: "relative",
+        fontFamily: "var(--font-sans)",
+        backgroundColor: "var(--bg-canvas)",
+      }}
+    >
+      {/* Material You Layered Organic Ambient Background */}
+      <MD3AmbientBackground />
+
+      {/* Main Authentication Card in Surface Container */}
+      <MD3Card
+        variant="filled"
+        radius="32px"
+        style={{
+          width: "100%",
+          maxWidth: "460px",
+          padding: "36px 32px",
+          zIndex: 1,
+          backgroundColor: "var(--bg-surface)",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "var(--shadow-lg)",
+        }}
+      >
+        {/* Brand Header */}
+        <div style={{ textAlign: "center", marginBottom: "26px" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "56px",
+              height: "56px",
+              borderRadius: "20px",
+              backgroundColor: "var(--primary-container)",
+              color: "var(--on-primary-container)",
+              marginBottom: "14px",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Brain size={30} />
+          </div>
+
+          <h1
+            style={{
+              margin: "0 0 6px 0",
+              fontSize: "26px",
+              fontWeight: "500",
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            DecisionIntel
+          </h1>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              color: "var(--text-secondary)",
+              lineHeight: 1.5,
+            }}
+          >
             {isRegister
-              ? "Create your account to get started"
-              : "Sign in to access your platform dashboard"}
+              ? "Join the enterprise decision intelligence workspace"
+              : "Expert Decision Replay & Knowledge Graph Platform"}
           </p>
         </div>
 
+        {/* Feedback Alert Snackbar */}
         {message.text && (
           <div
-            style={
-              message.isError ? styles.alertError : styles.alertSuccess
-            }
+            style={{
+              padding: "12px 16px",
+              backgroundColor: message.isError
+                ? "var(--accent-rose-subtle)"
+                : "rgba(22, 163, 74, 0.12)",
+              color: message.isError ? "var(--accent-rose)" : "var(--accent-emerald)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "13.5px",
+              fontWeight: "500",
+              marginBottom: "18px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              animation: "md3FadeIn 0.25s var(--md3-easing)",
+            }}
           >
-            {message.text}
+            <Sparkles size={16} />
+            <span>{message.text}</span>
           </div>
         )}
 
         {isRegister ? (
+          /* ========================================================
+             REGISTRATION FORM (MATERIAL YOU STYLE)
+             ======================================================== */
           <form onSubmit={handleRegister}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Full Name</label>
-              <input
-                style={styles.input}
-                type="text"
-                placeholder="Jane Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
+            <MD3TextField
+              label="Full Name"
+              placeholder="e.g. Elena Rostova"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              leadingIcon={<User size={18} />}
+            />
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Email</label>
-              <input
-                style={styles.input}
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+            <MD3TextField
+              label="Work Email"
+              type="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              leadingIcon={<Mail size={18} />}
+            />
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Password</label>
-              <input
-                style={styles.input}
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            <MD3TextField
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              leadingIcon={<Lock size={18} />}
+            />
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Role</label>
-              <select
-                style={styles.select}
-                value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
+            <div style={{ marginBottom: "20px" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  color: "var(--text-secondary)",
+                  marginBottom: "6px",
+                }}
               >
-                <option value={1}>Employee (ID: 1)</option>
-                <option value={2}>Reviewer (ID: 2)</option>
-                <option value={3}>Manager (ID: 3)</option>
-                <option value={4}>Administrator (ID: 4)</option>
-              </select>
+                Assigned Role
+              </label>
+              <div
+                style={{
+                  backgroundColor: "var(--bg-surface-container-high)",
+                  borderTopLeftRadius: "12px",
+                  borderTopRightRadius: "12px",
+                  borderBottom: "2px solid var(--border-muted)",
+                  overflow: "hidden",
+                }}
+              >
+                <select
+                  style={{
+                    width: "100%",
+                    height: "56px",
+                    padding: "0 16px",
+                    fontSize: "15px",
+                    color: "var(--text-primary)",
+                    backgroundColor: "transparent",
+                    border: "none",
+                    outline: "none",
+                    cursor: "pointer",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                  value={roleId}
+                  onChange={(e) => setRoleId(e.target.value)}
+                >
+                  <option value={1}>Employee (Create & Participate)</option>
+                  <option value={2}>Reviewer (Critique & Score)</option>
+                  <option value={3}>Manager (Approve & Govern)</option>
+                  <option value={4}>Administrator (Full Access)</option>
+                </select>
+              </div>
             </div>
 
-            <button type="submit" style={styles.button} disabled={loading}>
-              {loading ? "Creating account..." : "Register"}
-            </button>
+            <MD3Button
+              type="submit"
+              variant="filled"
+              size="lg"
+              fullWidth
+              loading={loading}
+              style={{ marginTop: "6px" }}
+            >
+              {loading ? "Creating Account..." : "Create Account"}
+            </MD3Button>
           </form>
         ) : (
-          <form onSubmit={handleLogin}>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Email</label>
-              <input
-                style={styles.input}
+          /* ========================================================
+             SIGN IN FORM
+             ======================================================== */
+          <div>
+            {/* Credentials Login Form */}
+            <form onSubmit={handleLogin}>
+              <MD3TextField
+                label="Email Address"
                 type="email"
-                placeholder="name@company.com"
+                placeholder="admin@company.com or emp@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                leadingIcon={<Mail size={18} />}
               />
-            </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Password</label>
-              <input
-                style={styles.input}
+              <MD3TextField
+                label="Password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="password123"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                leadingIcon={<Lock size={18} />}
               />
-            </div>
 
-            <button type="submit" style={styles.button} disabled={loading}>
-              {loading ? "Signing in..." : "Login"}
-            </button>
-          </form>
+              <MD3Button
+                type="submit"
+                variant="filled"
+                size="lg"
+                fullWidth
+                loading={loading}
+                icon={<ArrowRight size={18} />}
+                style={{ marginTop: "6px" }}
+              >
+                {loading ? "Signing in..." : "Sign In to Workspace"}
+              </MD3Button>
+            </form>
+          </div>
         )}
 
-        <div style={styles.toggleRow}>
-          <span style={styles.toggleText}>
-            {isRegister
-              ? "Already have an account?"
-              : "Don't have an account?"}
-          </span>
+        {/* Toggle between Login and Register */}
+        <div
+          style={{
+            marginTop: "24px",
+            textAlign: "center",
+            fontSize: "13.5px",
+            color: "var(--text-secondary)",
+          }}
+        >
+          <span>
+            {isRegister ? "Already have an account?" : "Need account access?"}
+          </span>{" "}
           <button
             type="button"
-            style={styles.toggleLink}
             onClick={() => {
               setIsRegister(!isRegister);
               setMessage({ text: "", isError: false });
             }}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--primary)",
+              fontWeight: "600",
+              cursor: "pointer",
+              fontSize: "13.5px",
+              padding: 0,
+              marginLeft: "4px",
+              outline: "none",
+            }}
           >
-            {isRegister ? "Login here" : "Register here"}
+            {isRegister ? "Sign in" : "Register here"}
           </button>
         </div>
-      </div>
+      </MD3Card>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0f172a",
-    padding: "20px",
-    boxSizing: "border-box",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  loadingContainer: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0f172a",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  spinner: {
-    width: "36px",
-    height: "36px",
-    border: "3px solid #334155",
-    borderTopColor: "#38bdf8",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "440px",
-    padding: "36px",
-    backgroundColor: "#1e293b",
-    borderRadius: "16px",
-    border: "1px solid #334155",
-    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
-    boxSizing: "border-box",
-  },
-  brandHeader: {
-    textAlign: "center",
-    marginBottom: "28px",
-  },
-  brandIcon: {
-    fontSize: "36px",
-    display: "inline-block",
-    marginBottom: "8px",
-  },
-  title: {
-    margin: "0 0 8px 0",
-    fontSize: "22px",
-    fontWeight: "700",
-    color: "#f8fafc",
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: "14px",
-    color: "#94a3b8",
-  },
-  formGroup: {
-    marginBottom: "18px",
-  },
-  label: {
-    display: "block",
-    fontSize: "13px",
-    fontWeight: "600",
-    marginBottom: "6px",
-    color: "#cbd5e1",
-  },
-  input: {
-    width: "100%",
-    padding: "12px 14px",
-    fontSize: "14px",
-    backgroundColor: "#0f172a",
-    color: "#f8fafc",
-    border: "1px solid #334155",
-    borderRadius: "8px",
-    boxSizing: "border-box",
-    outline: "none",
-  },
-  select: {
-    width: "100%",
-    padding: "12px 14px",
-    fontSize: "14px",
-    backgroundColor: "#0f172a",
-    color: "#f8fafc",
-    border: "1px solid #334155",
-    borderRadius: "8px",
-    boxSizing: "border-box",
-    outline: "none",
-  },
-  button: {
-    width: "100%",
-    padding: "12px",
-    marginTop: "8px",
-    backgroundColor: "#0284c7",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "15px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "background-color 0.2s ease",
-  },
-  alertError: {
-    padding: "10px 14px",
-    backgroundColor: "#7f1d1d",
-    color: "#fca5a5",
-    borderRadius: "8px",
-    fontSize: "13px",
-    marginBottom: "18px",
-    border: "1px solid #991b1b",
-  },
-  alertSuccess: {
-    padding: "10px 14px",
-    backgroundColor: "#064e3b",
-    color: "#6ee7b7",
-    borderRadius: "8px",
-    fontSize: "13px",
-    marginBottom: "18px",
-    border: "1px solid #065f46",
-  },
-  toggleRow: {
-    marginTop: "22px",
-    textAlign: "center",
-    fontSize: "13px",
-    color: "#94a3b8",
-  },
-  toggleText: {
-    marginRight: "6px",
-  },
-  toggleLink: {
-    background: "none",
-    border: "none",
-    color: "#38bdf8",
-    fontWeight: "600",
-    cursor: "pointer",
-    fontSize: "13px",
-    padding: 0,
-  },
-};
 
 export default App;

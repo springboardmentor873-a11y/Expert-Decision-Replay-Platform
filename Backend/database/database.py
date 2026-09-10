@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:Lizapuja%4012345@localhost:5432/expert_decision_replay"
+    "sqlite:///./expert_decision_replay.db"
 )
 
 try:

@@ -176,27 +176,27 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
     const ext = fileType?.toLowerCase() || "";
     if (ext === "pdf") {
       return (
-        <div style={{ ...styles.docIconBase, backgroundColor: "#fee2e2", color: "#dc2626" }}>
+        <div style={{ ...styles.docIconBase, backgroundColor: "rgba(244, 63, 94, 0.15)", color: "#FB7185", border: "1px solid rgba(244, 63, 94, 0.3)" }}>
           PDF
         </div>
       );
     }
     if (ext === "docx" || ext === "doc") {
       return (
-        <div style={{ ...styles.docIconBase, backgroundColor: "#dbeafe", color: "#2563eb" }}>
+        <div style={{ ...styles.docIconBase, backgroundColor: "rgba(99, 102, 241, 0.15)", color: "#818CF8", border: "1px solid rgba(99, 102, 241, 0.3)" }}>
           Doc
         </div>
       );
     }
     if (ext === "pptx" || ext === "ppt") {
       return (
-        <div style={{ ...styles.docIconBase, backgroundColor: "#ffedd5", color: "#ea580c" }}>
+        <div style={{ ...styles.docIconBase, backgroundColor: "rgba(245, 158, 11, 0.15)", color: "#FBBF24", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
           PPT
         </div>
       );
     }
     return (
-      <div style={{ ...styles.docIconBase, backgroundColor: "#f1f5f9", color: "#475569" }}>
+      <div style={{ ...styles.docIconBase, backgroundColor: "rgba(255, 255, 255, 0.08)", color: "#94A3B8", border: "1px solid var(--border-subtle)" }}>
         FILE
       </div>
     );
@@ -210,11 +210,11 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
 
   return (
     <div style={styles.container}>
-      {/* Top Main Banner matching reference */}
+      {/* Top Main Banner matching Obsidian Dark */}
       <div style={styles.banner}>
         <div style={styles.bannerLeft}>
           <div style={styles.bookIconCircle}>
-            <BookOpen size={28} color="#ffffff" />
+            <BookOpen size={24} color="var(--primary)" />
           </div>
           <div>
             <h1 style={styles.bannerTitle}>Knowledge Repository</h1>
@@ -224,7 +224,7 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
           </div>
         </div>
         <button style={styles.uploadBtn} onClick={() => setIsUploadOpen(true)}>
-          <Upload size={16} />
+          <Upload size={17} />
           <span>Upload Document</span>
         </button>
       </div>
@@ -238,8 +238,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
               key={tab}
               style={{
                 ...styles.tabBtn,
-                color: isActive ? "#2563eb" : "#64748b",
-                borderBottom: isActive ? "2px solid #2563eb" : "2px solid transparent",
+                color: isActive ? "var(--primary)" : "var(--text-secondary)",
+                borderBottom: isActive ? "3px solid var(--primary)" : "3px solid transparent",
                 fontWeight: isActive ? "600" : "500",
               }}
               onClick={() => {
@@ -258,8 +258,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
       {/* Metric Cards Row */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <div style={{ ...styles.statIconCircle, backgroundColor: "#eff6ff" }}>
-            <FileText size={22} color="#2563eb" />
+          <div style={{ ...styles.statIconCircle, backgroundColor: "var(--primary-container)" }}>
+            <FileText size={22} color="var(--primary)" />
           </div>
           <div>
             <div style={styles.statVal}>{stats.total_documents}</div>
@@ -268,8 +268,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
         </div>
 
         <div style={styles.statCard}>
-          <div style={{ ...styles.statIconCircle, backgroundColor: "#ecfdf5" }}>
-            <CheckCircle size={22} color="#10b981" />
+          <div style={{ ...styles.statIconCircle, backgroundColor: "rgba(22, 163, 74, 0.12)" }}>
+            <CheckCircle size={22} color="var(--accent-emerald)" />
           </div>
           <div>
             <div style={styles.statVal}>{stats.decision_documents}</div>
@@ -278,8 +278,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
         </div>
 
         <div style={styles.statCard}>
-          <div style={{ ...styles.statIconCircle, backgroundColor: "#f5f3ff" }}>
-            <Users size={22} color="#8b5cf6" />
+          <div style={{ ...styles.statIconCircle, backgroundColor: "var(--secondary-container)" }}>
+            <Users size={22} color="var(--secondary)" />
           </div>
           <div>
             <div style={styles.statVal}>{stats.teams_contributed}</div>
@@ -288,8 +288,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
         </div>
 
         <div style={styles.statCard}>
-          <div style={{ ...styles.statIconCircle, backgroundColor: "#ede9fe" }}>
-            <Clock size={22} color="#7c3aed" />
+          <div style={{ ...styles.statIconCircle, backgroundColor: "rgba(217, 119, 6, 0.12)" }}>
+            <Clock size={22} color="var(--accent-amber)" />
           </div>
           <div>
             <div style={styles.statVal}>{stats.recently_added}</div>
@@ -310,7 +310,7 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
               </div>
               <div style={styles.sortToggleRow}>
                 <div style={styles.sortDropdown}>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>Sort by:</span>
+                  <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Sort by:</span>
                   <select
                     style={styles.sortSelect}
                     value={sortBy}
@@ -325,22 +325,22 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
                   <button
                     style={{
                       ...styles.toggleBtn,
-                      backgroundColor: viewMode === "list" ? "#2563eb" : "#f1f5f9",
-                      color: viewMode === "list" ? "#ffffff" : "#64748b",
+                      backgroundColor: viewMode === "list" ? "var(--secondary-container)" : "transparent",
+                      color: viewMode === "list" ? "var(--on-secondary-container)" : "var(--text-secondary)",
                     }}
                     onClick={() => setViewMode("list")}
                   >
-                    <LayoutList size={15} />
+                    <LayoutList size={16} />
                   </button>
                   <button
                     style={{
                       ...styles.toggleBtn,
-                      backgroundColor: viewMode === "grid" ? "#2563eb" : "#f1f5f9",
-                      color: viewMode === "grid" ? "#ffffff" : "#64748b",
+                      backgroundColor: viewMode === "grid" ? "var(--secondary-container)" : "transparent",
+                      color: viewMode === "grid" ? "var(--on-secondary-container)" : "var(--text-secondary)",
                     }}
                     onClick={() => setViewMode("grid")}
                   >
-                    <LayoutGrid size={15} />
+                    <LayoutGrid size={16} />
                   </button>
                 </div>
               </div>
@@ -349,7 +349,7 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
             {/* Filter Toolbar */}
             <div style={styles.filterToolbar}>
               <div style={styles.searchWrap}>
-                <Search size={15} color="#94a3b8" style={{ marginLeft: "10px" }} />
+                <Search size={15} color="var(--text-muted)" style={{ marginLeft: "10px" }} />
                 <input
                   type="text"
                   style={styles.searchInput}
@@ -401,8 +401,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
             {/* Document Items List / Grid */}
             {filteredDocuments.length === 0 ? (
               <div style={styles.emptyContainer}>
-                <FileText size={40} color="#cbd5e1" />
-                <p style={{ marginTop: "12px", color: "#64748b" }}>No matching documents found.</p>
+                <FileText size={40} color="var(--border-muted)" />
+                <p style={{ marginTop: "12px", color: "var(--text-secondary)" }}>No matching documents found.</p>
               </div>
             ) : viewMode === "list" ? (
               <div style={styles.itemsList}>
@@ -429,20 +429,28 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
                                 ...styles.tagPill,
                                 backgroundColor:
                                   tag === "AI"
-                                    ? "#dbeafe"
+                                    ? "rgba(99, 102, 241, 0.15)"
                                     : tag === "Database"
-                                    ? "#e0e7ff"
+                                    ? "rgba(6, 182, 212, 0.15)"
                                     : tag === "Security"
-                                    ? "#fee2e2"
-                                    : "#f3e8ff",
+                                    ? "rgba(244, 63, 94, 0.15)"
+                                    : "rgba(16, 185, 129, 0.15)",
+                                border:
+                                  tag === "AI"
+                                    ? "1px solid rgba(99, 102, 241, 0.3)"
+                                    : tag === "Database"
+                                    ? "1px solid rgba(6, 182, 212, 0.3)"
+                                    : tag === "Security"
+                                    ? "1px solid rgba(244, 63, 94, 0.3)"
+                                    : "1px solid rgba(16, 185, 129, 0.3)",
                                 color:
                                   tag === "AI"
-                                    ? "#1d4ed8"
+                                    ? "#A5B4FC"
                                     : tag === "Database"
-                                    ? "#4338ca"
+                                    ? "#67E8F9"
                                     : tag === "Security"
-                                    ? "#b91c1c"
-                                    : "#7e22ce",
+                                    ? "#FDA4AF"
+                                    : "#6EE7B7",
                               }}
                               onClick={() => setSelectedTag(tag)}
                             >
@@ -538,7 +546,7 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
             </div>
 
             <div style={styles.insightItem}>
-              <div style={{ ...styles.insightIcon, backgroundColor: "#eff6ff", color: "#2563eb" }}>
+              <div style={{ ...styles.insightIcon, backgroundColor: "rgba(99, 102, 241, 0.15)", color: "#818CF8", border: "1px solid rgba(99, 102, 241, 0.3)" }}>
                 <Lightbulb size={17} />
               </div>
               <div>
@@ -550,7 +558,7 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
             </div>
 
             <div style={styles.insightItem}>
-              <div style={{ ...styles.insightIcon, backgroundColor: "#ecfdf5", color: "#10b981" }}>
+              <div style={{ ...styles.insightIcon, backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#34D399", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
                 <BarChart2 size={17} />
               </div>
               <div>
@@ -562,7 +570,7 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
             </div>
 
             <div style={styles.insightItem}>
-              <div style={{ ...styles.insightIcon, backgroundColor: "#fef3c7", color: "#d97706" }}>
+              <div style={{ ...styles.insightIcon, backgroundColor: "rgba(245, 158, 11, 0.15)", color: "#FBBF24", border: "1px solid rgba(245, 158, 11, 0.3)" }}>
                 <Bookmark size={17} />
               </div>
               <div>
@@ -594,8 +602,10 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
                 style={{
                   ...styles.popularTagPill,
                   backgroundColor:
-                    selectedTag === topic.name ? "#2563eb" : "#f1f5f9",
-                  color: selectedTag === topic.name ? "#ffffff" : "#334155",
+                    selectedTag === topic.name ? "var(--primary)" : "var(--bg-surface-container)",
+                  color: selectedTag === topic.name ? "var(--on-primary)" : "var(--text-secondary)",
+                  border: selectedTag === topic.name ? "1px solid var(--primary)" : "1px solid var(--border-subtle)",
+                  boxShadow: selectedTag === topic.name ? "0 2px 8px rgba(103, 80, 164, 0.28)" : "none",
                 }}
                 onClick={() =>
                   setSelectedTag(selectedTag === topic.name ? "All Tags" : topic.name)
@@ -620,13 +630,13 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
             {recentActivity.map((act) => (
               <div key={act.id} style={styles.activityItem}>
                 <div style={styles.activityAvatar}>
-                  {act.type === "upload" && <Upload size={14} color="#2563eb" />}
-                  {act.type === "comment" && <MessageSquare size={14} color="#059669" />}
-                  {act.type === "approval" && <CheckCircle size={14} color="#7c3aed" />}
+                  {act.type === "upload" && <Upload size={14} color="#818CF8" />}
+                  {act.type === "comment" && <MessageSquare size={14} color="#34D399" />}
+                  {act.type === "approval" && <CheckCircle size={14} color="#A78BFA" />}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={styles.activityText}>
-                    <strong>{act.user_name}</strong> {act.action}{" "}
+                    <strong style={{ color: "var(--text-primary)" }}>{act.user_name}</strong> {act.action}{" "}
                     <span style={styles.activityHighlight}>{act.target}</span>
                   </div>
                 </div>
@@ -645,8 +655,8 @@ function KnowledgeRepository({ user, onNavigate, apiBase = "http://127.0.0.1:800
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {getDocIcon(previewDoc.file_type)}
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "17px", color: "#0f172a" }}>{previewDoc.title}</h3>
-                  <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748b" }}>
+                  <h3 style={{ margin: 0, fontSize: "17px", color: "var(--text-primary)" }}>{previewDoc.title}</h3>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "var(--text-secondary)" }}>
                     {previewDoc.category} &bull; Uploaded by {previewDoc.uploader_name} on {formatDate(previewDoc.created_at)}
                   </p>
                 </div>
@@ -749,7 +759,7 @@ const styles = {
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: "24px",
+    gap: "28px",
     maxWidth: "1400px",
     margin: "0 auto",
   },
@@ -758,135 +768,145 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: "16px",
+    gap: "20px",
+    backgroundColor: "var(--bg-surface-container)",
+    padding: "28px 32px",
+    borderRadius: "var(--radius-2xl)",
+    boxShadow: "var(--shadow-sm)",
   },
   bannerLeft: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
+    gap: "18px",
   },
   bookIconCircle: {
     width: "48px",
     height: "48px",
-    borderRadius: "12px",
-    backgroundColor: "#1e3a8a",
+    borderRadius: "16px",
+    backgroundColor: "var(--primary-container)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 2px 4px rgba(30, 58, 138, 0.2)",
+    boxShadow: "var(--shadow-sm)",
   },
   bannerTitle: {
-    fontSize: "24px",
-    fontWeight: "700",
-    color: "#0f172a",
+    fontSize: "26px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: 0,
-    letterSpacing: "-0.5px",
+    letterSpacing: "-0.3px",
   },
   bannerSubtitle: {
     fontSize: "14px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     margin: "4px 0 0 0",
+    lineHeight: 1.5,
   },
   uploadBtn: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    padding: "10px 20px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    padding: "10px 22px",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "var(--radius-full)",
     fontWeight: "600",
     fontSize: "14px",
     cursor: "pointer",
-    boxShadow: "0 1px 3px rgba(37, 99, 235, 0.3)",
-    transition: "background-color 0.15s ease",
+    boxShadow: "var(--shadow-sm)",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
+    fontFamily: "var(--font-sans)",
   },
   tabsRow: {
     display: "flex",
     gap: "24px",
-    borderBottom: "1px solid #e2e8f0",
+    borderBottom: "1px solid var(--border-subtle)",
   },
   tabBtn: {
     background: "none",
     border: "none",
-    padding: "12px 2px",
+    padding: "12px 4px",
     fontSize: "14px",
     cursor: "pointer",
-    transition: "all 0.15s ease",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
+    fontFamily: "var(--font-sans)",
   },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "16px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+    gap: "18px",
   },
   statCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    border: "1px solid #e2e8f0",
-    padding: "18px 20px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "20px 22px",
     display: "flex",
     alignItems: "center",
     gap: "16px",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+    boxShadow: "var(--shadow-card)",
+    transition: "all var(--md3-duration-normal) var(--md3-easing)",
   },
   statIconCircle: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "10px",
+    width: "46px",
+    height: "46px",
+    borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   statVal: {
-    fontSize: "22px",
+    fontSize: "26px",
     fontWeight: "700",
-    color: "#0f172a",
+    color: "var(--text-primary)",
+    letterSpacing: "-0.4px",
   },
   statLabel: {
     fontSize: "13px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     marginTop: "2px",
   },
   mainGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 380px",
-    gap: "24px",
+    gridTemplateColumns: "1fr 390px",
+    gap: "26px",
   },
   leftCol: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "22px",
   },
   rightCol: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "22px",
   },
   docListCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "14px",
-    border: "1px solid #e2e8f0",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "26px",
+    boxShadow: "var(--shadow-card)",
   },
   docListHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: "16px",
+    marginBottom: "18px",
     flexWrap: "wrap",
     gap: "12px",
   },
   docListTitle: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#0f172a",
+    fontSize: "19px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: 0,
   },
   docListSubtitle: {
-    fontSize: "13px",
-    color: "#64748b",
+    fontSize: "13.5px",
+    color: "var(--text-secondary)",
     margin: "3px 0 0 0",
   },
   sortToggleRow: {
@@ -897,63 +917,70 @@ const styles = {
   sortDropdown: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "8px",
   },
   sortSelect: {
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    padding: "5px 10px",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-full)",
+    padding: "7px 16px",
     fontSize: "13px",
-    color: "#334155",
-    backgroundColor: "#ffffff",
+    color: "var(--text-primary)",
+    backgroundColor: "var(--bg-surface-container-high)",
     cursor: "pointer",
+    outline: "none",
   },
   viewToggleGroup: {
     display: "flex",
-    borderRadius: "6px",
+    borderRadius: "var(--radius-full)",
     overflow: "hidden",
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface-container-high)",
   },
   toggleBtn: {
     border: "none",
-    padding: "6px 8px",
+    padding: "7px 12px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    transition: "background-color 0.15s ease",
   },
   filterToolbar: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    marginBottom: "16px",
+    marginBottom: "18px",
     flexWrap: "wrap",
   },
   searchWrap: {
     flex: 1,
-    minWidth: "200px",
+    minWidth: "220px",
     display: "flex",
     alignItems: "center",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    backgroundColor: "#ffffff",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--bg-surface-container-high)",
+    padding: "0 14px",
   },
   searchInput: {
     border: "none",
     outline: "none",
-    padding: "9px 12px",
-    fontSize: "13px",
+    padding: "9px 8px",
+    fontSize: "14px",
     width: "100%",
     backgroundColor: "transparent",
+    color: "var(--text-primary)",
+    fontFamily: "var(--font-sans)",
   },
   filterSelect: {
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    padding: "9px 12px",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-full)",
+    padding: "8px 16px",
     fontSize: "13px",
-    color: "#334155",
-    backgroundColor: "#ffffff",
+    color: "var(--text-primary)",
+    backgroundColor: "var(--bg-surface-container-high)",
     cursor: "pointer",
+    outline: "none",
   },
   itemsList: {
     display: "flex",
@@ -963,10 +990,10 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "14px 0",
-    borderBottom: "1px solid #f1f5f9",
+    padding: "16px 0",
+    borderBottom: "1px solid var(--border-subtle)",
     flexWrap: "wrap",
-    gap: "12px",
+    gap: "14px",
   },
   docRowLeft: {
     display: "flex",
@@ -976,9 +1003,9 @@ const styles = {
     minWidth: "260px",
   },
   docIconBase: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "8px",
+    width: "38px",
+    height: "38px",
+    borderRadius: "10px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -988,15 +1015,15 @@ const styles = {
     flexShrink: 0,
   },
   docItemTitle: {
-    fontSize: "14px",
+    fontSize: "14.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     lineHeight: 1.3,
   },
   docItemMeta: {
-    fontSize: "12px",
-    color: "#64748b",
-    marginTop: "2px",
+    fontSize: "12.5px",
+    color: "var(--text-secondary)",
+    marginTop: "3px",
   },
   docRowRight: {
     display: "flex",
@@ -1009,32 +1036,32 @@ const styles = {
     alignItems: "center",
   },
   tagPill: {
-    padding: "3px 9px",
-    borderRadius: "20px",
+    padding: "3px 10px",
+    borderRadius: "var(--radius-full)",
     fontSize: "11px",
     fontWeight: "600",
     cursor: "pointer",
-    backgroundColor: "#eff6ff",
-    color: "#2563eb",
+    transition: "opacity 0.15s ease",
   },
   viewDocBtn: {
-    padding: "6px 14px",
-    backgroundColor: "#ffffff",
-    color: "#2563eb",
-    border: "1px solid #bfdbfe",
-    borderRadius: "6px",
+    padding: "7px 16px",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
     fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
+    transition: "all var(--md3-duration-short) var(--md3-easing)",
   },
   actionMenuBtn: {
     background: "none",
     border: "none",
-    color: "#94a3b8",
-    padding: "4px",
+    color: "var(--text-secondary)",
+    padding: "6px",
     cursor: "pointer",
     display: "flex",
-    borderRadius: "4px",
+    borderRadius: "var(--radius-full)",
   },
   itemsGrid: {
     display: "grid",
@@ -1042,26 +1069,28 @@ const styles = {
     gap: "16px",
   },
   gridCard: {
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
-    padding: "16px",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border-subtle)",
+    backgroundColor: "var(--bg-surface-container-low)",
+    padding: "18px",
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "12px",
+    boxShadow: "var(--shadow-sm)",
   },
   gridTitle: {
-    fontSize: "14px",
+    fontSize: "14.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
   },
   viewDocBtnFull: {
     width: "100%",
-    padding: "8px",
-    backgroundColor: "#f8fafc",
-    color: "#2563eb",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    fontSize: "12px",
+    padding: "9px",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
+    fontSize: "13px",
     fontWeight: "600",
     cursor: "pointer",
   },
@@ -1069,61 +1098,60 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: "16px",
-    borderTop: "1px solid #f1f5f9",
-    marginTop: "8px",
+    paddingTop: "18px",
+    borderTop: "1px solid var(--border-subtle)",
+    marginTop: "10px",
     flexWrap: "wrap",
     gap: "12px",
   },
   paginationText: {
     fontSize: "13px",
-    color: "#64748b",
+    color: "var(--text-secondary)",
   },
   paginationControls: {
     display: "flex",
     alignItems: "center",
-    gap: "4px",
+    gap: "6px",
   },
   pageArrow: {
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    width: "30px",
-    height: "30px",
+    background: "var(--bg-surface-container-high)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
+    width: "32px",
+    height: "32px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#64748b",
+    color: "var(--text-secondary)",
     cursor: "pointer",
   },
   pageNum: {
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    width: "30px",
-    height: "30px",
+    background: "var(--bg-surface-container-high)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
+    width: "32px",
+    height: "32px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "13px",
-    color: "#334155",
+    color: "var(--text-secondary)",
     cursor: "pointer",
   },
   pageNumActive: {
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-    borderColor: "#2563eb",
-    fontWeight: "600",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
+    fontWeight: "700",
   },
   insightsCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "14px",
-    border: "1px solid #e2e8f0",
-    padding: "18px",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "22px",
+    boxShadow: "var(--shadow-card)",
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: "16px",
   },
   insightsHeader: {
     display: "flex",
@@ -1131,31 +1159,31 @@ const styles = {
     alignItems: "center",
   },
   insightsTitle: {
-    fontSize: "15px",
-    fontWeight: "700",
-    color: "#0f172a",
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--text-primary)",
     margin: 0,
   },
   viewAllBtn: {
     background: "none",
     border: "none",
-    color: "#2563eb",
-    fontSize: "12px",
+    color: "var(--primary)",
+    fontSize: "12.5px",
     fontWeight: "600",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
-    gap: "2px",
+    gap: "4px",
   },
   insightItem: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "12px",
+    gap: "14px",
   },
   insightIcon: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "8px",
+    width: "34px",
+    height: "34px",
+    borderRadius: "10px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1163,38 +1191,38 @@ const styles = {
     marginTop: "2px",
   },
   insightItemTitle: {
-    fontSize: "13px",
+    fontSize: "13.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
   },
   insightItemText: {
-    fontSize: "12px",
-    color: "#64748b",
+    fontSize: "12.5px",
+    color: "var(--text-secondary)",
     marginTop: "2px",
     lineHeight: 1.4,
   },
   bottomGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "24px",
+    gap: "26px",
   },
   bottomCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "14px",
-    border: "1px solid #e2e8f0",
-    padding: "18px 20px",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "22px",
+    boxShadow: "var(--shadow-card)",
   },
   popularTagsContainer: {
     display: "flex",
     flexWrap: "wrap",
     gap: "8px",
-    marginTop: "14px",
+    marginTop: "16px",
   },
   popularTagPill: {
-    padding: "6px 12px",
-    borderRadius: "8px",
-    fontSize: "12px",
+    padding: "6px 14px",
+    borderRadius: "var(--radius-full)",
+    fontSize: "12.5px",
     fontWeight: "500",
     cursor: "pointer",
     transition: "all 0.15s ease",
@@ -1202,8 +1230,8 @@ const styles = {
   activityFeed: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
-    marginTop: "14px",
+    gap: "14px",
+    marginTop: "16px",
   },
   activityItem: {
     display: "flex",
@@ -1213,36 +1241,36 @@ const styles = {
   activityAvatar: {
     width: "32px",
     height: "32px",
-    borderRadius: "8px",
-    backgroundColor: "#f1f5f9",
+    borderRadius: "50%",
+    backgroundColor: "var(--secondary-container)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   activityText: {
-    fontSize: "13px",
-    color: "#334155",
-    lineHeight: 1.3,
+    fontSize: "13.5px",
+    color: "var(--text-secondary)",
+    lineHeight: 1.4,
   },
   activityHighlight: {
-    color: "#2563eb",
-    fontWeight: "500",
+    color: "var(--primary)",
+    fontWeight: "600",
   },
   activityTime: {
-    fontSize: "11px",
-    color: "#94a3b8",
+    fontSize: "11.5px",
+    color: "var(--text-muted)",
     whiteSpace: "nowrap",
   },
   emptyContainer: {
-    padding: "40px",
+    padding: "44px",
     textAlign: "center",
   },
   modalBackdrop: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    backdropFilter: "blur(4px)",
+    backgroundColor: "rgba(28, 27, 31, 0.5)",
+    backdropFilter: "blur(6px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1250,34 +1278,35 @@ const styles = {
     padding: "20px",
   },
   previewModal: {
-    backgroundColor: "#ffffff",
-    borderRadius: "16px",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-xl)",
     width: "100%",
-    maxWidth: "600px",
-    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-    border: "1px solid #e2e8f0",
+    maxWidth: "620px",
+    boxShadow: "var(--shadow-xl)",
+    border: "1px solid var(--border-subtle)",
     overflow: "hidden",
   },
   previewHeader: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "18px 24px",
-    borderBottom: "1px solid #f1f5f9",
+    padding: "20px 26px",
+    borderBottom: "1px solid var(--border-subtle)",
   },
   closeBtn: {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#94a3b8",
-    padding: "4px",
+    color: "var(--text-muted)",
+    padding: "6px",
+    borderRadius: "var(--radius-full)",
     display: "flex",
   },
   previewBody: {
-    padding: "24px",
+    padding: "26px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "18px",
   },
   previewSection: {
     display: "flex",
@@ -1287,14 +1316,14 @@ const styles = {
   previewSectionTitle: {
     fontSize: "12px",
     fontWeight: "700",
-    color: "#64748b",
+    color: "var(--text-muted)",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     margin: 0,
   },
   previewSectionContent: {
     fontSize: "14px",
-    color: "#334155",
+    color: "var(--text-secondary)",
     lineHeight: 1.5,
     margin: 0,
   },
@@ -1302,13 +1331,12 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "10px 14px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-    fontSize: "13px",
+    padding: "12px 16px",
+    backgroundColor: "var(--bg-surface-container)",
+    borderRadius: "var(--radius-md)",
+    fontSize: "13.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
   },
   openDecisionBtn: {
     display: "flex",
@@ -1316,60 +1344,60 @@ const styles = {
     gap: "4px",
     background: "none",
     border: "none",
-    color: "#2563eb",
-    fontSize: "12px",
+    color: "var(--primary)",
+    fontSize: "12.5px",
     fontWeight: "600",
     cursor: "pointer",
   },
   previewMetaGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "12px",
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
+    gap: "14px",
+    padding: "14px",
+    backgroundColor: "var(--bg-surface-container)",
+    borderRadius: "var(--radius-md)",
   },
   metaLabel: {
     display: "block",
-    fontSize: "11px",
-    color: "#64748b",
+    fontSize: "11.5px",
+    color: "var(--text-muted)",
   },
   metaValue: {
-    fontSize: "13px",
+    fontSize: "13.5px",
     fontWeight: "600",
-    color: "#0f172a",
+    color: "var(--text-primary)",
   },
   previewFooter: {
     display: "flex",
     justifyContent: "flex-end",
     gap: "12px",
-    padding: "16px 24px",
-    backgroundColor: "#f8fafc",
-    borderTop: "1px solid #f1f5f9",
+    padding: "18px 26px",
+    backgroundColor: "var(--bg-surface-container-low)",
+    borderTop: "1px solid var(--border-subtle)",
   },
   cancelBtn: {
-    padding: "8px 16px",
-    backgroundColor: "#ffffff",
-    color: "#475569",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
+    padding: "9px 20px",
+    backgroundColor: "var(--bg-surface-container-high)",
+    color: "var(--text-primary)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
     fontWeight: "600",
-    fontSize: "13px",
+    fontSize: "13.5px",
     cursor: "pointer",
   },
   downloadLink: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    padding: "8px 18px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-    borderRadius: "8px",
+    gap: "8px",
+    padding: "9px 22px",
+    backgroundColor: "var(--primary)",
+    color: "var(--on-primary)",
+    border: "none",
+    borderRadius: "var(--radius-full)",
     fontWeight: "600",
-    fontSize: "13px",
+    fontSize: "13.5px",
     textDecoration: "none",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    boxShadow: "var(--shadow-sm)",
   },
 };
 

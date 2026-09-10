@@ -52,8 +52,10 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
           <button
             style={{
               ...styles.pillBtn,
-              backgroundColor: filterType === "all" ? "#2563eb" : "#ffffff",
-              color: filterType === "all" ? "#ffffff" : "#475569",
+              backgroundColor: filterType === "all" ? "var(--primary)" : "var(--bg-surface-container)",
+              color: filterType === "all" ? "var(--on-primary)" : "var(--text-secondary)",
+              borderColor: filterType === "all" ? "var(--primary)" : "var(--border-subtle)",
+              boxShadow: filterType === "all" ? "0 2px 8px rgba(103, 80, 164, 0.28)" : "none",
             }}
             onClick={() => setFilterType("all")}
           >
@@ -62,8 +64,10 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
           <button
             style={{
               ...styles.pillBtn,
-              backgroundColor: filterType === "meetings" ? "#2563eb" : "#ffffff",
-              color: filterType === "meetings" ? "#ffffff" : "#475569",
+              backgroundColor: filterType === "meetings" ? "var(--primary)" : "var(--bg-surface-container)",
+              color: filterType === "meetings" ? "var(--on-primary)" : "var(--text-secondary)",
+              borderColor: filterType === "meetings" ? "var(--primary)" : "var(--border-subtle)",
+              boxShadow: filterType === "meetings" ? "0 2px 8px rgba(103, 80, 164, 0.28)" : "none",
             }}
             onClick={() => setFilterType("meetings")}
           >
@@ -72,8 +76,10 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
           <button
             style={{
               ...styles.pillBtn,
-              backgroundColor: filterType === "comments" ? "#2563eb" : "#ffffff",
-              color: filterType === "comments" ? "#ffffff" : "#475569",
+              backgroundColor: filterType === "comments" ? "var(--primary)" : "var(--bg-surface-container)",
+              color: filterType === "comments" ? "var(--on-primary)" : "var(--text-secondary)",
+              borderColor: filterType === "comments" ? "var(--primary)" : "var(--border-subtle)",
+              boxShadow: filterType === "comments" ? "0 2px 8px rgba(103, 80, 164, 0.28)" : "none",
             }}
             onClick={() => setFilterType("comments")}
           >
@@ -82,7 +88,7 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
         </div>
 
         <div style={styles.searchWrap}>
-          <Search size={14} color="#94a3b8" />
+          <Search size={16} color="var(--text-muted)" />
           <input
             type="text"
             placeholder="Search discussions or attendees..."
@@ -96,8 +102,10 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
       <div style={styles.list}>
         {filtered.length === 0 ? (
           <div style={styles.empty}>
-            <MessageSquare size={40} color="#cbd5e1" />
-            <p style={{ marginTop: "12px", color: "#64748b" }}>No discussions match your filter.</p>
+            <MessageSquare size={44} color="var(--primary)" style={{ opacity: 0.6 }} />
+            <p style={{ marginTop: "14px", color: "var(--text-secondary)", fontSize: "15px", fontWeight: "500" }}>
+              No discussions match your filter.
+            </p>
           </div>
         ) : (
           filtered.map((item) => (
@@ -105,20 +113,27 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
               key={item.id}
               style={{
                 ...styles.card,
-                backgroundColor: item.is_meeting_note ? "#fcfdfc" : "#ffffff",
-                borderLeft: item.is_meeting_note ? "4px solid #10b981" : "4px solid #2563eb",
+                backgroundColor: item.is_meeting_note ? "rgba(22, 163, 74, 0.04)" : "var(--bg-surface)",
+                borderLeft: item.is_meeting_note ? "4px solid var(--accent-emerald)" : "4px solid var(--primary)",
               }}
             >
               <div style={styles.cardHeader}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div style={styles.avatar}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      ...styles.avatar,
+                      background: item.is_meeting_note
+                        ? "linear-gradient(135deg, #16A34A 0%, #15803D 100%)"
+                        : "linear-gradient(135deg, var(--primary) 0%, #7965af 100%)",
+                    }}
+                  >
                     {item.user_name.charAt(0)}
                   </div>
-                  <div>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
                     <span style={styles.userName}>{item.user_name}</span>
                     {item.is_meeting_note && (
                       <span style={styles.meetingBadge}>
-                        <Calendar size={11} /> Meeting Minutes
+                        <Calendar size={12} /> Meeting Minutes
                       </span>
                     )}
                   </div>
@@ -130,8 +145,10 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
 
               {item.meeting_attendees && (
                 <div style={styles.attendeesBox}>
-                  <Users size={13} color="#059669" />
-                  <span><strong>Attendees:</strong> {item.meeting_attendees}</span>
+                  <Users size={14} color="#15803D" />
+                  <span>
+                    <strong style={{ color: "#14532D" }}>Attendees:</strong> {item.meeting_attendees}
+                  </span>
                 </div>
               )}
 
@@ -139,16 +156,20 @@ function DiscussionsView({ onSelectDecision, apiBase = "http://127.0.0.1:8000" }
 
               <div style={styles.cardFooter}>
                 <div style={styles.decisionLink}>
-                  <FileText size={13} color="#64748b" />
-                  <span>Regarding Decision: <strong>{item.decision_title}</strong></span>
+                  <FileText size={14} color="var(--primary)" />
+                  <span>
+                    Regarding Decision:{" "}
+                    <strong style={{ color: "var(--text-primary)" }}>{item.decision_title}</strong>
+                  </span>
                 </div>
                 {onSelectDecision && (
                   <button
                     style={styles.openBtn}
                     onClick={() => onSelectDecision(item.decision_id)}
+                    title="View full decision replay"
                   >
                     <span>View Decision Replay</span>
-                    <ArrowUpRight size={13} />
+                    <ArrowUpRight size={14} />
                   </button>
                 )}
               </div>
@@ -164,7 +185,7 @@ const styles = {
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "22px",
     maxWidth: "1100px",
     margin: "0 auto",
   },
@@ -176,153 +197,168 @@ const styles = {
   title: {
     fontSize: "24px",
     fontWeight: "700",
-    color: "#0f172a",
+    color: "var(--text-primary)",
     margin: 0,
-    letterSpacing: "-0.5px",
+    letterSpacing: "-0.4px",
   },
   subtitle: {
     fontSize: "14px",
-    color: "#64748b",
-    margin: "4px 0 0 0",
+    color: "var(--text-secondary)",
+    margin: "6px 0 0 0",
+    lineHeight: "1.5",
   },
   toolbar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    padding: "12px 16px",
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
+    backgroundColor: "var(--bg-surface)",
+    padding: "14px 20px",
+    borderRadius: "var(--radius-xl)",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-card)",
     flexWrap: "wrap",
-    gap: "12px",
+    gap: "14px",
   },
   pills: {
     display: "flex",
     gap: "8px",
+    flexWrap: "wrap",
   },
   pillBtn: {
-    padding: "6px 14px",
-    borderRadius: "6px",
-    border: "1px solid #e2e8f0",
-    fontSize: "12px",
+    padding: "8px 18px",
+    borderRadius: "var(--radius-full)",
+    border: "1px solid var(--border-subtle)",
+    fontSize: "12.5px",
     fontWeight: "600",
     cursor: "pointer",
+    transition: "all 0.18s cubic-bezier(0.2, 0, 0, 1)",
+    fontFamily: "var(--font-sans)",
   },
   searchWrap: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "6px 12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    backgroundColor: "#f8fafc",
-    width: "250px",
+    gap: "10px",
+    padding: "8px 16px",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-full)",
+    backgroundColor: "var(--bg-surface-container)",
+    width: "280px",
+    transition: "border-color 0.2s ease",
   },
   searchInput: {
     border: "none",
     outline: "none",
     background: "transparent",
-    fontSize: "13px",
+    fontSize: "13.5px",
     width: "100%",
+    color: "var(--text-primary)",
+    fontFamily: "var(--font-sans)",
   },
   list: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "14px",
   },
   empty: {
-    padding: "60px",
+    padding: "64px 24px",
     textAlign: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    border: "1px dashed #cbd5e1",
+    backgroundColor: "var(--bg-surface)",
+    borderRadius: "var(--radius-xl)",
+    border: "1px dashed var(--border-subtle)",
   },
   card: {
-    borderRadius: "10px",
-    border: "1px solid #e2e8f0",
-    padding: "18px 20px",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--border-subtle)",
+    padding: "20px 24px",
+    boxShadow: "var(--shadow-card)",
+    transition: "transform 0.18s ease, box-shadow 0.18s ease",
   },
   cardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "10px",
+    marginBottom: "12px",
   },
   avatar: {
-    width: "30px",
-    height: "30px",
+    width: "34px",
+    height: "34px",
     borderRadius: "50%",
-    backgroundColor: "#2563eb",
     color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "700",
-    fontSize: "12px",
+    fontSize: "13px",
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)",
   },
   userName: {
-    fontWeight: "700",
-    fontSize: "14px",
-    color: "#0f172a",
-    marginRight: "8px",
+    fontWeight: "600",
+    fontSize: "14.5px",
+    color: "var(--text-primary)",
   },
   meetingBadge: {
     display: "inline-flex",
     alignItems: "center",
     gap: "4px",
-    padding: "2px 8px",
-    backgroundColor: "#ecfdf5",
-    color: "#059669",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "700",
+    padding: "2px 10px",
+    backgroundColor: "rgba(22, 163, 74, 0.12)",
+    color: "#15803D",
+    borderRadius: "var(--radius-full)",
+    border: "1px solid rgba(22, 163, 74, 0.25)",
+    fontSize: "11.5px",
+    fontWeight: "600",
   },
   timestamp: {
     fontSize: "12px",
-    color: "#94a3b8",
+    color: "var(--text-muted)",
   },
   attendeesBox: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    fontSize: "12px",
-    color: "#065f46",
-    backgroundColor: "#f0fdf4",
-    padding: "6px 12px",
-    borderRadius: "6px",
-    marginBottom: "10px",
+    gap: "8px",
+    fontSize: "12.5px",
+    color: "#166534",
+    backgroundColor: "rgba(22, 163, 74, 0.08)",
+    border: "1px solid rgba(22, 163, 74, 0.2)",
+    padding: "8px 14px",
+    borderRadius: "var(--radius-md)",
+    marginBottom: "12px",
   },
   content: {
     fontSize: "14px",
-    color: "#334155",
-    lineHeight: 1.5,
-    margin: "0 0 12px 0",
+    color: "var(--text-primary)",
+    lineHeight: 1.6,
+    margin: "0 0 14px 0",
   },
   cardFooter: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    borderTop: "1px solid #f1f5f9",
-    paddingTop: "10px",
+    borderTop: "1px solid var(--border-subtle)",
+    paddingTop: "12px",
+    flexWrap: "wrap",
+    gap: "8px",
   },
   decisionLink: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    fontSize: "12px",
-    color: "#64748b",
+    gap: "8px",
+    fontSize: "13px",
+    color: "var(--text-secondary)",
   },
   openBtn: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
-    gap: "4px",
-    background: "none",
+    gap: "6px",
+    backgroundColor: "var(--primary-container)",
+    color: "var(--on-primary-container)",
     border: "none",
-    color: "#2563eb",
+    borderRadius: "var(--radius-full)",
+    padding: "6px 14px",
     fontWeight: "600",
-    fontSize: "12px",
+    fontSize: "12.5px",
     cursor: "pointer",
+    transition: "all 0.15s ease",
   },
 };
 
