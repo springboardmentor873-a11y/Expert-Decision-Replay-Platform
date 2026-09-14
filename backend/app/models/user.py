@@ -50,3 +50,9 @@ class User(Base):
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )
+    approvals: Mapped[list["Approval"]] = relationship(  # noqa: F821
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    notifications: Mapped[list["Notification"]] = relationship(  # noqa: F821
+        back_populates="user", cascade="all, delete-orphan"
+    )

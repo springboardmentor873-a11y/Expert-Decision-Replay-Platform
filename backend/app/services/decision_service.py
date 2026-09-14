@@ -13,6 +13,8 @@ from sqlalchemy.orm import selectinload
 from app.models.decision import Decision, DecisionStatus
 from app.models.decision_version import DecisionVersion
 from app.models.user import User, UserRole
+from app.services.audit_service import record_decision_archived, record_decision_submitted
+from app.services.notification_service import notify_submitted_for_review
 
 EDIT_ALLOWED_ROLES = (UserRole.MANAGER, UserRole.ADMINISTRATOR)
 
@@ -83,6 +85,37 @@ async def submit_for_review(db: AsyncSession, decision: Decision, user: User) ->
         )
 
     decision.status = DecisionStatus.UNDER_REVIEW
+    await record_decision_submitted(db, decision, user)
+    await notify_submitted_for_review(db, decision, user)
+    await db.commit()
+    await db.refresh(decision)
+    return decision
+
+
+async def archive_decision(db: AsyncSession, decision: Decision, user: User) -> Decision:
+    """
+    Moves a closed decision to ARCHIVED. Restricted to Managers/Administrators
+    and only meaningful for decisions that already left the draft stage.
+    """
+    if user.role not in (UserRole.MANAGER, UserRole.ADMINISTRATOR):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Managers and Administrators can archive decisions.",
+        )
+
+    if decision.status == DecisionStatus.ARCHIVED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This decision is already archived.",
+        )
+    if decision.status == DecisionStatus.DRAFT:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Draft decisions cannot be archived; submit them for review first.",
+        )
+
+    decision.status = DecisionStatus.ARCHIVED
+    await record_decision_archived(db, decision, user)
     await db.commit()
     await db.refresh(decision)
     return decision

@@ -3,6 +3,7 @@ import "./StatusBadge.css";
 const LABELS = {
   draft: "Draft",
   under_review: "Under Review",
+  pending_manager_review: "Pending Manager Review",
   approved: "Approved",
   rejected: "Rejected",
   archived: "Archived",

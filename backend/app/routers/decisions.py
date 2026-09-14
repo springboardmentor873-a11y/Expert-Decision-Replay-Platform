@@ -9,11 +9,13 @@ from app.core.dependencies import get_current_user
 from app.models.decision import Decision
 from app.models.user import User
 from app.schemas.decision import DecisionCreate, DecisionDetail, DecisionOut, DecisionUpdate
+from app.services.audit_service import record_decision_created, record_decision_updated
 from app.services.decision_service import (
     ensure_can_edit,
     get_decision_or_404,
     record_version,
     submit_for_review,
+    archive_decision,
 )
 
 router = APIRouter(prefix="/api/v1/decisions", tags=["decisions"])
@@ -36,6 +38,7 @@ async def create_decision(
     await db.flush()  # so decision.id exists before the version snapshot references it
 
     await record_version(db, decision, edited_by=current_user.id)
+    await record_decision_created(db, decision, current_user)
 
     await db.commit()
     await db.refresh(decision)
@@ -79,6 +82,7 @@ async def update_decision(
 
     if updates:
         await record_version(db, decision, edited_by=current_user.id)
+        await record_decision_updated(db, decision, current_user)
 
     await db.commit()
     await db.refresh(decision)
@@ -93,3 +97,13 @@ async def submit_decision_for_review(
 ):
     decision = await get_decision_or_404(db, decision_id)
     return await submit_for_review(db, decision, current_user)
+
+
+@router.post("/{decision_id}/archive", response_model=DecisionOut)
+async def archive_decision_endpoint(
+    decision_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = await get_decision_or_404(db, decision_id)
+    return await archive_decision(db, decision, current_user)

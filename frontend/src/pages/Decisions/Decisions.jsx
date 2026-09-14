@@ -1,16 +1,27 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "../../components/Navbar/Navbar";
 import StatusBadge from "../../components/StatusBadge/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { listDecisions } from "../../services/decision";
 import "./Decisions.css";
 
+const STATUS_LABELS = {
+  draft: "Draft",
+  under_review: "Under Review",
+  pending_manager_review: "Pending Manager Review",
+  approved: "Approved",
+  rejected: "Rejected",
+  archived: "Archived",
+};
+
 export default function Decisions() {
   const { tokens } = useAuth();
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeStatus = searchParams.get("status");
 
   useEffect(() => {
     async function load() {
@@ -26,6 +37,11 @@ export default function Decisions() {
     load();
   }, [tokens]);
 
+  const visible = activeStatus
+    ? decisions.filter((d) => d.status === activeStatus)
+    : decisions;
+  const statusLabel = STATUS_LABELS[activeStatus] || activeStatus;
+
   return (
     <div className="page">
       <Navbar />
@@ -40,18 +56,32 @@ export default function Decisions() {
           </Link>
         </div>
 
+        {activeStatus && (
+          <div className="decisions__filter">
+            <span>
+              Showing <strong>{statusLabel}</strong> ({visible.length})
+            </span>
+            <button
+              className="decisions__filter-clear"
+              onClick={() => setSearchParams({})}
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
+
         {error && <div className="decisions__error">{error}</div>}
 
         {loading ? (
           <p className="decisions__loading">Loading…</p>
-        ) : decisions.length === 0 ? (
+        ) : visible.length === 0 && !error ? (
           <div className="decisions__empty">
-            <p>No decisions yet.</p>
-            <Link to="/decisions/new">Create the first one</Link>
+            <p>{activeStatus ? "No decisions match this filter." : "No decisions yet."}</p>
+            {!activeStatus && <Link to="/decisions/new">Create the first one</Link>}
           </div>
         ) : (
           <ul className="decisions__list">
-            {decisions.map((decision) => (
+            {visible.map((decision) => (
               <li key={decision.id} className="decisions__item">
                 <Link to={`/decisions/${decision.id}`} className="decisions__item-link">
                   <div className="decisions__item-main">

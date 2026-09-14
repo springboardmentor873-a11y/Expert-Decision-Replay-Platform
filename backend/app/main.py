@@ -2,7 +2,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import alternatives, auth, decisions, files, users
+from app.routers import (
+    alternatives,
+    approvals,
+    audit_logs,
+    auth,
+    decisions,
+    files,
+    notifications,
+    reports,
+    users,
+)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -20,9 +30,13 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(approvals.router)
 app.include_router(decisions.router)
 app.include_router(alternatives.router)
 app.include_router(files.router)
+app.include_router(notifications.router)
+app.include_router(audit_logs.router)
+app.include_router(reports.router)
 
 
 @app.get("/")

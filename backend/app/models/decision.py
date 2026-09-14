@@ -12,6 +12,7 @@ from app.core.database import Base
 class DecisionStatus(str, enum.Enum):
     DRAFT = "draft"
     UNDER_REVIEW = "under_review"
+    PENDING_MANAGER_REVIEW = "pending_manager_review"
     APPROVED = "approved"
     REJECTED = "rejected"
     ARCHIVED = "archived"
@@ -46,4 +47,10 @@ class Decision(Base):
     )
     versions: Mapped[list["DecisionVersion"]] = relationship(  # noqa: F821
         back_populates="decision", cascade="all, delete-orphan", order_by="DecisionVersion.version_number"
+    )
+    approvals: Mapped[list["Approval"]] = relationship(  # noqa: F821
+        back_populates="decision", cascade="all, delete-orphan", order_by="Approval.created_at"
+    )
+    notifications: Mapped[list["Notification"]] = relationship(  # noqa: F821
+        back_populates="decision", cascade="all, delete-orphan"
     )

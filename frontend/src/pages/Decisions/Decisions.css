@@ -42,6 +42,33 @@
   background: var(--ink-soft);
 }
 
+.decisions__filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  background: var(--paper-dim);
+  border: 1px solid var(--line-dark);
+  border-radius: 6px;
+  padding: 0.5rem 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.decisions__filter-clear {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.decisions__filter-clear:hover {
+  color: var(--ink-soft);
+}
+
 .decisions__error {
   background: rgba(181, 67, 47, 0.08);
   border: 1px solid rgba(181, 67, 47, 0.25);

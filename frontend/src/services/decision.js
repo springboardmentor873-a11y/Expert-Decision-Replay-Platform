@@ -22,6 +22,10 @@ export function submitDecisionForReview(decisionId, token) {
   return request(`/api/v1/decisions/${decisionId}/submit`, { method: "POST", token });
 }
 
+export function archiveDecision(decisionId, token) {
+  return request(`/api/v1/decisions/${decisionId}/archive`, { method: "POST", token });
+}
+
 export function addAlternative(decisionId, payload, token) {
   return request(`/api/v1/decisions/${decisionId}/alternatives`, {
     method: "POST",
@@ -65,4 +69,59 @@ export function deleteAttachment(decisionId, attachmentId, token) {
 
 export function attachmentDownloadUrl(decisionId, attachmentId) {
   return `${API_BASE_URL}/api/v1/decisions/${decisionId}/attachments/${attachmentId}/download`;
+}
+
+export async function approveDecision(decisionId, token) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/decisions/${decisionId}/approve`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.detail || "Approval failed.");
+  }
+  return data;
+}
+
+export async function rejectDecision(decisionId, reason, token) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/decisions/${decisionId}/reject`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    }
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.detail || "Rejection failed.");
+  }
+  return data;
+}
+
+export async function listPendingApprovals(token) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/decisions/pending-review`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.detail || "Failed to load pending approvals.");
+  }
+  return data;
+}
+
+export async function getDecisionApprovals(decisionId, token) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/decisions/${decisionId}/approvals`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.detail || "Failed to load approval history.");
+  }
+  return data;
 }

@@ -76,3 +76,15 @@
 .navbar__logout:hover {
   background: var(--paper-dim);
 }
+
+.navbar__badge {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.4rem;
+  line-height: 1.2;
+}

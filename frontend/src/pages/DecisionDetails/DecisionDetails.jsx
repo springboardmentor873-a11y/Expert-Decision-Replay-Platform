@@ -9,8 +9,12 @@ import {
   deleteAttachment,
   getDecision,
   submitDecisionForReview,
-  uploadAttachment,
+  approveDecision,
+  rejectDecision,
+  getDecisionApprovals,
+  archiveDecision,
 } from "../../services/decision";
+import { listAuditLogs, AUDIT_ACTION_LABELS } from "../../services/audit";
 import "./DecisionDetails.css";
 
 export default function DecisionDetails() {
@@ -25,6 +29,28 @@ export default function DecisionDetails() {
   const [actionError, setActionError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [showApprovals, setShowApprovals] = useState(false);
+  const [approvalHistory, setApprovalHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  const isPrivileged = user && ["manager", "administrator"].includes(user.role);
+  const isDraft = decision?.status === "draft";
+  const canEdit = decision && (decision.created_by === user?.id || ["manager", "administrator"].includes(user?.role));
+  const canEditNow = canEdit && isDraft;
+
+  const isUnderReview = decision?.status === "under_review";
+  const isPendingManagerReview = decision?.status === "pending_manager_review";
+
+  const canApprove = isUnderReview && (user?.role === "reviewer" || user?.role === "administrator");
+  const canManagerApprove = isPendingManagerReview && (user?.role === "manager" || user?.role === "administrator");
+  const canReview = canApprove || canManagerApprove;
 
   const loadDecision = useCallback(async () => {
     try {
@@ -41,11 +67,7 @@ export default function DecisionDetails() {
     loadDecision();
   }, [loadDecision]);
 
-  const isDraft = decision?.status === "draft";
-  const canEdit = decision && (decision.created_by === user?.id || ["manager", "administrator"].includes(user?.role));
-  const canEditNow = canEdit && isDraft;
-
-  async function handleSubmitForReview() {
+async function handleSubmitForReview() {
     setActionError("");
     setSubmitting(true);
     try {
@@ -55,6 +77,79 @@ export default function DecisionDetails() {
       setActionError(err.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleApprove() {
+    setActionError("");
+    try {
+      await approveDecision(decisionId, tokens.access_token);
+      await loadDecision();
+    } catch (err) {
+      setActionError(err.message);
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectReason.trim()) {
+      setActionError("A reason is required when rejecting.");
+      return;
+    }
+    setActionError("");
+    setRejecting(true);
+    try {
+      await rejectDecision(decisionId, rejectReason, tokens.access_token);
+      await loadDecision();
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setRejecting(false);
+      setShowRejectForm(false);
+      setRejectReason("");
+    }
+  }
+
+  async function handleToggleApprovals() {
+    setShowApprovals(!showApprovals);
+    if (!showApprovals) {
+      setHistoryLoading(true);
+      try {
+        const data = await getDecisionApprovals(decisionId, tokens.access_token);
+        setApprovalHistory(data);
+      } catch {
+        // ignore
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+  }
+
+  async function handleToggleActivity() {
+    setShowActivity(!showActivity);
+    if (!showActivity) {
+      setAuditLoading(true);
+      try {
+        const data = await listAuditLogs(tokens.access_token, { decision_id: decisionId, limit: 100 });
+        setAuditLogs(data.logs);
+      } catch {
+        // ignore
+      } finally {
+        setAuditLoading(false);
+      }
+    }
+  }
+
+  async function handleArchive() {
+    setActionError("");
+    if (!window.confirm("Archive this decision? This removes it from the active workflow.")) return;
+    setArchiving(true);
+    try {
+      await archiveDecision(decisionId, tokens.access_token);
+      await loadDecision();
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setArchiving(false);
     }
   }
 
@@ -164,6 +259,135 @@ export default function DecisionDetails() {
           <button className="submit-review-button" onClick={handleSubmitForReview} disabled={submitting}>
             {submitting ? "Submitting…" : "Submit for review"}
           </button>
+        )}
+
+        {canReview && (
+          <div className="decision-details__approval">
+            <h2 className="detail-section__title">Review Decision</h2>
+            {showRejectForm ? (
+              <div className="decision-details__reject-form">
+                <textarea
+                  placeholder="Reason for rejection…"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={3}
+                  autoFocus
+                />
+                <div>
+                  <button className="submit-review-button" onClick={handleReject} disabled={rejecting}>
+                    {rejecting ? "Rejecting…" : "Confirm Reject"}
+                  </button>
+                  <button
+                    className="decision-details__back"
+                    onClick={() => { setShowRejectForm(false); setRejectReason(""); setActionError(""); }}
+                    style={{ marginLeft: "0.75rem" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button className="submit-review-button" onClick={handleApprove}>
+                  Approve
+                </button>
+                <button
+                  className="decision-details__back"
+                  onClick={() => setShowRejectForm(true)}
+                  style={{ marginLeft: "0.75rem", background: "transparent", color: "var(--text-ink)" }}
+                >
+                  Reject
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        <button
+          className="decision-details__back"
+          onClick={handleToggleApprovals}
+          style={{ marginTop: "1rem" }}
+        >
+          {showApprovals ? "Hide" : "Show"} Approval History
+        </button>
+
+        {isPrivileged && (
+          <button
+            className="decision-details__back"
+            onClick={handleToggleActivity}
+            style={{ marginLeft: "0.75rem", marginTop: "1rem" }}
+          >
+            {showActivity ? "Hide" : "Show"} Activity
+          </button>
+        )}
+
+        {isPrivileged && ![null, "draft", "archived"].includes(decision.status) && (
+          <button
+            className="decision-details__back decision-details__archive"
+            onClick={handleArchive}
+            disabled={archiving}
+            style={{ marginLeft: "0.75rem", marginTop: "1rem" }}
+          >
+            {archiving ? "Archiving…" : "Archive decision"}
+          </button>
+        )}
+
+        {showActivity && isPrivileged && (
+          <div className="decision-details__approval-history">
+            <h2 className="detail-section__title">Activity</h2>
+            {auditLoading ? (
+              <p>Loading…</p>
+            ) : auditLogs.length === 0 ? (
+              <p>No activity recorded yet.</p>
+            ) : (
+              <ul className="activity-list">
+                {auditLogs.map((log) => (
+                  <li key={log.id} className="activity-list__item">
+                    <span
+                      className={`activity-list__badge activity-list__badge--${log.action.replace(/_/g, "-")}`}
+                    >
+                      {AUDIT_ACTION_LABELS[log.action] || log.action}
+                    </span>
+                    <span className="activity-list__details">{log.details}</span>
+                    <span className="activity-list__actor">{log.actor_name}</span>
+                    <span className="activity-list__time">
+                      {new Date(log.created_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {showApprovals && (
+          <div className="decision-details__approval-history">
+            <h2 className="detail-section__title">Approval History</h2>
+            {historyLoading ? (
+              <p>Loading…</p>
+            ) : approvalHistory.length === 0 ? (
+              <p>No approval actions yet.</p>
+            ) : (
+              <ul className="alternative-list">
+                {approvalHistory.map((entry) => (
+                  <li key={entry.id} className="alternative-card">
+                    <div className="alternative-card__header">
+                      <span className={`status-badge status-badge--${entry.action}`}>
+                        {entry.action}
+                      </span>
+                      <span className="decision-details__stage">
+                        {entry.approval_stage}
+                      </span>
+                    </div>
+                    {entry.reason && <p>{entry.reason}</p>}
+                    <p className="alternative-card__cost">
+                      {new Date(entry.created_at).toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         <section className="detail-section">
