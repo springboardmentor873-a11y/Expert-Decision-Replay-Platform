@@ -23,6 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 node_modules/
-.env
+backend/.env
 .env.*
 !.env.example
