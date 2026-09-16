@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { DecisionStatusBadge, ImplementationStatusBadge } from '../../components/ui/StatusBadge';
 import api from '../../api/client';
+import { downloadFile } from '../../utils/download';
 
 import { OverviewTab } from './tabs/OverviewTab';
 import { AlternativesTab } from './tabs/AlternativesTab';
@@ -53,7 +54,7 @@ export const DecisionDetailsPage = () => {
   const [altForm, setAltForm] = useState({ title: '', description: '', sort_order: 0 });
 
   const [showAddCritModal, setShowAddCritModal] = useState(false);
-  const [critForm, setCritForm] = useState({ name: '', description: '', weight: 1.0, sort_order: 0 });
+  const [critForm, setCritForm] = useState({ name: '', description: '', weight: '1', sort_order: 0 });
 
   const [showAddRiskModal, setShowAddRiskModal] = useState(false);
   const [riskForm, setRiskForm] = useState({ title: '', description: '', severity: 'medium', likelihood: 'medium', mitigation: '' });
@@ -177,8 +178,12 @@ export const DecisionDetailsPage = () => {
   const handleAddCriterion = async (e) => {
     e.preventDefault();
     try {
-      await api.post(`/decisions/${id}/criteria`, critForm);
-      setCritForm({ name: '', description: '', weight: 1.0, sort_order: 0 });
+      const payload = {
+        ...critForm,
+        weight: parseFloat(critForm.weight) || 1.0,
+      };
+      await api.post(`/decisions/${id}/criteria`, payload);
+      setCritForm({ name: '', description: '', weight: '1', sort_order: 0 });
       setShowAddCritModal(false);
       await fetchFullCaseFile();
     } catch (err) {
@@ -197,8 +202,17 @@ export const DecisionDetailsPage = () => {
   };
 
   const handleScoreChange = (altId, critId, val) => {
-    const num = Math.min(100, Math.max(0, parseFloat(val) || 0));
-    setEditingScores({ ...editingScores, [`${altId}_${critId}`]: num });
+    if (val === '') {
+      setEditingScores({ ...editingScores, [`${altId}_${critId}`]: '' });
+      return;
+    }
+    const num = parseFloat(val);
+    if (isNaN(num)) {
+      setEditingScores({ ...editingScores, [`${altId}_${critId}`]: '' });
+      return;
+    }
+    const clamped = Math.min(100, Math.max(0, num));
+    setEditingScores({ ...editingScores, [`${altId}_${critId}`]: clamped });
   };
 
   const handleSaveEvaluationMatrix = async () => {
@@ -207,7 +221,8 @@ export const DecisionDetailsPage = () => {
       const evaluations = [];
       matrix.alternatives.forEach((alt) => {
         matrix.criteria.forEach((crit) => {
-          const score = editingScores[`${alt.id}_${crit.id}`] ?? 0;
+          const rawScore = editingScores[`${alt.id}_${crit.id}`];
+          const score = (rawScore === '' || rawScore === undefined || rawScore === null) ? 0 : (parseFloat(rawScore) || 0);
           evaluations.push({
             alternative_id: alt.id,
             criterion_id: crit.id,
@@ -336,8 +351,23 @@ export const DecisionDetailsPage = () => {
   }
 
   const isOwner = decision.owner_id === user?.id;
-  const canEdit = isOwner || isAdmin || isReviewer || isManager;
   const isDraftOrChanges = decision.status === 'draft' || decision.status === 'changes_requested';
+  const isInReview = decision.status === 'in_review';
+  const isInApproval = decision.status === 'in_approval';
+  const isFinalized = decision.status === 'approved' || decision.status === 'rejected' || decision.status === 'superseded';
+
+  let canEdit = false;
+  if (isAdmin) {
+    canEdit = true;
+  } else if (isFinalized) {
+    canEdit = false;
+  } else if (isInApproval) {
+    canEdit = isManager;
+  } else if (isInReview) {
+    canEdit = isReviewer || isManager;
+  } else if (isDraftOrChanges) {
+    canEdit = isOwner || isManager;
+  }
 
   const currentPendingStep = approvals?.steps?.find((s) => s.status === 'pending');
   const userCanActOnApproval =
@@ -369,7 +399,11 @@ export const DecisionDetailsPage = () => {
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
-            <DecisionStatusBadge status={decision.status} />
+            <DecisionStatusBadge
+              status={decision.status}
+              approvalRole={decision.current_approval_role || currentPendingStep?.required_role_code}
+              approvalStep={decision.current_approval_step || currentPendingStep?.step_name}
+            />
             <ImplementationStatusBadge status={decision.implementation_status} />
             <span className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
               v{decision.current_version_no}
@@ -380,15 +414,15 @@ export const DecisionDetailsPage = () => {
             {decision.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-1">
             <span>
               Author: <strong className="text-slate-700 font-semibold">{decision.owner_name}</strong>
             </span>
-            <span>?</span>
+            <span className="text-slate-300">•</span>
             <span>Category: <strong className="text-slate-700 font-semibold">{decision.category?.name || 'Uncategorized'}</strong></span>
-            <span>?</span>
+            <span className="text-slate-300">•</span>
             <span>Team: <strong className="text-slate-700 font-semibold">{decision.team_name || 'General'}</strong></span>
-            <span>?</span>
+            <span className="text-slate-300">•</span>
             <span>Created: {new Date(decision.created_at).toLocaleDateString()}</span>
           </div>
         </div>
@@ -464,23 +498,24 @@ export const DecisionDetailsPage = () => {
             </button>
           )}
 
-          <a
-            href={`/api/v1/reports/decision/${id}/pdf`}
-            download
-            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 transition-colors"
+          <button
+            onClick={() => downloadFile(`/reports/decision/${id}/pdf`, `Decision_${String(id).slice(0, 8)}_CaseFile.pdf`)}
+            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
+            title="Download PDF Case File"
           >
             <FileText className="w-3.5 h-3.5 text-rose-600" />
             <span>PDF</span>
-          </a>
+          </button>
 
-          <a
-            href={`/api/v1/reports/decision/${id}/excel`}
-            download
-            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 transition-colors"
+          <button
+            onClick={() => downloadFile(`/reports/decision/${id}/excel`, `Decision_${String(id).slice(0, 8)}_Analysis.xlsx`)}
+            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
+            title="Download Matrix Excel Workbook"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>Excel</span>
-          </a>
+          </button>
+
 
           {canEdit && (
             <Link
@@ -541,6 +576,8 @@ export const DecisionDetailsPage = () => {
 
       {activeTab === 'criteria' && (
         <CriteriaMatrixTab
+          decision={decision}
+          user={user}
           matrix={matrix}
           canEdit={canEdit}
           editingScores={editingScores}

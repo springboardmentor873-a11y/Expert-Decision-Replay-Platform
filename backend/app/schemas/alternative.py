@@ -85,6 +85,8 @@ class AlternativeEvaluationOut(BaseModel):
     score: float
     notes: str | None = None
     evaluated_by_id: UUID | None = None
+    evaluated_by_name: str | None = None
+    evaluated_by_role: str | None = None
     created_at: datetime
 
 

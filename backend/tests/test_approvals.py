@@ -7,10 +7,12 @@ def test_full_approval_workflow_lifecycle(
     employee_user: tuple,
     reviewer_user: tuple,
     manager_user: tuple,
+    admin_user: tuple,
 ) -> None:
     _, _, emp_headers = employee_user
     _, _, rev_headers = reviewer_user
     _, _, mgr_headers = manager_user
+    _, _, adm_headers = admin_user
 
     # 1. Employee creates a decision and adds an alternative
     d_res = client.post(
@@ -34,11 +36,12 @@ def test_full_approval_workflow_lifecycle(
     assert sub_res.status_code == 200
     assert sub_res.json()["current_status"] == "in_review"
 
-    # Step 1 must be pending (Reviewer), Step 2 waiting (Manager)
+    # Step 1 must be pending (Reviewer), Step 2 waiting (Manager), Step 3 waiting (Administrator)
     steps = sub_res.json()["steps"]
-    assert len(steps) == 2
+    assert len(steps) == 3
     assert steps[0]["status"] == "pending"
     assert steps[1]["status"] == "waiting"
+    assert steps[2]["status"] == "waiting"
 
     # 3. Non-reviewer (Employee) cannot approve step 1
     bad_appr = client.post(
@@ -59,18 +62,33 @@ def test_full_approval_workflow_lifecycle(
     steps2 = rev_appr.json()["steps"]
     assert steps2[0]["status"] == "approved"
     assert steps2[1]["status"] == "pending"
+    assert steps2[2]["status"] == "waiting"
 
-    # 5. Manager approves step 2 (in_approval -> approved)
+    # 5. Manager approves step 2 (in_approval -> in_approval)
     mgr_appr = client.post(
         f"/api/v1/decisions/{decision_id}/approve",
         json={"comment": "Executive budget authorized."},
         headers=mgr_headers,
     )
     assert mgr_appr.status_code == 200
-    assert mgr_appr.json()["current_status"] == "approved"
+    assert mgr_appr.json()["current_status"] == "in_approval"
     steps3 = mgr_appr.json()["steps"]
     assert steps3[0]["status"] == "approved"
     assert steps3[1]["status"] == "approved"
+    assert steps3[2]["status"] == "pending"
+
+    # 6. Administrator approves step 3 (in_approval -> approved)
+    adm_appr = client.post(
+        f"/api/v1/decisions/{decision_id}/approve",
+        json={"comment": "Final administrative sign-off authorized."},
+        headers=adm_headers,
+    )
+    assert adm_appr.status_code == 200
+    assert adm_appr.json()["current_status"] == "approved"
+    steps4 = adm_appr.json()["steps"]
+    assert steps4[0]["status"] == "approved"
+    assert steps4[1]["status"] == "approved"
+    assert steps4[2]["status"] == "approved"
 
     # Verify decision state
     dec_check = client.get(f"/api/v1/decisions/{decision_id}", headers=emp_headers)

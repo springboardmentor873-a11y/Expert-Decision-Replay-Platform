@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileSpreadsheet, FileText, Download, FolderKanban, ShieldCheck } from 'lucide-react';
 import api from '../api/client';
+import { downloadFile } from '../utils/download';
 
 export const ReportsPage = () => {
   const [decisions, setDecisions] = useState([]);
@@ -41,14 +42,13 @@ export const ReportsPage = () => {
             Download a consolidated multi-sheet Excel spreadsheet containing all active, approved, and archived decision records with owners, categories, alternatives, and scores.
           </p>
         </div>
-        <a
-          href="/api/v1/reports/summary/excel"
-          download
-          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-6 py-3 rounded-xl shadow-lg transition-colors flex-shrink-0"
+        <button
+          onClick={() => downloadFile('/reports/summary/excel', 'EDRP_Decisions_Executive_Summary.xlsx')}
+          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-6 py-3 rounded-xl shadow-lg transition-colors flex-shrink-0 cursor-pointer"
         >
           <FileSpreadsheet className="w-4 h-4" />
           <span>Download Summary (Excel)</span>
-        </a>
+        </button>
       </div>
 
       {/* Individual Decision Reports Table */}
@@ -68,33 +68,33 @@ export const ReportsPage = () => {
               <div key={d.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
                 <div className="min-w-0 flex-1">
                   <h4 className="font-bold text-slate-900 text-sm truncate">{d.title}</h4>
-                  <div className="flex items-center gap-3 mt-1 text-slate-400">
+                  <div className="flex items-center gap-2.5 mt-1 text-slate-400">
                     <span>By {d.owner_name}</span>
-                    <span>?</span>
+                    <span className="text-slate-300">•</span>
                     <span>v{d.current_version_no}</span>
-                    <span>?</span>
+                    <span className="text-slate-300">•</span>
                     <span className="capitalize">{d.status.replace('_', ' ')}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <a
-                    href={`/api/v1/reports/decision/${d.id}/pdf`}
-                    download
-                    className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold px-3.5 py-2 rounded-lg border border-rose-200 transition-colors"
+                  <button
+                    onClick={() => downloadFile(`/reports/decision/${d.id}/pdf`, `Decision_${d.id.slice(0, 8)}_CaseFile.pdf`)}
+                    className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold px-3.5 py-2 rounded-lg border border-rose-200 transition-colors cursor-pointer"
+                    title="Download Decision Case PDF"
                   >
                     <FileText className="w-3.5 h-3.5" />
                     <span>Case PDF</span>
-                  </a>
+                  </button>
 
-                  <a
-                    href={`/api/v1/reports/decision/${d.id}/excel`}
-                    download
-                    className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-3.5 py-2 rounded-lg border border-emerald-200 transition-colors"
+                  <button
+                    onClick={() => downloadFile(`/reports/decision/${d.id}/excel`, `Decision_${d.id.slice(0, 8)}_Matrix.xlsx`)}
+                    className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-3.5 py-2 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                    title="Download Decision Matrix Excel"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5" />
                     <span>Matrix Excel</span>
-                  </a>
+                  </button>
                 </div>
               </div>
             ))}
@@ -104,3 +104,4 @@ export const ReportsPage = () => {
     </div>
   );
 };
+

@@ -307,15 +307,16 @@ export const DashboardPage = () => {
                     >
                       {d.title}
                     </Link>
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                    <div className="flex items-center gap-2.5 mt-1.5 text-xs text-slate-400">
                       <span>By <strong className="text-slate-600 font-medium">{d.owner_name}</strong></span>
-                      <span>?</span>
+                      <span className="text-slate-300">•</span>
                       <span>{d.category?.name || 'General'}</span>
-                      <span>?</span>
+                      <span className="text-slate-300">•</span>
                       <span>v{d.current_version_no}</span>
                     </div>
+
                   </div>
-                  <DecisionStatusBadge status={d.status} />
+                  <DecisionStatusBadge status={d.status} approvalRole={d.current_approval_role} approvalStep={d.current_approval_step} />
                 </div>
               ))
             )}

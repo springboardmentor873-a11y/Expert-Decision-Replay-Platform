@@ -70,7 +70,7 @@ export const ApprovalsPage = () => {
                       {d.category?.name || 'General'}
                     </td>
                     <td className="py-4 px-4">
-                      <DecisionStatusBadge status={d.status} />
+                      <DecisionStatusBadge status={d.status} approvalRole={d.current_approval_role} approvalStep={d.current_approval_step} />
                     </td>
                     <td className="py-4 px-4 text-xs font-medium text-slate-700">
                       {d.owner_name || d.owner_email}

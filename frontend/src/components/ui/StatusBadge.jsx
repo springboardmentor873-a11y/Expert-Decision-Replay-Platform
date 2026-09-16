@@ -12,8 +12,9 @@ import {
   CheckCheck
 } from 'lucide-react';
 
-export const DecisionStatusBadge = ({ status }) => {
+export const DecisionStatusBadge = ({ status, approvalRole, approvalStep }) => {
   const s = (status || 'draft').toLowerCase();
+  const r = (approvalRole || '').toLowerCase();
 
   const config = {
     draft: {
@@ -27,8 +28,8 @@ export const DecisionStatusBadge = ({ status }) => {
       icon: Clock,
     },
     in_approval: {
-      label: 'In Management Approval',
-      bg: 'bg-blue-50 text-blue-700 border-blue-200',
+      label: r === 'administrator' ? 'In Admin Approval' : (r === 'manager' ? 'In Management Approval' : 'In Approval'),
+      bg: r === 'administrator' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200',
       icon: Clock,
     },
     approved: {

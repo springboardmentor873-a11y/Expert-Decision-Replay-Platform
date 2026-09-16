@@ -1,5 +1,6 @@
 import React from 'react';
 import { Paperclip, Download } from 'lucide-react';
+import { downloadFile } from '../../../utils/download';
 
 export const AttachmentsTab = ({
   attachments,
@@ -44,18 +45,18 @@ export const AttachmentsTab = ({
                 <div>
                   <span className="font-bold text-slate-900">{att.file_name}</span>
                   <span className="text-slate-400 text-[11px] block mt-0.5">
-                    {(att.byte_size / 1024).toFixed(1)} KB ? Uploaded by {att.uploaded_by_name}
+                    {(att.byte_size / 1024).toFixed(1)} KB <span className="text-slate-300">•</span> Uploaded by {att.uploaded_by_name}
                   </span>
                 </div>
               </div>
-              <a
-                href={`/api/v1/attachments/${att.id}/download`}
-                download
-                className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200"
+              <button
+                onClick={() => downloadFile(`/attachments/${att.id}/download`, att.file_name)}
+                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
+                title="Download Attachment File"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="w-3.5 h-3.5 text-blue-600" />
                 <span>Download</span>
-              </a>
+              </button>
             </div>
           ))
         )}
@@ -63,3 +64,4 @@ export const AttachmentsTab = ({
     </div>
   );
 };
+

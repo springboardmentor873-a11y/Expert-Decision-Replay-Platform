@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 
+from app.models.collaboration import Approval
 from app.models.decision import (
     Alternative,
     AlternativeEvaluation,
@@ -11,7 +12,7 @@ from app.models.decision import (
     Risk,
     Stakeholder,
 )
-from app.models.identity import Team, User, UserProfile
+from app.models.identity import Role, Team, User, UserProfile
 from app.models.taxonomy import DecisionCategory, DecisionTag, DecisionTagLink
 from app.schemas.alternative import (
     AlternativeOut,
@@ -102,6 +103,19 @@ def build_decision_out(db: Session, d: Decision) -> DecisionOut:
         .where(Alternative.decision_id == d.id, Alternative.deleted_at.is_(None))
     ) or 0
 
+    current_approval_step = None
+    current_approval_role = None
+    if d.status in ("in_review", "in_approval"):
+        pending_appr = db.scalar(
+            select(Approval)
+            .where(Approval.decision_id == d.id, Approval.status == "pending")
+            .order_by(Approval.step_order)
+        )
+        if pending_appr:
+            current_approval_step = pending_appr.step_name
+            req_role = db.scalar(select(Role).where(Role.id == pending_appr.required_role_id))
+            current_approval_role = req_role.code if req_role else None
+
     return DecisionOut(
         id=d.id,
         title=d.title,
@@ -122,6 +136,8 @@ def build_decision_out(db: Session, d: Decision) -> DecisionOut:
         outcome_recorded_at=d.outcome_recorded_at,
         tags=tag_outs,
         alternatives_count=alt_count,
+        current_approval_step=current_approval_step,
+        current_approval_role=current_approval_role,
         created_at=d.created_at,
         updated_at=d.updated_at,
     )

@@ -14,7 +14,7 @@ from app.models.decision import (
     Risk,
     Stakeholder,
 )
-from app.models.identity import User
+from app.models.identity import Role, User, UserProfile
 from app.schemas.alternative import (
     AlternativeCreate,
     AlternativeEvaluationOut,
@@ -36,9 +36,56 @@ from app.schemas.alternative import (
 from app.schemas.decision import DecisionSelectAlternative
 from app.services.audit_service import log_audit
 from app.services.decision_service import calculate_alternative_scores
+from app.services.notification_service import notify_decision_stakeholders
 from app.services.version_service import create_decision_snapshot
 
 router = APIRouter(tags=["alternatives & criteria"])
+
+
+def check_decision_matrix_permission(
+    db: Session,
+    decision: Decision,
+    current_user: User,
+    action_description: str = "modify decision criteria or evaluations",
+) -> None:
+    """Validate user permissions to alter criteria, alternatives, or evaluations based on lifecycle state and role."""
+    user_role = db.scalar(select(Role).where(Role.id == current_user.role_id))
+    role_code = user_role.code if user_role else "employee"
+    is_admin = role_code == "administrator"
+    is_manager = role_code == "manager"
+    is_reviewer = role_code == "reviewer"
+    is_owner = decision.owner_id == current_user.id
+
+    if is_admin:
+        return
+
+    if decision.status in ("approved", "rejected", "superseded"):
+        raise ForbiddenError(
+            message=f"Decision is in '{decision.status}' status and is locked as an immutable record."
+        )
+
+    if decision.status == "in_approval":
+        if not is_manager:
+            raise ForbiddenError(
+                message="Decision is in Management Approval. Only designated Managers or Administrators can evaluate or modify scores."
+            )
+        return
+
+    if decision.status == "in_review":
+        if not (is_reviewer or is_manager):
+            raise ForbiddenError(
+                message="Decision is currently in Peer Review. The author cannot alter scores or criteria while under formal review."
+            )
+        return
+
+    if decision.status in ("draft", "changes_requested"):
+        if not (is_owner or is_manager):
+            raise ForbiddenError(
+                message="You do not have permission to modify this draft decision."
+            )
+        return
+
+    raise ForbiddenError(message=f"You do not have permission to {action_description}.")
 
 
 # ---------------- ALTERNATIVES ----------------
@@ -54,6 +101,7 @@ def add_alternative(
     decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
     if not decision:
         raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "add alternative options")
 
     alt = Alternative(
         decision_id=decision_id,
@@ -73,12 +121,22 @@ def add_alternative(
         actor_id=current_user.id,
         decision_id=decision_id,
     )
+    notify_decision_stakeholders(
+        db=db,
+        decision_id=decision_id,
+        type="alternative_added",
+        title=f"New Alternative Added: {alt.title}",
+        body=f"A new candidate solution '{alt.title}' was added to '{decision.title}'.",
+        payload={"decision_id": str(decision_id), "alternative_id": str(alt.id)},
+        exclude_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(alt)
 
     ao = AlternativeOut.model_validate(alt)
     ao.total_score = None
     return ao
+
 
 
 @router.put("/alternatives/{alt_id}", response_model=AlternativeOut)
@@ -92,6 +150,10 @@ def update_alternative(
     alt = db.scalar(select(Alternative).where(Alternative.id == alt_id, Alternative.deleted_at.is_(None)))
     if not alt:
         raise NotFoundError(message="Alternative not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == alt.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "update alternative options")
 
     if data.title is not None:
         alt.title = data.title.strip()
@@ -130,6 +192,10 @@ def delete_alternative(
     alt = db.scalar(select(Alternative).where(Alternative.id == alt_id, Alternative.deleted_at.is_(None)))
     if not alt:
         raise NotFoundError(message="Alternative not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == alt.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "delete alternative options")
 
     alt.deleted_at = datetime.now(UTC)
     create_decision_snapshot(db, alt.decision_id, current_user.id, reason=f"Alternative '{alt.title}' deleted")
@@ -156,6 +222,7 @@ def select_decision_alternative(
     decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
     if not decision:
         raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "select designated alternative")
 
     target_alt = db.scalar(
         select(Alternative).where(Alternative.id == data.alternative_id, Alternative.decision_id == decision_id)
@@ -180,8 +247,18 @@ def select_decision_alternative(
         decision_id=decision_id,
         extra={"selected_alternative_id": str(data.alternative_id)},
     )
+    notify_decision_stakeholders(
+        db=db,
+        decision_id=decision_id,
+        type="alternative_selected",
+        title=f"Option Selected: {target_alt.title}",
+        body=f"'{target_alt.title}' was selected as the designated decision choice for '{decision.title}'.",
+        payload={"decision_id": str(decision_id), "alternative_id": str(target_alt.id)},
+        exclude_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(target_alt)
+
 
     scores = calculate_alternative_scores(db, decision_id)
     ao = AlternativeOut.model_validate(target_alt)
@@ -202,6 +279,7 @@ def add_criterion(
     decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
     if not decision:
         raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "add evaluation criteria")
 
     crit = EvaluationCriterion(
         decision_id=decision_id,
@@ -238,6 +316,10 @@ def update_criterion(
     crit = db.scalar(select(EvaluationCriterion).where(EvaluationCriterion.id == crit_id, EvaluationCriterion.deleted_at.is_(None)))
     if not crit:
         raise NotFoundError(message="Criterion not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == crit.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "update evaluation criteria")
 
     if data.name is not None:
         crit.name = data.name.strip()
@@ -272,6 +354,10 @@ def delete_criterion(
     crit = db.scalar(select(EvaluationCriterion).where(EvaluationCriterion.id == crit_id, EvaluationCriterion.deleted_at.is_(None)))
     if not crit:
         raise NotFoundError(message="Criterion not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == crit.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "delete evaluation criteria")
 
     crit.deleted_at = datetime.now(UTC)
     create_decision_snapshot(db, crit.decision_id, current_user.id, reason=f"Criterion '{crit.name}' deleted")
@@ -297,6 +383,11 @@ def record_evaluation(
     db: Session = Depends(get_db),
 ) -> AlternativeEvaluationOut:
     """Record or update a score for an alternative under a criterion."""
+    decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "record evaluation score")
+
     eval_record = db.scalar(
         select(AlternativeEvaluation).where(
             AlternativeEvaluation.decision_id == decision_id,
@@ -332,6 +423,11 @@ def batch_record_evaluations(
     db: Session = Depends(get_db),
 ) -> list[AlternativeEvaluationOut]:
     """Batch update alternative evaluation matrix scores."""
+    decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "save evaluation matrix scores")
+
     results = []
     for item in data.evaluations:
         eval_record = db.scalar(
@@ -355,7 +451,8 @@ def batch_record_evaluations(
             eval_record.score = item.score
             eval_record.notes = item.notes
             eval_record.evaluated_by_id = current_user.id
-        results.append(eval_record)
+        db.flush()
+        results.append(AlternativeEvaluationOut.model_validate(eval_record))
 
     create_decision_snapshot(db, decision_id, current_user.id, reason="Evaluation scores updated")
     log_audit(
@@ -366,8 +463,20 @@ def batch_record_evaluations(
         actor_id=current_user.id,
         decision_id=decision_id,
     )
+    dec_title = decision.title if decision else "Decision"
+    notify_decision_stakeholders(
+        db=db,
+        decision_id=decision_id,
+        type="evaluations_updated",
+        title=f"Evaluation Scores Saved: {dec_title}",
+        body=f"Comparative matrix evaluation scores and weighted rankings were updated for '{dec_title}'.",
+        payload={"decision_id": str(decision_id)},
+        exclude_user_id=current_user.id,
+    )
     db.commit()
-    return [AlternativeEvaluationOut.model_validate(r) for r in results]
+    return results
+
+
 
 
 @router.get("/decisions/{decision_id}/evaluation-matrix", response_model=EvaluationMatrixOut)
@@ -376,7 +485,7 @@ def get_evaluation_matrix(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> EvaluationMatrixOut:
-    """Get the full comparative evaluation matrix (criteria, alternatives with total scores, and cell scores)."""
+    """Get the full comparative evaluation matrix (criteria, alternatives with total scores, and cell scores with evaluator info)."""
     scores = calculate_alternative_scores(db, decision_id)
 
     alts = db.scalars(
@@ -400,7 +509,17 @@ def get_evaluation_matrix(
     evals = db.scalars(
         select(AlternativeEvaluation).where(AlternativeEvaluation.decision_id == decision_id)
     ).all()
-    eval_outs = [AlternativeEvaluationOut.model_validate(e) for e in evals]
+    eval_outs = []
+    for e in evals:
+        eo = AlternativeEvaluationOut.model_validate(e)
+        if e.evaluated_by_id:
+            eval_user = db.scalar(select(User).where(User.id == e.evaluated_by_id))
+            if eval_user:
+                profile = db.scalar(select(UserProfile).where(UserProfile.user_id == eval_user.id))
+                role = db.scalar(select(Role).where(Role.id == eval_user.role_id))
+                eo.evaluated_by_name = profile.full_name if profile and profile.full_name else eval_user.email
+                eo.evaluated_by_role = role.name if role else None
+        eval_outs.append(eo)
 
     return EvaluationMatrixOut(criteria=crit_outs, alternatives=alt_outs, evaluations=eval_outs)
 
@@ -418,6 +537,7 @@ def add_risk(
     decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
     if not decision:
         raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "add risk assessments")
 
     risk = Risk(
         decision_id=decision_id,
@@ -455,6 +575,10 @@ def update_risk(
     risk = db.scalar(select(Risk).where(Risk.id == risk_id, Risk.deleted_at.is_(None)))
     if not risk:
         raise NotFoundError(message="Risk not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == risk.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "update risk assessments")
 
     if data.title is not None:
         risk.title = data.title.strip()
@@ -491,6 +615,10 @@ def delete_risk(
     risk = db.scalar(select(Risk).where(Risk.id == risk_id, Risk.deleted_at.is_(None)))
     if not risk:
         raise NotFoundError(message="Risk not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == risk.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "delete risk assessments")
 
     risk.deleted_at = datetime.now(UTC)
     create_decision_snapshot(db, risk.decision_id, current_user.id, reason=f"Risk '{risk.title}' deleted")
@@ -519,6 +647,7 @@ def add_stakeholder(
     decision = db.scalar(select(Decision).where(Decision.id == decision_id, Decision.deleted_at.is_(None)))
     if not decision:
         raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "add stakeholders")
 
     st = Stakeholder(
         decision_id=decision_id,
@@ -553,6 +682,10 @@ def delete_stakeholder(
     st = db.scalar(select(Stakeholder).where(Stakeholder.id == stakeholder_id, Stakeholder.deleted_at.is_(None)))
     if not st:
         raise NotFoundError(message="Stakeholder not found.")
+    decision = db.scalar(select(Decision).where(Decision.id == st.decision_id, Decision.deleted_at.is_(None)))
+    if not decision:
+        raise NotFoundError(message="Decision not found.")
+    check_decision_matrix_permission(db, decision, current_user, "delete stakeholders")
 
     st.deleted_at = datetime.now(UTC)
     create_decision_snapshot(db, st.decision_id, current_user.id, reason=f"Stakeholder '{st.display_name}' deleted")

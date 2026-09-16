@@ -15,8 +15,9 @@ ALLOWED_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".svg", ".gif",
     ".txt", ".md", ".csv", ".json", ".zip"
 }
-STORAGE_DIR = Path("storage/uploads").resolve()
+STORAGE_DIR = (Path(__file__).resolve().parent.parent.parent / "storage" / "uploads")
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+
 
 
 def sanitize_filename(filename: str) -> str:

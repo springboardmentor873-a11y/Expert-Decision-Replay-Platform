@@ -167,49 +167,156 @@ def compare_decision_versions(
     if not v1 or not v2:
         raise ValueError("One or both version snapshots not found")
 
-    s1 = v1.snapshot
-    s2 = v2.snapshot
+    s1 = v1.snapshot or {}
+    s2 = v2.snapshot or {}
 
     differences = {}
     scalar_fields = [
-        "title",
-        "problem_statement",
-        "status",
-        "implementation_status",
-        "category",
-        "outcome_summary",
-        "selected_alternative_id",
+        ("status", "Status / Lifecycle"),
+        ("implementation_status", "Implementation Status"),
+        ("title", "Decision Title"),
+        ("problem_statement", "Problem Statement & Context"),
+        ("category", "Decision Category"),
+        ("outcome_summary", "Outcome Rationale"),
+        ("selected_alternative_id", "Selected Alternative ID"),
     ]
 
-    for field in scalar_fields:
+    for field, label in scalar_fields:
         val1 = s1.get(field)
         val2 = s2.get(field)
         if val1 != val2:
-            differences[field] = {"old": val1, "new": val2}
+            differences[field] = {
+                "field_name": label,
+                "old": val1 if val1 is not None else "None",
+                "new": val2 if val2 is not None else "None",
+            }
 
-    # Compare alternatives count & titles
-    alts1 = {a["title"]: a for a in s1.get("alternatives", [])}
-    alts2 = {a["title"]: a for a in s2.get("alternatives", [])}
-    added_alts = [t for t in alts2 if t not in alts1]
-    removed_alts = [t for t in alts1 if t not in alts2]
-    if added_alts or removed_alts:
-        differences["alternatives"] = {"added": added_alts, "removed": removed_alts}
+    # Compare alternatives deeply (titles, pros/cons/trade-offs description, selected state)
+    alts1 = {a.get("id") or a.get("title"): a for a in s1.get("alternatives", [])}
+    alts2 = {a.get("id") or a.get("title"): a for a in s2.get("alternatives", [])}
 
-    # Compare criteria
-    crit1 = {c["name"]: c for c in s1.get("criteria", [])}
-    crit2 = {c["name"]: c for c in s2.get("criteria", [])}
-    added_crit = [c for c in crit2 if c not in crit1]
-    removed_crit = [c for c in crit1 if c not in crit2]
-    if added_crit or removed_crit:
-        differences["criteria"] = {"added": added_crit, "removed": removed_crit}
+    added_alts = []
+    for k, a2 in alts2.items():
+        if k not in alts1:
+            added_alts.append({
+                "title": a2.get("title", "Untitled Option"),
+                "description": a2.get("description", "No description provided"),
+                "is_selected": a2.get("is_selected", False),
+            })
+
+    removed_alts = []
+    for k, a1 in alts1.items():
+        if k not in alts2:
+            removed_alts.append({
+                "title": a1.get("title", "Untitled Option"),
+                "description": a1.get("description", "No description provided"),
+                "is_selected": a1.get("is_selected", False),
+            })
+
+    modified_alts = []
+    for k, a1 in alts1.items():
+        if k in alts2:
+            a2 = alts2[k]
+            desc_changed = (a1.get("description") or "").strip() != (a2.get("description") or "").strip()
+            sel_changed = a1.get("is_selected") != a2.get("is_selected")
+            title_changed = a1.get("title") != a2.get("title")
+            if desc_changed or sel_changed or title_changed:
+                modified_alts.append({
+                    "title": a2.get("title", a1.get("title")),
+                    "old_title": a1.get("title"),
+                    "new_title": a2.get("title"),
+                    "old_description": a1.get("description") or "No description",
+                    "new_description": a2.get("description") or "No description",
+                    "old_selected": a1.get("is_selected", False),
+                    "new_selected": a2.get("is_selected", False),
+                    "description_changed": desc_changed,
+                    "selection_changed": sel_changed,
+                })
+
+    if added_alts or removed_alts or modified_alts:
+        differences["alternatives"] = {
+            "field_name": "Alternative Options & Trade-offs (Pros/Cons)",
+            "added": added_alts,
+            "removed": removed_alts,
+            "modified": modified_alts,
+        }
+
+    # Compare evaluation criteria and weights
+    crit1 = {c.get("id") or c.get("name"): c for c in s1.get("criteria", [])}
+    crit2 = {c.get("id") or c.get("name"): c for c in s2.get("criteria", [])}
+    added_crit = [c for k, c in crit2.items() if k not in crit1]
+    removed_crit = [c for k, c in crit1.items() if k not in crit2]
+    modified_crit = []
+    for k, c1 in crit1.items():
+        if k in crit2:
+            c2 = crit2[k]
+            if c1.get("weight") != c2.get("weight") or c1.get("name") != c2.get("name"):
+                modified_crit.append({
+                    "name": c2.get("name"),
+                    "old_weight": c1.get("weight"),
+                    "new_weight": c2.get("weight"),
+                })
+
+    if added_crit or removed_crit or modified_crit:
+        differences["criteria"] = {
+            "field_name": "Evaluation Criteria & Weights",
+            "added": added_crit,
+            "removed": removed_crit,
+            "modified": modified_crit,
+        }
+
+    # Compare evaluation matrix scores
+    evals1 = {f"{e.get('alternative_id')}_{e.get('criterion_id')}": e for e in s1.get("evaluations", [])}
+    evals2 = {f"{e.get('alternative_id')}_{e.get('criterion_id')}": e for e in s2.get("evaluations", [])}
+    score_changes = []
+    all_eval_keys = set(evals1.keys()).union(set(evals2.keys()))
+    for ek in all_eval_keys:
+        e1 = evals1.get(ek)
+        e2 = evals2.get(ek)
+        s1_val = e1.get("score") if e1 else None
+        s2_val = e2.get("score") if e2 else None
+        if s1_val != s2_val:
+            score_changes.append({
+                "key": ek,
+                "old_score": s1_val,
+                "new_score": s2_val,
+            })
+    if score_changes:
+        differences["evaluations"] = {
+            "field_name": "Evaluation Matrix Scores",
+            "changed_count": len(score_changes),
+            "changes": score_changes,
+        }
 
     # Compare risks
-    r1 = {r["title"]: r for r in s1.get("risks", [])}
-    r2 = {r["title"]: r for r in s2.get("risks", [])}
-    added_risks = [r for r in r2 if r not in r1]
-    removed_risks = [r for r in r1 if r not in r2]
-    if added_risks or removed_risks:
-        differences["risks"] = {"added": added_risks, "removed": removed_risks}
+    r1 = {r.get("id") or r.get("title"): r for r in s1.get("risks", [])}
+    r2 = {r.get("id") or r.get("title"): r for r in s2.get("risks", [])}
+    added_risks = [r for k, r in r2.items() if k not in r1]
+    removed_risks = [r for k, r in r1.items() if k not in r2]
+    modified_risks = []
+    for k, r_old in r1.items():
+        if k in r2:
+            r_new = r2[k]
+            if (
+                r_old.get("severity") != r_new.get("severity")
+                or r_old.get("likelihood") != r_new.get("likelihood")
+                or r_old.get("mitigation") != r_new.get("mitigation")
+            ):
+                modified_risks.append({
+                    "title": r_new.get("title"),
+                    "old_severity": r_old.get("severity"),
+                    "new_severity": r_new.get("severity"),
+                    "old_mitigation": r_old.get("mitigation"),
+                    "new_mitigation": r_new.get("mitigation"),
+                })
+
+    if added_risks or removed_risks or modified_risks:
+        differences["risks"] = {
+            "field_name": "Risks & Mitigation Strategies",
+            "added": added_risks,
+            "removed": removed_risks,
+            "modified": modified_risks,
+        }
 
     return {
         "decision_id": decision_id,
@@ -217,5 +324,8 @@ def compare_decision_versions(
         "v2_no": v2_no,
         "v1_reason": v1.reason,
         "v2_reason": v2.reason,
+        "v1_snapshot": s1,
+        "v2_snapshot": s2,
         "differences": differences,
     }
+

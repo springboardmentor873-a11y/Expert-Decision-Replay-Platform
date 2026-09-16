@@ -175,7 +175,7 @@ export const RepositoryPage = () => {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <DecisionStatusBadge status={d.status} />
+                    <DecisionStatusBadge status={d.status} approvalRole={d.current_approval_role} approvalStep={d.current_approval_step} />
                     <ImplementationStatusBadge status={d.implementation_status} />
                     <span className="text-xs text-slate-400">v{d.current_version_no}</span>
                   </div>
@@ -207,11 +207,12 @@ export const RepositoryPage = () => {
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-100 text-xs text-slate-400">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <span>Author: <strong className="text-slate-700">{d.owner_name}</strong></span>
-                  <span>?</span>
+                  <span className="text-slate-300">•</span>
                   <span>{d.category?.name || 'General'}</span>
                 </div>
+
                 {d.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {d.tags.map((t) => (

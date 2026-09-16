@@ -21,6 +21,7 @@ from app.schemas.decision import (
 from app.schemas.taxonomy import CategoryCreate, CategoryOut, TagCreate, TagOut
 from app.services.audit_service import log_audit
 from app.services.decision_service import build_decision_detail_out, build_decision_out
+from app.services.notification_service import notify_decision_stakeholders
 from app.services.version_service import compare_decision_versions, create_decision_snapshot
 
 router = APIRouter(prefix="/decisions", tags=["decisions"])
@@ -225,6 +226,15 @@ def update_decision(
         actor_id=current_user.id,
         decision_id=decision.id,
     )
+    notify_decision_stakeholders(
+        db=db,
+        decision_id=decision.id,
+        type="decision_updated",
+        title=f"Decision Updated: {decision.title}",
+        body=f"Case file specifications and metadata were updated for '{decision.title}'.",
+        payload={"decision_id": str(decision.id)},
+        exclude_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(decision)
 
@@ -287,8 +297,18 @@ def record_decision_outcome(
         decision_id=decision.id,
         extra={"implementation_status": data.implementation_status},
     )
+    notify_decision_stakeholders(
+        db=db,
+        decision_id=decision.id,
+        type="outcome_recorded",
+        title=f"Outcome Rationale Recorded: {decision.title}",
+        body=f"Final implementation outcome and retrospective rationale were recorded for '{decision.title}'.",
+        payload={"decision_id": str(decision.id)},
+        exclude_user_id=current_user.id,
+    )
     db.commit()
     db.refresh(decision)
+
 
     return build_decision_detail_out(db, decision)
 

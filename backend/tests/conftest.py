@@ -3,10 +3,10 @@ from collections.abc import Generator
 from datetime import datetime, UTC
 from uuid import uuid4
 
-os.environ.setdefault("SECRET_KEY", "test-secret-key-32-characters-min-for-security")
-os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://edrp:edrp@localhost:5432/edrp")
-os.environ.setdefault("ENVIRONMENT", "test")
-os.environ.setdefault("CORS_ORIGINS", "http://testserver")
+os.environ["SECRET_KEY"] = "test-secret-key-32-characters-min-for-security"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["ENVIRONMENT"] = "test"
+os.environ["CORS_ORIGINS"] = "http://testserver"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -113,16 +113,22 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     app.dependency_overrides.clear()
 
 
+
+
+PRE_HASHED_TEST_PASSWORD = hash_password("TestPassword123!")
+
+
 def create_test_user_helper(db: Session, email: str, role_code: str, full_name: str) -> tuple[User, str, dict[str, str]]:
     u = db.scalar(select(User).where(User.email == email))
     if not u:
         role = db.scalar(select(Role).where(Role.code == role_code))
         u = User(
             email=email,
-            hashed_password=hash_password("TestPassword123!"),
+            hashed_password=PRE_HASHED_TEST_PASSWORD,
             role_id=role.id,
             is_active=True,
         )
+
         db.add(u)
         db.flush()
         db.add(UserProfile(user_id=u.id, full_name=full_name))

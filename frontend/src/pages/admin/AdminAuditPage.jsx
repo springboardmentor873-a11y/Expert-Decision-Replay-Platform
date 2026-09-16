@@ -107,10 +107,11 @@ export const AdminAuditPage = () => {
                     <td className="py-3 px-4 uppercase text-[11px] text-slate-700 font-semibold">
                       {l.entity_type} {l.entity_id ? `(${String(l.entity_id).slice(0, 8)})` : ''}
                     </td>
-                    <td className="py-3 px-4 text-slate-400 text-[11px]">{l.ip_address || '?'}</td>
+                    <td className="py-3 px-4 text-slate-400 text-[11px]">{l.ip_address || '—'}</td>
                     <td className="py-3 px-6 text-slate-500 max-w-xs truncate text-[11px]">
-                      {l.extra ? JSON.stringify(l.extra) : '?'}
+                      {l.extra ? JSON.stringify(l.extra) : '—'}
                     </td>
+
                   </tr>
                 ))}
               </tbody>

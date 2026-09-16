@@ -139,7 +139,7 @@ export const OverviewTab = ({ decision, approvals, setActiveTab }) => {
                       : 'bg-slate-200 text-slate-600'
                   }`}
                 >
-                  {step.status === 'approved' ? '?' : step.step_order}
+                  {step.status === 'approved' ? '✓' : step.step_order}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-800 truncate">{step.step_name}</p>

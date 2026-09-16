@@ -13,6 +13,7 @@ from app.models.identity import Role, User, UserProfile
 from app.schemas.attachment import AttachmentOut
 from app.services.audit_service import log_audit
 from app.services.file_service import get_attachment_file_path, save_attachment
+from app.services.notification_service import notify_decision_stakeholders
 
 router = APIRouter(tags=["attachments & files"])
 
@@ -30,21 +31,34 @@ def upload_file_attachment(
         raise NotFoundError(message="Decision not found.")
 
     att = save_attachment(db=db, decision_id=decision_id, user_id=current_user.id, file=file)
+    profile = db.scalar(select(UserProfile).where(UserProfile.user_id == current_user.id))
+    actor_name = profile.full_name if profile else current_user.email
+
+    notify_decision_stakeholders(
+        db=db,
+        decision_id=decision_id,
+        type="attachment_uploaded",
+        title=f"New Document Attached: {att.file_name}",
+        body=f"{actor_name} uploaded '{att.file_name}' to '{decision.title}'.",
+        payload={"decision_id": str(decision_id), "attachment_id": str(att.id)},
+        exclude_user_id=current_user.id,
+    )
+
     db.commit()
     db.refresh(att)
 
-    profile = db.scalar(select(UserProfile).where(UserProfile.user_id == current_user.id))
     return AttachmentOut(
         id=att.id,
         decision_id=att.decision_id,
         uploaded_by_id=att.uploaded_by_id,
-        uploaded_by_name=profile.full_name if profile else current_user.email,
+        uploaded_by_name=actor_name,
         file_name=att.file_name,
         content_type=att.content_type,
         byte_size=att.byte_size,
         storage_backend=att.storage_backend,
         created_at=att.created_at,
     )
+
 
 
 @router.get("/decisions/{decision_id}/attachments", response_model=list[AttachmentOut])

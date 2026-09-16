@@ -29,7 +29,7 @@ export const ApprovalsTab = ({ approvals }) => {
                       : 'bg-slate-200 text-slate-600'
                   }`}
                 >
-                  {isApproved ? '?' : st.step_order}
+                  {isApproved ? '✓' : st.step_order}
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">

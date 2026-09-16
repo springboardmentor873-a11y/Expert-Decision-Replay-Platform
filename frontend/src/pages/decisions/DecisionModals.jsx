@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { X, Layers, Award, AlertTriangle, CheckCircle2, ArrowRight, ShieldCheck, Check, Info } from 'lucide-react';
 
 export const DecisionModals = ({
   actionModal,
@@ -139,10 +140,12 @@ export const DecisionModals = ({
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Relative Weight</label>
               <input
                 type="number"
-                step="0.1"
-                min="0.1"
+                step="any"
+                min="0.01"
                 value={critForm.weight}
-                onChange={(e) => setCritForm({ ...critForm, weight: parseFloat(e.target.value) || 1.0 })}
+                placeholder="1"
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setCritForm({ ...critForm, weight: e.target.value })}
                 className="w-full bg-slate-50 border border-slate-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -288,43 +291,287 @@ export const DecisionModals = ({
       {/* Diff Modal */}
       {diffModal.open && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
-                Diff Comparison: v{diffModal.v1} &rarr; v{diffModal.v2}
-              </h3>
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
+                    v{diffModal.v1}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    v{diffModal.v2}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 ml-1">
+                    Decision Version Comparison & Rationale Diff
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                  <span>v{diffModal.v1}: <strong className="text-slate-700">{diffModal.data?.v1_reason || 'Previous version'}</strong></span>
+                  <span className="text-slate-300">•</span>
+                  <span>v{diffModal.v2}: <strong className="text-slate-700">{diffModal.data?.v2_reason || 'Target version'}</strong></span>
+                </div>
+              </div>
               <button
                 onClick={() => setDiffModal({ open: false, v1: 1, v2: 2, data: null })}
-                className="text-slate-400 hover:text-slate-700 text-xs font-bold"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                title="Close Diff Viewer"
               >
-                ?
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3">
-              {Object.keys(diffModal.data?.differences || {}).length === 0 ? (
-                <p className="text-xs text-slate-500 py-6 text-center">No field differences found between these versions.</p>
-              ) : (
-                Object.entries(diffModal.data?.differences || {}).map(([key, diff]) => (
-                  <div key={key} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
-                    <span className="font-bold text-slate-800 uppercase text-[10px] tracking-wider block">{key}</span>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <div className="p-2 rounded bg-rose-50 border border-rose-100 text-rose-800">
-                        <strong className="block text-[10px] text-rose-500 font-mono">v{diffModal.v1} (OLD):</strong>
-                        <span>{JSON.stringify(diff.old || diff.removed || '?')}</span>
+            {/* Differences Sections */}
+            <div className="space-y-6">
+              {/* 1. Status & Governance Changes */}
+              {(diffModal.data?.differences?.status ||
+                diffModal.data?.differences?.implementation_status ||
+                diffModal.data?.differences?.title ||
+                diffModal.data?.differences?.problem_statement ||
+                diffModal.data?.differences?.outcome_summary) && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    <span>Governance Status & Core Metadata Changes</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {Object.entries(diffModal.data?.differences || {})
+                      .filter(([k]) => ['status', 'implementation_status', 'title', 'problem_statement', 'outcome_summary', 'category'].includes(k))
+                      .map(([key, diff]) => (
+                        <div key={key} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                          <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                            {diff.field_name || key.replace('_', ' ')}
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div className="p-3 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-900 space-y-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 block">
+                                v{diffModal.v1} (Previous)
+                              </span>
+                              <p className="whitespace-pre-line leading-relaxed font-medium">
+                                {typeof diff.old === 'object' ? JSON.stringify(diff.old) : String(diff.old || 'None')}
+                              </p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-900 space-y-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">
+                                v{diffModal.v2} (Updated)
+                              </span>
+                              <p className="whitespace-pre-line leading-relaxed font-medium">
+                                {typeof diff.new === 'object' ? JSON.stringify(diff.new) : String(diff.new || 'None')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Candidate Alternatives & Pros/Cons Comparison */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    <span>Candidate Alternatives & Trade-offs (Pros, Cons, Advantages)</span>
+                  </div>
+                  {diffModal.data?.differences?.alternatives && (
+                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                      Alternatives Modified
+                    </span>
+                  )}
+                </div>
+
+                {/* Modified Alternatives */}
+                {diffModal.data?.differences?.alternatives?.modified?.length > 0 && (
+                  <div className="space-y-3">
+                    {diffModal.data.differences.alternatives.modified.map((alt, idx) => (
+                      <div key={idx} className="p-4 rounded-xl bg-white border border-indigo-200 ring-1 ring-indigo-100 shadow-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-slate-900 text-sm">{alt.title}</h4>
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                            Description / Selection Modified
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                          <div className="p-3 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-900 space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-rose-600 uppercase tracking-wider">
+                              <span>v{diffModal.v1} Trade-offs & Pros/Cons</span>
+                              {alt.old_selected && <span className="bg-rose-200 text-rose-800 px-1.5 py-0.2 rounded font-bold">SELECTED</span>}
+                            </div>
+                            <p className="whitespace-pre-line leading-relaxed text-slate-700 mt-1">
+                              {alt.old_description}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-900 space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                              <span>v{diffModal.v2} Trade-offs & Pros/Cons</span>
+                              {alt.new_selected && <span className="bg-emerald-200 text-emerald-800 px-1.5 py-0.2 rounded font-bold">SELECTED</span>}
+                            </div>
+                            <p className="whitespace-pre-line leading-relaxed text-slate-700 mt-1">
+                              {alt.new_description}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-2 rounded bg-emerald-50 border border-emerald-100 text-emerald-800">
-                        <strong className="block text-[10px] text-emerald-500 font-mono">v{diffModal.v2} (NEW):</strong>
-                        <span>{JSON.stringify(diff.new || diff.added || '?')}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Added Alternatives */}
+                {diffModal.data?.differences?.alternatives?.added?.length > 0 && (
+                  <div className="space-y-2">
+                    {diffModal.data.differences.alternatives.added.map((alt, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-xs space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded">ADDED IN v{diffModal.v2}</span>
+                          <span className="font-bold text-slate-900 text-sm">{alt.title}</span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed whitespace-pre-line pt-1">{alt.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Removed Alternatives */}
+                {diffModal.data?.differences?.alternatives?.removed?.length > 0 && (
+                  <div className="space-y-2">
+                    {diffModal.data.differences.alternatives.removed.map((alt, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200 text-xs space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold bg-rose-600 text-white px-2 py-0.5 rounded">REMOVED AFTER v{diffModal.v1}</span>
+                          <span className="font-bold text-slate-900 text-sm">{alt.title}</span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed whitespace-pre-line pt-1">{alt.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* If no alternative field changed, show side-by-side snapshot summary */}
+                {!diffModal.data?.differences?.alternatives && (
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                          v{diffModal.v1} Alternatives ({diffModal.data?.v1_snapshot?.alternatives?.length || 0})
+                        </span>
+                        <div className="space-y-2">
+                          {diffModal.data?.v1_snapshot?.alternatives?.map((a, i) => (
+                            <div key={i} className="p-2.5 rounded-lg bg-white border border-slate-200 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-800">{a.title}</span>
+                                {a.is_selected && <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">SELECTED</span>}
+                              </div>
+                              <p className="text-[11px] text-slate-500 line-clamp-2">{a.description || 'No description'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                          v{diffModal.v2} Alternatives ({diffModal.data?.v2_snapshot?.alternatives?.length || 0})
+                        </span>
+                        <div className="space-y-2">
+                          {diffModal.data?.v2_snapshot?.alternatives?.map((a, i) => (
+                            <div key={i} className="p-2.5 rounded-lg bg-white border border-slate-200 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-800">{a.title}</span>
+                                {a.is_selected && <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">SELECTED</span>}
+                              </div>
+                              <p className="text-[11px] text-slate-500 line-clamp-2">{a.description || 'No description'}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))
+                )}
+              </div>
+
+              {/* 3. Evaluation Criteria & Scores Matrix Diff */}
+              {(diffModal.data?.differences?.criteria || diffModal.data?.differences?.evaluations) && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <Award className="w-4 h-4 text-blue-600" />
+                    <span>Evaluation Criteria & Scoring Matrix Changes</span>
+                  </div>
+
+                  {diffModal.data.differences.criteria && (
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                      <span className="font-bold text-slate-800 block">Criteria Modifications:</span>
+                      {diffModal.data.differences.criteria.modified?.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded bg-white border border-slate-200">
+                          <span className="font-semibold text-slate-800">{c.name}</span>
+                          <span className="text-slate-500">Weight: <strong className="text-rose-600">{c.old_weight}x</strong> &rarr; <strong className="text-emerald-600">{c.new_weight}x</strong></span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {diffModal.data.differences.evaluations && (
+                    <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 text-xs space-y-2">
+                      <span className="font-bold text-blue-900 block">
+                        Matrix Scores Updated ({diffModal.data.differences.evaluations.changed_count} score values changed)
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
+
+              {/* 4. Risks & Mitigation Diff */}
+              {diffModal.data?.differences?.risks && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <AlertTriangle className="w-4 h-4 text-orange-600" />
+                    <span>Risk Assessment & Mitigation Updates</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {diffModal.data.differences.risks.added?.map((r, i) => (
+                      <div key={i} className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1">
+                        <div className="flex items-center justify-between font-bold text-emerald-900">
+                          <span>+ {r.title}</span>
+                          <span className="uppercase text-[10px] bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded">ADDED RISK</span>
+                        </div>
+                        <p className="text-slate-600">{r.description || 'No description'}</p>
+                        {r.mitigation && <p className="text-emerald-800 italic">Mitigation: {r.mitigation}</p>}
+                      </div>
+                    ))}
+
+                    {diffModal.data.differences.risks.modified?.map((r, i) => (
+                      <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                        <div className="flex items-center justify-between font-bold text-slate-900">
+                          <span>{r.title}</span>
+                          <span className="text-slate-500">
+                            Severity: <span className="text-rose-600">{r.old_severity}</span> &rarr; <span className="text-emerald-600">{r.new_severity}</span>
+                          </span>
+                        </div>
+                        <div className="pt-1 text-slate-600">
+                          <p><strong>Old Mitigation:</strong> {r.old_mitigation || 'None'}</p>
+                          <p className="text-emerald-700"><strong>New Mitigation:</strong> {r.new_mitigation || 'None'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDiffModal({ open: false, v1: 1, v2: 2, data: null })}
+                className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
+              >
+                Close Comparison
+              </button>
             </div>
           </div>
         </div>
       )}
+
 
       {/* Start Discussion Modal */}
       {showAddDiscModal && (

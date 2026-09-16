@@ -28,14 +28,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     logger.info("Starting %s (%s)", settings.app_name, settings.environment)
-    try:
-        Base.metadata.create_all(bind=engine)
-        seed_database()
-        logger.info("Database initialized and verified.")
-    except Exception as e:
-        logger.warning("Database auto-init warning: %s", e)
+    if settings.environment != "test":
+        try:
+            Base.metadata.create_all(bind=engine)
+            seed_database()
+            logger.info("Database initialized and verified.")
+        except Exception as e:
+            logger.warning("Database auto-init warning: %s", e)
     yield
     logger.info("Shutting down %s", settings.app_name)
+
 
 
 def create_app() -> FastAPI:

@@ -1,7 +1,9 @@
 import React from 'react';
-import { Plus, Check, Trash2 } from 'lucide-react';
+import { Plus, Check, Trash2, Lock, ShieldCheck, UserCheck } from 'lucide-react';
 
 export const CriteriaMatrixTab = ({
+  decision,
+  user,
   matrix,
   canEdit,
   editingScores,
@@ -11,8 +13,68 @@ export const CriteriaMatrixTab = ({
   handleScoreChange,
   handleDeleteCriterion,
 }) => {
+  const calculateLiveScore = (altId) => {
+    if (!matrix?.criteria || matrix.criteria.length === 0) return null;
+    let weightedSum = 0;
+    let totalWeight = 0;
+    let hasAnyScore = false;
+
+    matrix.criteria.forEach((crit) => {
+      const weight = parseFloat(crit.weight) || 1.0;
+      const score = editingScores[`${altId}_${crit.id}`];
+      if (score !== undefined && score !== null && score !== '') {
+        weightedSum += parseFloat(score) * weight;
+        totalWeight += weight;
+        hasAnyScore = true;
+      }
+    });
+
+    if (!hasAnyScore || totalWeight <= 0) return null;
+    return (weightedSum / totalWeight).toFixed(1);
+  };
+
+  const getGovernanceNotice = () => {
+    if (canEdit) return null;
+    const st = decision?.status;
+    if (st === 'approved' || st === 'rejected' || st === 'superseded') {
+      return {
+        icon: Lock,
+        bgColor: 'bg-slate-50 border-slate-200 text-slate-700',
+        text: 'Decision Finalized & Locked: Evaluation matrix is preserved as an immutable institutional record.',
+      };
+    }
+    if (st === 'in_approval') {
+      return {
+        icon: ShieldCheck,
+        bgColor: 'bg-amber-50/80 border-amber-200 text-amber-800',
+        text: 'In Management Approval: Evaluation criteria and scoring are locked for non-managers to prevent tampering with management reviews.',
+      };
+    }
+    if (st === 'in_review') {
+      return {
+        icon: UserCheck,
+        bgColor: 'bg-blue-50/80 border-blue-200 text-blue-800',
+        text: 'In Technical Peer Review: Scoring is currently restricted to designated Reviewers and Managers.',
+      };
+    }
+    return {
+      icon: Lock,
+      bgColor: 'bg-slate-50 border-slate-200 text-slate-700',
+      text: 'Draft Mode: Only the decision author and management team can configure evaluation criteria and ratings.',
+    };
+  };
+
+  const notice = getGovernanceNotice();
+
   return (
     <div className="space-y-6">
+      {notice && (
+        <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-xs font-medium ${notice.bgColor}`}>
+          <notice.icon className="w-4 h-4 shrink-0" />
+          <span>{notice.text}</span>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900">Weighted Evaluation & Decision Matrix</h2>
@@ -49,16 +111,17 @@ export const CriteriaMatrixTab = ({
               <tr>
                 <th className="py-3.5 px-6 min-w-[200px]">Evaluation Criterion</th>
                 <th className="py-3.5 px-4 w-28 text-center">Weight</th>
-                {matrix?.alternatives?.map((alt) => (
-                  <th key={alt.id} className="py-3.5 px-4 text-center min-w-[160px]">
-                    <span className="font-bold text-slate-900 block truncate">{alt.title}</span>
-                    {alt.total_score !== null && (
+                {matrix?.alternatives?.map((alt) => {
+                  const compScore = calculateLiveScore(alt.id) ?? alt.total_score;
+                  return (
+                    <th key={alt.id} className="py-3.5 px-4 text-center min-w-[160px]">
+                      <span className="font-bold text-slate-900 block truncate">{alt.title}</span>
                       <span className="text-[10px] text-blue-600 font-semibold block mt-0.5">
-                        Composite: {alt.total_score}
+                        Composite: {compScore !== null ? `${compScore}/100` : 'Unscored'}
                       </span>
-                    )}
-                  </th>
-                ))}
+                    </th>
+                  );
+                })}
                 {canEdit && <th className="py-3.5 px-4 w-12 text-center"></th>}
               </tr>
             </thead>
@@ -74,20 +137,45 @@ export const CriteriaMatrixTab = ({
                   </td>
                   {matrix.alternatives.map((alt) => {
                     const cellKey = `${alt.id}_${crit.id}`;
-                    const currentVal = editingScores[cellKey] ?? '';
+                    const currentVal = editingScores[cellKey] !== undefined ? editingScores[cellKey] : '';
+                    const evalRecord = matrix?.evaluations?.find(
+                      (e) => e.alternative_id === alt.id && e.criterion_id === crit.id
+                    );
+                    const evaluatorTooltip = evalRecord?.evaluated_by_name
+                      ? `Evaluated by: ${evalRecord.evaluated_by_name}${evalRecord.evaluated_by_role ? ` (${evalRecord.evaluated_by_role})` : ''}`
+                      : undefined;
+
                     return (
-                      <td key={alt.id} className="py-3 px-4 text-center">
+                      <td key={alt.id} className="py-3 px-4 text-center" title={evaluatorTooltip}>
                         {canEdit ? (
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={currentVal}
-                            onChange={(e) => handleScoreChange(alt.id, crit.id, e.target.value)}
-                            className="w-20 bg-slate-50 border border-slate-200 text-center font-bold text-xs py-1.5 px-2 rounded-lg focus:bg-white focus:outline-none focus:border-blue-500"
-                          />
+                          <div className="flex flex-col items-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={currentVal}
+                              placeholder="0"
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => handleScoreChange(alt.id, crit.id, e.target.value)}
+                              className="w-20 bg-slate-50 border border-slate-200 text-center font-bold text-xs py-1.5 px-2 rounded-lg focus:bg-white focus:outline-none focus:border-blue-500"
+                            />
+                            {evalRecord?.evaluated_by_name && (
+                              <span className="text-[9px] text-slate-400 mt-0.5 truncate max-w-[120px]">
+                                by {evalRecord.evaluated_by_name}
+                              </span>
+                            )}
+                          </div>
                         ) : (
-                          <span className="font-bold text-xs text-slate-900">{currentVal || '?'}</span>
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-xs text-slate-900">
+                              {currentVal !== '' && currentVal !== undefined ? currentVal : '—'}
+                            </span>
+                            {evalRecord?.evaluated_by_name && (
+                              <span className="text-[9px] text-slate-400 mt-0.5 truncate max-w-[120px]">
+                                by {evalRecord.evaluated_by_name}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                     );
@@ -110,11 +198,14 @@ export const CriteriaMatrixTab = ({
                   Weighted Total Score
                 </td>
                 <td className="py-4 px-4 text-center text-xs text-slate-500">100%</td>
-                {matrix?.alternatives?.map((alt) => (
-                  <td key={alt.id} className="py-4 px-4 text-center text-sm font-bold text-blue-700">
-                    {alt.total_score !== null ? `${alt.total_score} / 100` : '?'}
-                  </td>
-                ))}
+                {matrix?.alternatives?.map((alt) => {
+                  const finalScore = calculateLiveScore(alt.id) ?? alt.total_score;
+                  return (
+                    <td key={alt.id} className="py-4 px-4 text-center text-sm font-bold text-blue-700">
+                      {finalScore !== null ? `${finalScore} / 100` : '0 / 100 (Unscored)'}
+                    </td>
+                  );
+                })}
                 {canEdit && <td></td>}
               </tr>
             </tbody>
@@ -124,3 +215,4 @@ export const CriteriaMatrixTab = ({
     </div>
   );
 };
+

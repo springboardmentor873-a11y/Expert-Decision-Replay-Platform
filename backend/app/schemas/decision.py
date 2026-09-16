@@ -58,6 +58,8 @@ class DecisionOut(BaseModel):
     outcome_recorded_at: datetime | None = None
     tags: list[TagOut] = []
     alternatives_count: int = 0
+    current_approval_step: str | None = None
+    current_approval_role: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -86,4 +88,9 @@ class DecisionVersionDiffOut(BaseModel):
     decision_id: UUID
     v1_no: int
     v2_no: int
+    v1_reason: str | None = None
+    v2_reason: str | None = None
+    v1_snapshot: dict | None = None
+    v2_snapshot: dict | None = None
     differences: dict
+

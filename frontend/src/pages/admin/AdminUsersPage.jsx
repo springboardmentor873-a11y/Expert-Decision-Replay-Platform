@@ -117,7 +117,7 @@ export const AdminUsersPage = () => {
                       </div>
                     </td>
                     <td className="py-4 px-4 text-xs">
-                      <span className="font-medium text-slate-800 block">{u.profile?.job_title || '?'}</span>
+                      <span className="font-medium text-slate-800 block">{u.profile?.job_title || '—'}</span>
                       <span className="text-slate-400 text-[11px]">{u.profile?.department || 'General'}</span>
                     </td>
                     <td className="py-4 px-4">
