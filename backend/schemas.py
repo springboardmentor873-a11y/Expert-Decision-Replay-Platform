@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
-from models import RoleEnum, DecisionStatusEnum
+from models import RoleEnum, DecisionStatusEnum, ApprovalStatusEnum
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -11,9 +11,24 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class TeamBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class TeamCreate(TeamBase):
+    pass
+
+class TeamResponse(TeamBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class UserResponse(UserBase):
     id: int
     is_active: bool
+    teams: List[TeamResponse] = []
     
     class Config:
         from_attributes = True
@@ -80,12 +95,59 @@ class DocumentResponse(DocumentBase):
     class Config:
         from_attributes = True
 
+# Approvals
+class ApprovalBase(BaseModel):
+    status: ApprovalStatusEnum = ApprovalStatusEnum.PENDING
+    comments: Optional[str] = None
+
+class ApprovalCreate(ApprovalBase):
+    pass
+
+class ApprovalResponse(ApprovalBase):
+    id: int
+    decision_id: int
+    reviewer_id: int
+    created_at: datetime
+    updated_at: datetime
+    reviewer: UserResponse
+
+    class Config:
+        from_attributes = True
+
+# Notifications
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    content: str
+    is_read: bool
+    related_entity_type: Optional[str] = None
+    related_entity_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Audit Logs
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: Optional[int] = None
+    action: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    description: Optional[str] = None
+    ip_address: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # Decisions
 class DecisionBase(BaseModel):
     title: str
     description: Optional[str] = None
     category: Optional[str] = None
     status: DecisionStatusEnum = DecisionStatusEnum.DRAFT
+    team_id: Optional[int] = None
 
 class DecisionCreate(DecisionBase):
     pass
@@ -103,9 +165,11 @@ class DecisionResponse(DecisionBase):
     created_at: datetime
     updated_at: datetime
     creator: UserResponse
+    team: Optional[TeamResponse] = None
     alternatives: List[AlternativeResponse] = []
     discussions: List[DiscussionResponse] = []
     documents: List[DocumentResponse] = []
+    approvals: List[ApprovalResponse] = []
 
     class Config:
         from_attributes = True

@@ -17,18 +17,26 @@ import {
 const Dashboard = () => {
   const { user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [decisions, setDecisions] = useState([]);
+  const [stats, setStats] = useState({
+    totalCount: 0,
+    draftCount: 0,
+    underReviewCount: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    recentActivities: [],
+    recentDecisionsCount: 0
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      decisionService.getDecisions()
+      decisionService.getDashboardStats()
         .then(data => {
-          setDecisions(data);
+          setStats(data);
           setLoading(false);
         })
         .catch(err => {
-          console.error("Failed to load decisions", err);
+          console.error("Failed to load dashboard stats", err);
           setLoading(false);
         });
     }
@@ -96,38 +104,38 @@ const Dashboard = () => {
             </div>
           </div>
           <p className="text-sm text-slate-500">Total Decisions</p>
-          <h3 className="text-3xl font-bold text-slate-900 mt-1">{loading ? "..." : decisions.length}</h3>
-          <p className="text-xs text-slate-400 mt-2">{decisions.length === 0 ? "No decisions recorded yet" : "Across the organization"}</p>
+          <h3 className="text-3xl font-bold text-slate-900 mt-1">{loading ? "..." : stats.totalCount}</h3>
+          <p className="text-xs text-slate-400 mt-2">{stats.recentDecisionsCount > 0 ? `${stats.recentDecisionsCount} this week` : "No decisions this week"}</p>
         </div>
 
-        {/* Knowledge Graph */}
+        {/* Approved Decisions */}
         <div className="card !p-6 hover:shadow-xl hover:shadow-brand/5 hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-5">
             <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center group-hover:bg-brand transition-colors duration-300">
               <Database className="w-6 h-6 text-brand group-hover:text-white transition-colors duration-300" />
             </div>
             <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-              <ArrowUpRight className="w-4 h-4 text-slate-400" />
+              <CheckCircle2 className="w-4 h-4 text-slate-400" />
             </div>
           </div>
-          <p className="text-sm text-slate-500">Knowledge Nodes</p>
-          <h3 className="text-3xl font-bold text-slate-900 mt-1">0</h3>
-          <p className="text-xs text-slate-400 mt-2">Knowledge graph is ready</p>
+          <p className="text-sm text-slate-500">Approved Decisions</p>
+          <h3 className="text-3xl font-bold text-slate-900 mt-1">{loading ? "..." : stats.approvedCount}</h3>
+          <p className="text-xs text-slate-400 mt-2">Finalized and approved</p>
         </div>
 
-        {/* Activity */}
+        {/* Pending Reviews */}
         <div className="card !p-6 hover:shadow-xl hover:shadow-brand/5 hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-5">
             <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center group-hover:bg-brand transition-colors duration-300">
-              <Activity className="w-6 h-6 text-brand group-hover:text-white transition-colors duration-300" />
+              <Clock className="w-6 h-6 text-brand group-hover:text-white transition-colors duration-300" />
             </div>
             <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-              <ArrowUpRight className="w-4 h-4 text-slate-400" />
+              <Activity className="w-4 h-4 text-slate-400" />
             </div>
           </div>
-          <p className="text-sm text-slate-500">Recent Activities</p>
-          <h3 className="text-3xl font-bold text-slate-900 mt-1">0</h3>
-          <p className="text-xs text-slate-400 mt-2">Waiting for activity</p>
+          <p className="text-sm text-slate-500">Pending Reviews</p>
+          <h3 className="text-3xl font-bold text-slate-900 mt-1">{loading ? "..." : stats.underReviewCount}</h3>
+          <p className="text-xs text-slate-400 mt-2">Awaiting action</p>
         </div>
 
         {/* Account */}
@@ -197,40 +205,26 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
-              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-brand" />
+            {stats.recentActivities && stats.recentActivities.length > 0 ? (
+              stats.recentActivities.map((activity, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                  <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-brand" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-800">{activity.userName} - {activity.action}</p>
+                    <p className="text-sm text-slate-500">{activity.target}</p>
+                  </div>
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> {activity.time}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 rounded-xl border border-slate-100 text-center">
+                <p className="text-sm text-slate-500">No recent activity</p>
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-slate-800">Decision Intelligence</p>
-                <p className="text-sm text-slate-500">Your decision workspace is ready.</p>
-              </div>
-              <span className="text-xs text-slate-400 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Now
-              </span>
-            </div>
-            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
-              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
-                <Database className="w-5 h-5 text-brand" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-slate-800">Knowledge Graph</p>
-                <p className="text-sm text-slate-500">Knowledge management module is available.</p>
-              </div>
-              <span className="text-xs text-slate-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Ready
-              </span>
-            </div>
-            <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
-              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-brand" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-slate-800">Account Verified</p>
-                <p className="text-sm text-slate-500">Your account is currently active.</p>
-              </div>
-              <span className="text-xs text-brand font-medium">Active</span>
-            </div>
+            )}
           </div>
         </div>
       </div>

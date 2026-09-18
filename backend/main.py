@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
-from routers import users, decisions, alternatives, discussions, documents
+from routers import users, decisions, alternatives, discussions, documents, teams, audit_logs, notifications, approvals, reports
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -22,6 +22,11 @@ app.include_router(decisions.router)
 app.include_router(alternatives.router)
 app.include_router(discussions.router)
 app.include_router(documents.router)
+app.include_router(teams.router)
+app.include_router(audit_logs.router)
+app.include_router(notifications.router)
+app.include_router(approvals.router)
+app.include_router(reports.router)
 
 @app.get("/")
 def read_root():

@@ -7,6 +7,18 @@ export const decisionService = {
     return response.data;
   },
   
+  // Users
+  getUsers: async () => {
+    const response = await api.get('/users/');
+    return response.data;
+  },
+
+  // Teams
+  getTeams: async () => {
+    const response = await api.get('/teams/');
+    return response.data;
+  },
+
   getDecision: async (id) => {
     const response = await api.get(`/decisions/${id}`);
     return response.data;
@@ -84,6 +96,50 @@ export const decisionService = {
   
   deleteDocument: async (decisionId, docId) => {
     const response = await api.delete(`/decisions/${decisionId}/documents/${docId}`);
+    return response.data;
+  },
+
+  // Approvals
+  createApproval: async (decisionId, reviewerId) => {
+    const response = await api.post(`/approvals/?decision_id=${decisionId}&reviewer_id=${reviewerId}`);
+    return response.data;
+  },
+  
+  updateApproval: async (approvalId, status, comments) => {
+    const response = await api.put(`/approvals/${approvalId}`, { status, comments });
+    return response.data;
+  },
+
+  // Notifications
+  getNotifications: async () => {
+    const response = await api.get('/notifications/');
+    return response.data;
+  },
+  
+  markNotificationRead: async (id) => {
+    const response = await api.put(`/notifications/${id}/read`);
+    return response.data;
+  },
+  
+  markAllNotificationsRead: async () => {
+    const response = await api.put('/notifications/read-all');
+    return response.data;
+  },
+
+  // Audit Logs
+  getAuditLogs: async () => {
+    const response = await api.get('/audit-logs/');
+    return response.data;
+  },
+  
+  getDecisionAuditLogs: async (decisionId) => {
+    const response = await api.get(`/audit-logs/${decisionId}`);
+    return response.data;
+  },
+
+  // Reports
+  getDashboardStats: async () => {
+    const response = await api.get('/reports/dashboard-stats');
     return response.data;
   },
 };
