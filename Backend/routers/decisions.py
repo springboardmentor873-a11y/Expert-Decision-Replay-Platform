@@ -23,10 +23,10 @@ def create_decision(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if _role_name(current_user) not in ("reviewer", "manager", "administrator"):
+    if _role_name(current_user) not in ("employee", "reviewer", "manager", "administrator"):
         raise HTTPException(
             status_code=403,
-            detail="Only a reviewer, manager, or administrator can create decisions",
+            detail="Only an employee, reviewer, manager, or administrator can create decisions",
         )
     decision = Decision(
         title=payload.title,

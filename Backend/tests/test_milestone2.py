@@ -25,6 +25,20 @@ def test_create_and_get_decision(client, auth_headers, seeded_decision_id):
     assert resp.json()["status"] == "Draft"
 
 
+def test_employee_can_create_decision(client, employee_headers):
+    resp = client.post(
+        "/decisions",
+        json={
+            "title": "Employee-created decision",
+            "category": "Process",
+            "problem_statement": "A regular employee should be able to initiate a decision.",
+        },
+        headers=employee_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["created_by_id"] is not None
+
+
 def test_list_and_filter_decisions(client, auth_headers, seeded_decision_id):
     resp = client.get("/decisions", headers=auth_headers)
     assert resp.status_code == 200
