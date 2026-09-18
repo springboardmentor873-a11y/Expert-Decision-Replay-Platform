@@ -49,3 +49,7 @@ def decode_access_token(token: str) -> Dict[str, Any]:
         algorithms=[settings.ALGORITHM],
         options={"require": ["exp", "sub"]}
     )
+
+
+# Alias for compatibility
+get_password_hash = hash_password

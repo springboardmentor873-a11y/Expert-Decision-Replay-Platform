@@ -67,5 +67,9 @@ class TeamResponse(BaseModel):
     creator_name: Optional[str] = None
     member_count: int = 0
     members: Optional[List[TeamMemberResponse]] = None
+    leader_name: Optional[str] = None
+    recent_decisions: Optional[List[dict]] = None
+    is_member: Optional[bool] = None
+    has_pending_join_request: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)

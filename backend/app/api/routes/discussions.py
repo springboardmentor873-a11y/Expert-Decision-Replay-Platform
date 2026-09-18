@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
@@ -13,12 +13,35 @@ from app.schemas.discussion import (
 from app.services.discussion_service import (
     create_discussion,
     delete_discussion,
+    get_all_accessible_discussions,
     get_discussion_by_id,
     get_discussions_for_decision,
     update_discussion,
 )
 
 router = APIRouter()
+standalone_router = APIRouter()
+
+
+@standalone_router.get(
+    "",
+    summary="List all discussions across accessible decisions"
+)
+def list_all_discussions(
+    search: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Retrieves all discussion comments across all decisions visible to current user.
+    """
+    return get_all_accessible_discussions(
+        db=db,
+        current_user=current_user,
+        limit=limit,
+        search=search,
+    )
 
 
 @router.post(

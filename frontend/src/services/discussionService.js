@@ -42,6 +42,21 @@ async function handleResponse(response) {
 }
 
 /**
+ * Fetches all discussion comments across accessible decisions.
+ */
+export async function getAllDiscussions(token = null, search = '') {
+  const url = new URL(`${API_BASE_URL}/api/v1/discussions`);
+  if (search) {
+    url.searchParams.append('search', search);
+  }
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+/**
  * Fetches all discussions and nested replies for a decision.
  */
 export async function getDiscussions(decisionId, token = null) {

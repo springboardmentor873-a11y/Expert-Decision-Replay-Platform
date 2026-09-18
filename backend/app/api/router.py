@@ -14,9 +14,13 @@ from app.api.routes import (
     tags,
     teams,
     users,
+    discussions,
 )
 
 api_router = APIRouter()
+
+# Register Discussions endpoints under /discussions
+api_router.include_router(discussions.standalone_router, prefix="/discussions", tags=["Discussions"])
 
 # Register Authentication endpoints under /auth
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])

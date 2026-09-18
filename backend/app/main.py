@@ -90,6 +90,7 @@ from app.api.routes import (
     tags,
     teams,
     users,
+    discussions,
 )
 
 # Also expose direct endpoints for convenience if called at root level
@@ -107,6 +108,7 @@ app.include_router(tags.router, prefix="/tags", tags=["Tags (Direct)"])
 app.include_router(meeting_notes.router, prefix="", tags=["Meeting Notes (Direct)"])
 app.include_router(approval_workflows.router, prefix="", tags=["Approval Workflows (Direct)"])
 app.include_router(knowledge_repository.router, prefix="/knowledge-repository", tags=["Knowledge Repository (Direct)"])
+app.include_router(discussions.standalone_router, prefix="/discussions", tags=["Discussions (Direct)"])
 
 
 

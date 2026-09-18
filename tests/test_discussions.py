@@ -24,6 +24,7 @@ from app.services.decision_service import create_decision, delete_decision
 from app.services.discussion_service import (
     create_discussion,
     delete_discussion,
+    get_all_accessible_discussions,
     get_discussion_by_id,
     get_discussions_for_decision,
     update_discussion,
@@ -32,6 +33,7 @@ from app.services.discussion_service import (
 from app.api.routes.discussions import (
     create_decision_discussion,
     create_discussion_reply,
+    list_all_discussions,
     list_decision_discussions,
     patch_discussion,
     remove_discussion,
@@ -424,6 +426,35 @@ class TestDiscussions(unittest.TestCase):
 
         self.assertIsNone(self.db.query(Discussion).filter(Discussion.id == parent.id).first())
         self.assertIsNone(self.db.query(Discussion).filter(Discussion.id == reply.id).first())
+
+    def test_17_get_all_accessible_discussions(self):
+        """Test retrieving all discussions across accessible decisions."""
+        c = create_decision_discussion(
+            decision_id=self.decision.id,
+            discussion_in=DiscussionCreate(content="Universal discussion query test"),
+            db=self.db,
+            current_user=self.alice
+        )
+        results = get_all_accessible_discussions(self.db, current_user=self.alice)
+        self.assertIsInstance(results, list)
+        self.assertGreater(len(results), 0)
+        found = any(d["id"] == c.id for d in results)
+        self.assertTrue(found)
+
+        # Test search
+        filtered = get_all_accessible_discussions(self.db, current_user=self.alice, search="Universal discussion")
+        self.assertGreater(len(filtered), 0)
+        self.assertTrue(all("Universal discussion" in d["content"] for d in filtered))
+
+    def test_18_list_all_discussions_endpoint(self):
+        """Test the standalone discussions endpoint function."""
+        results = list_all_discussions(
+            search=None,
+            limit=50,
+            db=self.db,
+            current_user=self.alice
+        )
+        self.assertIsInstance(results, list)
 
 
 if __name__ == "__main__":

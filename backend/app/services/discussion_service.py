@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.decision import Decision
 from app.models.discussion import Discussion
@@ -287,3 +287,50 @@ def delete_discussion(
 
     db.delete(discussion)
     db.commit()
+
+
+def get_all_accessible_discussions(
+    db: Session,
+    current_user: User,
+    limit: int = 100,
+    search: Optional[str] = None,
+) -> List[dict]:
+    """
+    Retrieves discussions across all decisions accessible to the current user.
+    """
+    from app.services.decision_service import get_decisions
+
+    accessible_decisions = get_decisions(db=db, current_user=current_user)
+    accessible_ids = [d.id for d in accessible_decisions]
+
+    if not accessible_ids:
+        return []
+
+    query = (
+        db.query(Discussion)
+        .options(joinedload(Discussion.user), joinedload(Discussion.decision))
+        .filter(Discussion.decision_id.in_(accessible_ids))
+    )
+    if search:
+        query = query.filter(Discussion.content.ilike(f"%{search.strip()}%"))
+
+    records = (
+        query.order_by(Discussion.created_at.desc(), Discussion.id.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "id": d.id,
+            "decision_id": d.decision_id,
+            "decision_title": d.decision.title if d.decision else f"Decision #{d.decision_id}",
+            "user_id": d.user_id,
+            "user_name": d.user.full_name if d.user else "Unknown",
+            "content": d.content,
+            "parent_id": d.parent_id,
+            "created_at": d.created_at,
+            "updated_at": d.updated_at,
+        }
+        for d in records
+    ]

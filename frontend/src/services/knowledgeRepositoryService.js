@@ -38,39 +38,57 @@ async function handleResponse(response) {
   return response.json();
 }
 
-export async function searchKnowledgeRepository(params = {}, token = null) {
+export async function getKnowledgeRepository(params = {}, token = null) {
   const query = new URLSearchParams();
-  if (params.query) query.append('query', params.query);
+  if (params.search) query.append('search', params.search);
   if (params.category_id) query.append('category_id', params.category_id.toString());
-  if (params.tag) query.append('tag', params.tag);
+  if (params.tag_id) query.append('tag_id', params.tag_id.toString());
   if (params.status && params.status !== 'ALL') query.append('status', params.status);
   if (params.limit) query.append('limit', params.limit.toString());
   if (params.skip) query.append('skip', params.skip.toString());
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository/search?${query.toString()}`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository?${query.toString()}`, {
     method: 'GET',
     headers: getHeaders(token),
   });
   return handleResponse(response);
+}
+
+export async function getKnowledgeGraph(token = null) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository/graph`, {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+export async function getRelatedInsights(token = null) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository/insights`, {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+// Backwards compatibility functions
+export async function searchKnowledgeRepository(params = {}, token = null) {
+  return getKnowledgeRepository(params, token);
 }
 
 export async function getKnowledgeTimeline(limit = 50, token = null) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository/timeline?limit=${limit}`, {
-    method: 'GET',
-    headers: getHeaders(token),
-  });
-  return handleResponse(response);
+  const data = await getKnowledgeRepository({ limit }, token);
+  return data.timeline_events || [];
 }
 
 export async function getKnowledgeDocuments(limit = 100, token = null) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository/documents?limit=${limit}`, {
-    method: 'GET',
-    headers: getHeaders(token),
-  });
-  return handleResponse(response);
+  const data = await getKnowledgeRepository({ limit }, token);
+  return data.documents || [];
 }
 
 export default {
+  getKnowledgeRepository,
+  getKnowledgeGraph,
+  getRelatedInsights,
   searchKnowledgeRepository,
   getKnowledgeTimeline,
   getKnowledgeDocuments,

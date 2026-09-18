@@ -15,6 +15,9 @@ import {
   Shield,
   BookOpen,
   CheckSquare,
+  UserCheck,
+  MessageSquare,
+  FileText,
 } from 'lucide-react';
 
 export const Sidebar = ({ isOpen, onClose }) => {
@@ -46,8 +49,17 @@ export const Sidebar = ({ isOpen, onClose }) => {
   };
 
   const role = user?.role?.name?.toLowerCase();
-  const canReview = ['reviewer', 'manager', 'administrator'].includes(role);
-  const canAudit = ['manager', 'administrator'].includes(role);
+  const isEmployee = role === 'employee';
+  const isReviewer = role === 'reviewer';
+  const isManager = role === 'manager';
+  const isAdmin = role === 'administrator';
+
+  // Role-based visibility flags per specification
+  const showCreateDecision = isEmployee || isManager || isAdmin;
+  const showPendingApprovals = isReviewer || isAdmin;
+  const showMyTeam = isEmployee || isReviewer || isManager;
+  const showTeams = isManager || isAdmin;
+  const showAuditLogs = isAdmin;
 
   return (
     <>
@@ -101,16 +113,18 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 <span>Decisions</span>
               </NavLink>
 
-              <NavLink
-                to="/decisions/new"
-                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                onClick={onClose}
-              >
-                <PlusCircle size={18} />
-                <span>Create Decision</span>
-              </NavLink>
+              {showCreateDecision && (
+                <NavLink
+                  to="/decisions/new"
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <PlusCircle size={18} />
+                  <span>Create Decision</span>
+                </NavLink>
+              )}
 
-              {canReview && (
+              {showPendingApprovals && (
                 <NavLink
                   to="/approvals/pending"
                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
@@ -120,7 +134,59 @@ export const Sidebar = ({ isOpen, onClose }) => {
                   <span>Pending Approvals</span>
                 </NavLink>
               )}
+            </nav>
+          </div>
 
+          {/* GROUP 2: COLLABORATION */}
+          <div className="sidebar-nav-group">
+            <span className="nav-group-heading">COLLABORATION</span>
+            <nav className="sidebar-nav-list">
+              {showMyTeam && (
+                <NavLink
+                  to="/my-team"
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <UserCheck size={18} />
+                  <span>My Team</span>
+                </NavLink>
+              )}
+
+              {showTeams && (
+                <NavLink
+                  to="/teams"
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <Users size={18} />
+                  <span>Teams</span>
+                </NavLink>
+              )}
+
+              <NavLink
+                to="/discussions"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                <MessageSquare size={18} />
+                <span>Discussions</span>
+              </NavLink>
+
+              <NavLink
+                to="/documents"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                <FileText size={18} />
+                <span>Documents</span>
+              </NavLink>
+            </nav>
+          </div>
+
+          {/* GROUP 3: KNOWLEDGE */}
+          <div className="sidebar-nav-group">
+            <span className="nav-group-heading">KNOWLEDGE</span>
+            <nav className="sidebar-nav-list">
               <NavLink
                 to="/knowledge-repository"
                 className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
@@ -132,31 +198,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* GROUP 2: COLLABORATION */}
-          <div className="sidebar-nav-group">
-            <span className="nav-group-heading">COLLABORATION</span>
-            <nav className="sidebar-nav-list">
-              <NavLink
-                to="/teams"
-                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                onClick={onClose}
-              >
-                <Users size={18} />
-                <span>Teams</span>
-              </NavLink>
-
-              <NavLink
-                to="/notifications"
-                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                onClick={onClose}
-              >
-                <Bell size={18} />
-                <span>Notifications</span>
-              </NavLink>
-            </nav>
-          </div>
-
-          {/* GROUP 3: ANALYTICS */}
+          {/* GROUP 4: ANALYTICS */}
           <div className="sidebar-nav-group">
             <span className="nav-group-heading">ANALYTICS</span>
             <nav className="sidebar-nav-list">
@@ -169,7 +211,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 <span>Reports & Analytics</span>
               </NavLink>
 
-              {canAudit && (
+              {showAuditLogs && (
                 <NavLink
                   to="/audit-logs"
                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
@@ -182,10 +224,19 @@ export const Sidebar = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* GROUP 4: ACCOUNT */}
+          {/* GROUP 5: ACCOUNT */}
           <div className="sidebar-nav-group">
             <span className="nav-group-heading">ACCOUNT</span>
             <nav className="sidebar-nav-list">
+              <NavLink
+                to="/notifications"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                <Bell size={18} />
+                <span>Notifications</span>
+              </NavLink>
+
               <NavLink
                 to="/settings"
                 className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}

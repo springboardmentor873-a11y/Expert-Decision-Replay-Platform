@@ -17,8 +17,10 @@ import Notifications from './pages/Notifications';
 import AuditLogs from './pages/AuditLogs';
 import Reports from './pages/Reports';
 import { Teams } from './pages/Teams';
+import { MyTeam } from './pages/MyTeam';
 import { TeamWorkspace } from './pages/TeamWorkspace';
 import { KnowledgeRepository } from './pages/KnowledgeRepository';
+import { Discussions } from './pages/Discussions';
 import { Settings } from './pages/Settings';
 import './App.css';
 
@@ -95,7 +97,10 @@ function AppRoutes() {
         <Route path="/approvals/pending" element={<PendingApprovals />} />
         <Route path="/knowledge-repository" element={<KnowledgeRepository />} />
         <Route path="/teams" element={<Teams />} />
+        <Route path="/my-team" element={<MyTeam />} />
         <Route path="/teams/:teamId" element={<TeamWorkspace />} />
+        <Route path="/discussions" element={<Discussions />} />
+        <Route path="/documents" element={<KnowledgeRepository defaultTab="documents" />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/reports" element={<Reports />} />

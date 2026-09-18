@@ -7,6 +7,10 @@ import {
   updateTeam,
   deleteTeam,
   addTeamMember,
+  requestJoinTeam,
+  getJoinRequests,
+  approveJoinRequest,
+  rejectJoinRequest,
 } from '../services/teamService';
 import { getUserRoster } from '../services/userService';
 import {
@@ -25,6 +29,8 @@ import {
   Calendar,
   Check,
   UserPlus,
+  Clock,
+  Inbox,
 } from 'lucide-react';
 
 export const Teams = () => {
@@ -58,6 +64,17 @@ export const Teams = () => {
   const [editTeamDesc, setEditTeamDesc] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
 
+  // Join Request Modal State
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [targetJoinTeam, setTargetJoinTeam] = useState(null);
+  const [joinMessage, setJoinMessage] = useState('');
+  const [joinSubmitting, setJoinSubmitting] = useState(false);
+
+  // Review Requests Modal State
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
   // Safe RBAC extraction (handles both string and object role formats)
   const userRoleName = (
     typeof user?.role === 'string'
@@ -67,12 +84,22 @@ export const Teams = () => {
   const isAdmin = userRoleName === 'administrator';
   const isManager = userRoleName === 'manager';
 
+  const fetchPendingRequests = async () => {
+    try {
+      const reqs = await getJoinRequests({ status: 'PENDING' });
+      setPendingRequests(reqs || []);
+    } catch (err) {
+      console.warn('Could not load join requests:', err);
+    }
+  };
+
   const fetchTeamsList = async () => {
     setLoading(true);
     setError('');
     try {
       const data = await getTeams();
       setTeams(data || []);
+      await fetchPendingRequests();
     } catch (err) {
       setError(err.message || 'Failed to fetch teams list.');
     } finally {
@@ -83,6 +110,56 @@ export const Teams = () => {
   useEffect(() => {
     fetchTeamsList();
   }, []);
+
+  const handleOpenJoinModal = (team) => {
+    setTargetJoinTeam(team);
+    setJoinMessage('');
+    setShowJoinModal(true);
+  };
+
+  const handleSubmitJoinRequest = async (e) => {
+    e.preventDefault();
+    if (!targetJoinTeam) return;
+    setJoinSubmitting(true);
+    try {
+      await requestJoinTeam(targetJoinTeam.id, joinMessage.trim());
+      setSuccess(`Your request to join "${targetJoinTeam.name}" has been submitted for review!`);
+      setShowJoinModal(false);
+      await fetchTeamsList();
+    } catch (err) {
+      alert(err.message || 'Failed to submit join request.');
+    } finally {
+      setJoinSubmitting(false);
+    }
+  };
+
+  const handleApproveJoinRequest = async (requestId) => {
+    setReviewSubmitting(true);
+    try {
+      await approveJoinRequest(requestId);
+      setSuccess('Join request approved successfully! The user is now enrolled in the team.');
+      await fetchPendingRequests();
+      await fetchTeamsList();
+    } catch (err) {
+      alert(err.message || 'Failed to approve join request.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleRejectJoinRequest = async (requestId) => {
+    setReviewSubmitting(true);
+    try {
+      await rejectJoinRequest(requestId);
+      setSuccess('Join request rejected.');
+      await fetchPendingRequests();
+      await fetchTeamsList();
+    } catch (err) {
+      alert(err.message || 'Failed to reject join request.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const handleOpenCreateModal = async () => {
     setNewTeamName('');
@@ -346,6 +423,27 @@ export const Teams = () => {
             )}
           </div>
 
+          {pendingRequests.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setShowReviewModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.625rem 1rem',
+                border: '1px solid #f59e0b',
+                color: '#b45309',
+                background: '#fef3c7',
+                fontWeight: 600,
+              }}
+            >
+              <Inbox size={16} />
+              <span>Join Requests ({pendingRequests.length})</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="btn btn-primary"
@@ -518,7 +616,83 @@ export const Teams = () => {
                   <span>Lead: <strong>{leadName}</strong></span>
                 </div>
 
+                {/* Recent Decisions Snippet */}
+                {team.recent_decisions && team.recent_decisions.length > 0 && (
+                  <div style={{ marginTop: '0.25rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                      Recent Decisions
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {team.recent_decisions.map((d) => (
+                        <Link
+                          key={d.id}
+                          to={`/decisions/${d.id}`}
+                          style={{
+                            fontSize: '0.8rem',
+                            color: '#2563eb',
+                            textDecoration: 'none',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            padding: '3px 6px',
+                            borderRadius: '4px',
+                            background: '#f8fafc',
+                          }}
+                        >
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>
+                            {d.title}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{d.status}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="team-directory-card-footer">
+                  {/* Membership / Request to Join Indicator */}
+                  {team.is_member ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.775rem',
+                        fontWeight: 600,
+                        color: '#15803d',
+                        background: '#dcfce7',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      <Check size={13} /> Enrolled
+                    </span>
+                  ) : team.has_pending_join_request ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.775rem',
+                        fontWeight: 600,
+                        color: '#b45309',
+                        background: '#fef3c7',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                      }}
+                    >
+                      <Clock size={13} /> Requested
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenJoinModal(team)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 9px', fontSize: '0.8rem' }}
+                    >
+                      <UserPlus size={13} />
+                      <span>Request to Join</span>
+                    </button>
+                  )}
                   <Link
                     to={`/teams/${team.id}`}
                     className="btn btn-primary btn-sm"
@@ -970,6 +1144,177 @@ export const Teams = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Request to Join Team Modal */}
+      {showJoinModal && targetJoinTeam && (
+        <div
+          className="rpt-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => !joinSubmitting && setShowJoinModal(false)}
+        >
+          <div
+            className="rpt-modal"
+            style={{ maxWidth: '480px', width: '100%', padding: '1.5rem' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserPlus size={20} className="text-primary" />
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>
+                  Request to Join Team
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => !joinSubmitting && setShowJoinModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Submit a request to join <strong>{targetJoinTeam.name}</strong>. The team lead or an administrator will review your enrollment.
+            </p>
+
+            <form onSubmit={handleSubmitJoinRequest}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '6px', color: '#1e293b' }}>
+                  Optional Note / Reason for Joining:
+                </label>
+                <textarea
+                  className="form-control-textarea"
+                  rows={3}
+                  placeholder="e.g. Collaborating on database sharding and scalability initiatives..."
+                  value={joinMessage}
+                  onChange={(e) => setJoinMessage(e.target.value)}
+                  disabled={joinSubmitting}
+                  style={{ width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', padding: '8px 12px', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowJoinModal(false)}
+                  disabled={joinSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={joinSubmitting}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {joinSubmitting ? <Loader2 size={15} className="spinner-icon" /> : <UserPlus size={15} />}
+                  <span>Submit Request</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Review Join Requests Modal */}
+      {showReviewModal && (
+        <div
+          className="rpt-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => !reviewSubmitting && setShowReviewModal(false)}
+        >
+          <div
+            className="rpt-modal"
+            style={{ maxWidth: '640px', width: '100%', padding: '1.5rem', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Inbox size={20} style={{ color: '#d97706' }} />
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>
+                  Pending Team Join Requests ({pendingRequests.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => !reviewSubmitting && setShowReviewModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {pendingRequests.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+                  <CheckCircle2 size={32} style={{ color: '#10b981', margin: '0 auto 8px' }} />
+                  <p style={{ margin: 0 }}>No pending join requests to review.</p>
+                </div>
+              ) : (
+                pendingRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{req.requester_name}</strong>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: '8px' }}>
+                          ({req.requester_email})
+                        </span>
+                        <div style={{ fontSize: '0.825rem', color: '#475569', marginTop: '2px' }}>
+                          Target Team: <strong>{req.team_name}</strong>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        {formatDate(req.created_at)}
+                      </span>
+                    </div>
+
+                    {req.message && (
+                      <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#334155', fontStyle: 'italic', background: '#ffffff', padding: '6px 10px', borderRadius: '4px', border: '1px solid #f1f5f9' }}>
+                        "{req.message}"
+                      </p>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRejectJoinRequest(req.id)}
+                        disabled={reviewSubmitting}
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: '#dc2626' }}
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApproveJoinRequest(req.id)}
+                        disabled={reviewSubmitting}
+                        className="btn btn-primary btn-sm"
+                        style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                      >
+                        Approve & Enroll
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

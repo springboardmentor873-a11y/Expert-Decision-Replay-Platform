@@ -49,6 +49,14 @@ export async function getTeams(token) {
   return handleResponse(response);
 }
 
+export async function getMyTeams(token) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/teams/my`, {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
 export async function getTeamById(teamId, token) {
   const response = await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}`, {
     method: 'GET',
@@ -108,8 +116,46 @@ export async function removeTeamMember(teamId, userId, token) {
   return handleResponse(response);
 }
 
+export async function requestJoinTeam(teamId, message = '', token = null) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/join-request`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ message }),
+  });
+  return handleResponse(response);
+}
+
+export async function getJoinRequests(params = {}, token = null) {
+  const query = new URLSearchParams();
+  if (params.team_id) query.append('team_id', params.team_id.toString());
+  if (params.status) query.append('status', params.status);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/teams/join-requests?${query.toString()}`, {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+export async function approveJoinRequest(requestId, token = null) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/teams/join-requests/${requestId}/approve`, {
+    method: 'PATCH',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+export async function rejectJoinRequest(requestId, token = null) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/teams/join-requests/${requestId}/reject`, {
+    method: 'PATCH',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
 export default {
   getTeams,
+  getMyTeams,
   getTeamById,
   getTeamWorkspace,
   createTeam,
@@ -117,4 +163,8 @@ export default {
   deleteTeam,
   addTeamMember,
   removeTeamMember,
+  requestJoinTeam,
+  getJoinRequests,
+  approveJoinRequest,
+  rejectJoinRequest,
 };

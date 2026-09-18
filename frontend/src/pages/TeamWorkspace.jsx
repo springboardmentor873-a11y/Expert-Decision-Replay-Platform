@@ -5,6 +5,9 @@ import {
   getTeamWorkspace,
   addTeamMember,
   removeTeamMember,
+  getJoinRequests,
+  approveJoinRequest,
+  rejectJoinRequest,
 } from '../services/teamService';
 import { getUserRoster } from '../services/userService';
 import { downloadReport } from '../services/reportService';
@@ -34,12 +37,14 @@ import {
   Plus,
   Paperclip,
   TrendingUp,
+  UserPlus,
 } from 'lucide-react';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'decisions', label: 'Decisions', icon: Layers },
   { id: 'members', label: 'Members', icon: Users },
+  { id: 'join-requests', label: 'Join Requests', icon: UserPlus },
   { id: 'discussions', label: 'Discussions', icon: MessageSquare },
   { id: 'documents', label: 'Documents', icon: Paperclip },
   { id: 'activity', label: 'Activity', icon: Activity },
@@ -56,6 +61,8 @@ export const TeamWorkspace = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exportingFormat, setExportingFormat] = useState(null);
+  const [teamJoinRequests, setTeamJoinRequests] = useState([]);
+  const [reqActionLoading, setReqActionLoading] = useState(false);
 
   // Add Member Modal State
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -73,6 +80,12 @@ export const TeamWorkspace = () => {
     try {
       const data = await getTeamWorkspace(teamId);
       setWorkspace(data);
+      try {
+        const reqs = await getJoinRequests({ team_id: teamId, status: 'PENDING' });
+        setTeamJoinRequests(reqs || []);
+      } catch {
+        // ignore if not authorized for join requests
+      }
     } catch (err) {
       setError(err.message || 'Failed to load team workspace.');
     } finally {
@@ -99,6 +112,30 @@ export const TeamWorkspace = () => {
       setRosterUsers((roster || []).filter(u => !existingUserIds.has(u.id)));
     } catch (err) {
       console.warn('Could not load user roster:', err);
+    }
+  };
+
+  const handleApproveReq = async (reqId) => {
+    setReqActionLoading(true);
+    try {
+      await approveJoinRequest(reqId);
+      await fetchWorkspace();
+    } catch (err) {
+      alert(err.message || 'Failed to approve request');
+    } finally {
+      setReqActionLoading(false);
+    }
+  };
+
+  const handleRejectReq = async (reqId) => {
+    setReqActionLoading(true);
+    try {
+      await rejectJoinRequest(reqId);
+      await fetchWorkspace();
+    } catch (err) {
+      alert(err.message || 'Failed to reject request');
+    } finally {
+      setReqActionLoading(false);
     }
   };
 
@@ -536,7 +573,85 @@ export const TeamWorkspace = () => {
         )}
 
         {/* TAB 4: DISCUSSIONS */}
-        {activeTab === 'discussions' && (
+        {activeTab === 'join-requests' && (
+        <div className="card" style={{ padding: '1.5rem', background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}>
+                Pending Membership Requests ({teamJoinRequests.length})
+              </h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                Review prospective engineers requesting enrollment in this team workspace.
+              </p>
+            </div>
+          </div>
+
+          {teamJoinRequests.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+              <CheckCircle2 size={36} style={{ color: '#10b981', margin: '0 auto 8px' }} />
+              <p style={{ margin: 0, fontWeight: 500 }}>No pending join requests for this team.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              {teamJoinRequests.map((req) => (
+                <div
+                  key={req.id}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{req.requester_name}</strong>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>({req.requester_email})</span>
+                      <span style={{ fontSize: '0.75rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>{req.requester_role}</span>
+                    </div>
+                    {req.message && (
+                      <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#334155', fontStyle: 'italic' }}>
+                        "{req.message}"
+                      </p>
+                    )}
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginTop: '4px' }}>
+                      Requested: {formatDate(req.created_at)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleRejectReq(req.id)}
+                      disabled={reqActionLoading}
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: '#dc2626' }}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveReq(req.id)}
+                      disabled={reqActionLoading}
+                      className="btn btn-primary btn-sm"
+                      style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                    >
+                      Approve & Enroll
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'discussions' && (
           <div className="card discussions-tab-pane">
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Team Discussions Feed</h2>
             <p style={{ color: 'var(--slate-500)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>

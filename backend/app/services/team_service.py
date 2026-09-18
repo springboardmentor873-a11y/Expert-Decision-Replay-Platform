@@ -1,12 +1,17 @@
 from typing import List, Optional
+from datetime import datetime, timezone
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.audit_log import AuditActionEnum
+from app.models.notification import Notification, NotificationTypeEnum
 from app.models.role import RoleEnum
 from app.models.team import Team, TeamMember
+from app.models.team_join_request import TeamJoinRequest
 from app.models.user import User
 from app.schemas.team import TeamCreateRequest, TeamMemberAddRequest, TeamResponse, TeamMemberResponse, TeamUpdateRequest
+from app.schemas.team_join_request import TeamJoinRequestCreate, TeamJoinRequestResponse, TeamJoinRequestReview
 from app.services.audit_service import create_audit_log
 
 
@@ -23,11 +28,36 @@ def _check_team_management_permission(team: Team, current_user: User) -> bool:
     return False
 
 
-def _format_team_response(team: Team) -> TeamResponse:
-    """Formats a Team model instance into TeamResponse with populated member information."""
+def _format_join_request_response(req: TeamJoinRequest) -> TeamJoinRequestResponse:
+    requester = req.user
+    reviewer = req.reviewer
+    team = req.team
+    return TeamJoinRequestResponse(
+        id=req.id,
+        team_id=req.team_id,
+        user_id=req.user_id,
+        status=req.status,
+        message=req.message,
+        reviewed_by=req.reviewed_by,
+        reviewed_at=req.reviewed_at,
+        created_at=req.created_at,
+        team_name=team.name if team else f"Team #{req.team_id}",
+        requester_name=requester.full_name if requester else f"User #{req.user_id}",
+        requester_email=requester.email if requester else "",
+        requester_role=requester.role.name if requester and requester.role else "Employee",
+        reviewer_name=reviewer.full_name if reviewer else None,
+    )
+
+
+def _format_team_response(team: Team, current_user: Optional[User] = None, db: Optional[Session] = None) -> TeamResponse:
+    """Formats a Team model instance into TeamResponse with populated member information, lead name, and indicators."""
     member_list: List[TeamMemberResponse] = []
+    leader_name = None
     for m in team.members:
         member_user = m.user
+        m_name = member_user.full_name if member_user else f"User #{m.user_id}"
+        if m.role.lower() == "lead":
+            leader_name = m_name
         member_list.append(
             TeamMemberResponse(
                 id=m.id,
@@ -35,13 +65,34 @@ def _format_team_response(team: Team) -> TeamResponse:
                 user_id=m.user_id,
                 role=m.role,
                 joined_at=m.joined_at,
-                user_name=member_user.full_name if member_user else f"User #{m.user_id}",
+                user_name=m_name,
                 user_email=member_user.email if member_user else "",
                 user_system_role=member_user.role.name if member_user and member_user.role else "Employee",
             )
         )
 
     creator_name = team.creator.full_name if team.creator else f"User #{team.created_by}"
+    if not leader_name:
+        leader_name = creator_name
+
+    # Check recent decisions
+    recent_decisions = []
+    if getattr(team, "decisions", None):
+        sorted_decs = sorted(team.decisions, key=lambda d: d.created_at, reverse=True)[:3]
+        recent_decisions = [{"id": d.id, "title": d.title, "status": d.status} for d in sorted_decs]
+
+    is_member = False
+    has_pending = False
+    if current_user:
+        is_member = any(m.user_id == current_user.id for m in team.members)
+        if db:
+            pending_req = db.query(TeamJoinRequest).filter(
+                TeamJoinRequest.team_id == team.id,
+                TeamJoinRequest.user_id == current_user.id,
+                TeamJoinRequest.status == "PENDING"
+            ).first()
+            has_pending = pending_req is not None
+
     return TeamResponse(
         id=team.id,
         name=team.name,
@@ -52,6 +103,10 @@ def _format_team_response(team: Team) -> TeamResponse:
         creator_name=creator_name,
         member_count=len(team.members),
         members=member_list,
+        leader_name=leader_name,
+        recent_decisions=recent_decisions,
+        is_member=is_member,
+        has_pending_join_request=has_pending,
     )
 
 
@@ -107,7 +162,13 @@ def create_team(db: Session, team_in: TeamCreateRequest, current_user: User) -> 
 def get_teams(db: Session, current_user: User, skip: int = 0, limit: int = 100) -> List[TeamResponse]:
     """Retrieves all teams in the organization ordered by updated_at desc."""
     teams = db.query(Team).order_by(Team.updated_at.desc()).offset(skip).limit(limit).all()
-    return [_format_team_response(t) for t in teams]
+    return [_format_team_response(t, current_user=current_user, db=db) for t in teams]
+
+
+def get_my_teams(db: Session, current_user: User) -> List[TeamResponse]:
+    """Retrieves all teams where current_user is an active member."""
+    teams = db.query(Team).join(Team.members).filter(TeamMember.user_id == current_user.id).order_by(Team.updated_at.desc()).all()
+    return [_format_team_response(t, current_user=current_user, db=db) for t in teams]
 
 
 def get_team_by_id(db: Session, team_id: int, current_user: User) -> TeamResponse:
@@ -436,3 +497,220 @@ def get_team_workspace(db: Session, team_id: int, current_user: User) -> dict:
             "member_metrics": member_metrics,
         }
     }
+
+
+def create_join_request(db: Session, team_id: int, request_in: TeamJoinRequestCreate, current_user: User) -> TeamJoinRequestResponse:
+    """Submits a request to join a team workspace."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Team with ID {team_id} not found."
+        )
+
+    # Check if already a member
+    is_member = any(m.user_id == current_user.id for m in team.members)
+    if is_member:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"You are already a member of team '{team.name}'."
+        )
+
+    # Check if a pending request already exists
+    existing_request = db.query(TeamJoinRequest).filter(
+        TeamJoinRequest.team_id == team_id,
+        TeamJoinRequest.user_id == current_user.id,
+        TeamJoinRequest.status == "PENDING"
+    ).first()
+    if existing_request:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"You already have a pending join request for team '{team.name}'."
+        )
+
+    join_req = TeamJoinRequest(
+        team_id=team_id,
+        user_id=current_user.id,
+        status="PENDING",
+        message=request_in.message.strip() if request_in.message else None,
+    )
+    db.add(join_req)
+    db.flush()
+
+    # Create audit log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.TEAM_JOIN_REQUESTED,
+        entity_type="Team",
+        entity_id=team.id,
+        user_id=current_user.id,
+        description=f"{current_user.full_name} requested to join team '{team.name}'",
+        details={"team_id": team.id, "request_id": join_req.id},
+        skip_commit=True,
+    )
+
+    # Notify team creator and leads
+    notified_user_ids = set()
+    for m in team.members:
+        if m.role.lower() == "lead" and m.user_id != current_user.id:
+            notified_user_ids.add(m.user_id)
+    if team.created_by != current_user.id:
+        notified_user_ids.add(team.created_by)
+
+    for r_id in notified_user_ids:
+        db.add(Notification(
+            recipient_id=r_id,
+            notification_type=NotificationTypeEnum.TEAM_JOIN_REQUESTED.value,
+            title="New Team Join Request",
+            message=f"{current_user.full_name} has requested to join team '{team.name}'.",
+        ))
+
+    db.commit()
+    db.refresh(join_req)
+
+    return _format_join_request_response(join_req)
+
+
+def get_join_requests(
+    db: Session,
+    current_user: User,
+    team_id: Optional[int] = None,
+    status_filter: Optional[str] = None
+) -> List[TeamJoinRequestResponse]:
+    """Lists join requests accessible to the current user according to RBAC."""
+    user_role = current_user.role.name if current_user.role else ""
+    is_org_mgr = user_role in (RoleEnum.ADMINISTRATOR.value, RoleEnum.MANAGER.value)
+
+    query = db.query(TeamJoinRequest).options(
+        joinedload(TeamJoinRequest.team),
+        joinedload(TeamJoinRequest.user),
+        joinedload(TeamJoinRequest.reviewer)
+    )
+
+    if team_id:
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found.")
+        is_lead = any(m.user_id == current_user.id and m.role.lower() == "lead" for m in team.members)
+        if not (is_org_mgr or is_lead or team.created_by == current_user.id):
+            query = query.filter(TeamJoinRequest.team_id == team_id, TeamJoinRequest.user_id == current_user.id)
+        else:
+            query = query.filter(TeamJoinRequest.team_id == team_id)
+    else:
+        if not is_org_mgr:
+            lead_teams = db.query(TeamMember.team_id).filter(
+                TeamMember.user_id == current_user.id,
+                TeamMember.role.ilike("lead")
+            ).subquery()
+            created_teams = db.query(Team.id).filter(Team.created_by == current_user.id).subquery()
+
+            query = query.filter(
+                or_(
+                    TeamJoinRequest.user_id == current_user.id,
+                    TeamJoinRequest.team_id.in_(lead_teams),
+                    TeamJoinRequest.team_id.in_(created_teams)
+                )
+            )
+
+    if status_filter:
+        query = query.filter(TeamJoinRequest.status == status_filter.upper())
+
+    requests = query.order_by(TeamJoinRequest.created_at.desc()).all()
+    return [_format_join_request_response(r) for r in requests]
+
+
+def review_join_request(
+    db: Session,
+    request_id: int,
+    review_in: TeamJoinRequestReview,
+    current_user: User
+) -> TeamJoinRequestResponse:
+    """Approves or rejects a team join request. Requires Lead, Manager, or Admin."""
+    join_req = db.query(TeamJoinRequest).filter(TeamJoinRequest.id == request_id).first()
+    if not join_req:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Join request with ID {request_id} not found."
+        )
+
+    if join_req.status != "PENDING":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This join request has already been {join_req.status.lower()}."
+        )
+
+    team = join_req.team
+    if not _check_team_management_permission(team, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to review join requests for this team."
+        )
+
+    action = review_in.action.strip().upper()
+    if action not in ("APPROVE", "REJECT"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Action must be either 'APPROVE' or 'REJECT'."
+        )
+
+    now = datetime.now(timezone.utc)
+    join_req.reviewed_by = current_user.id
+    join_req.reviewed_at = now
+
+    if action == "APPROVE":
+        join_req.status = "APPROVED"
+
+        # Check if already member
+        existing_m = db.query(TeamMember).filter(
+            TeamMember.team_id == team.id,
+            TeamMember.user_id == join_req.user_id
+        ).first()
+        if not existing_m:
+            new_member = TeamMember(
+                team_id=team.id,
+                user_id=join_req.user_id,
+                role="Member",
+            )
+            db.add(new_member)
+
+        create_audit_log(
+            db=db,
+            action=AuditActionEnum.TEAM_JOIN_APPROVED,
+            entity_type="Team",
+            entity_id=team.id,
+            user_id=current_user.id,
+            description=f"Approved join request for {join_req.user.full_name} to join '{team.name}'",
+            details={"team_id": team.id, "request_id": join_req.id, "user_id": join_req.user_id},
+            skip_commit=True,
+        )
+
+        db.add(Notification(
+            recipient_id=join_req.user_id,
+            notification_type=NotificationTypeEnum.TEAM_JOIN_APPROVED.value,
+            title="Team Join Request Approved",
+            message=f"Congratulations! Your request to join team '{team.name}' has been approved.",
+        ))
+    else:
+        join_req.status = "REJECTED"
+
+        create_audit_log(
+            db=db,
+            action=AuditActionEnum.TEAM_JOIN_REJECTED,
+            entity_type="Team",
+            entity_id=team.id,
+            user_id=current_user.id,
+            description=f"Rejected join request for {join_req.user.full_name} to join '{team.name}'",
+            details={"team_id": team.id, "request_id": join_req.id, "user_id": join_req.user_id},
+            skip_commit=True,
+        )
+
+        db.add(Notification(
+            recipient_id=join_req.user_id,
+            notification_type=NotificationTypeEnum.TEAM_JOIN_REJECTED.value,
+            title="Team Join Request Not Approved",
+            message=f"Your request to join team '{team.name}' was not approved.",
+        ))
+
+    db.commit()
+    db.refresh(join_req)
+    return _format_join_request_response(join_req)

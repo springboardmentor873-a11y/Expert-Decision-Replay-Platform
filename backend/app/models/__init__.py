@@ -18,6 +18,7 @@ from app.models.approval_workflow import (
     WorkflowStatusEnum,
     StepStatusEnum,
 )
+from app.models.team_join_request import TeamJoinRequest, JoinRequestStatusEnum
 
 __all__ = [
     "Role",
@@ -45,4 +46,6 @@ __all__ = [
     "ApprovalStep",
     "WorkflowStatusEnum",
     "StepStatusEnum",
+    "TeamJoinRequest",
+    "JoinRequestStatusEnum",
 ]

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Scale, ShieldCheck, Users, RotateCcw, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
+import { Scale, ShieldCheck, Users, RotateCcw, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, UserCheck, CheckSquare, Crown, Shield } from 'lucide-react';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -168,6 +168,62 @@ export const Login = () => {
               )}
             </button>
           </form>
+
+          {/* Quick Role Selection Strip */}
+          <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569' }}>
+                Quick Login
+              </span>
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Select role to populate fields</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem' }}>
+              {[
+                { role: 'Employee', email: 'nithin.kumar@example.com', icon: UserCheck, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+                { role: 'Reviewer', email: 'rahul.sharma@example.com', icon: CheckSquare, color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+                { role: 'Manager', email: 'priya.reddy@example.com', icon: Crown, color: '#7c3aed', bg: '#ede9fe', border: '#ddd6fe' },
+                { role: 'Administrator', email: 'arjun.mehta@example.com', icon: Shield, color: '#16a34a', bg: '#dcfce7', border: '#bbf7d0' },
+              ].map(({ role: roleName, email: roleEmail, icon: RoleIcon, color, bg, border }) => (
+                <button
+                  key={roleName}
+                  type="button"
+                  onClick={() => {
+                    setEmail(roleEmail);
+                    setPassword('Demo@123');
+                    setError('');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 14px',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    color: '#334155',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = border;
+                    e.currentTarget.style.background = bg;
+                    e.currentTarget.style.color = color;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.color = '#334155';
+                  }}
+                >
+                  <RoleIcon size={16} style={{ color }} />
+                  <span>{roleName}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <p className="auth-footer-prompt">
             Don't have an account?
