@@ -6,6 +6,9 @@ from models.alternative import DecisionAlternative
 from models.document import Document
 from models.comment import Comment
 from models.version import DecisionVersion
+from models.approval import ApprovalWorkflow, ApprovalAction
+from models.notification import Notification
+from models.audit import AuditLog
 
 __all__ = [
     "Role",
@@ -16,4 +19,8 @@ __all__ = [
     "Document",
     "Comment",
     "DecisionVersion",
+    "ApprovalWorkflow",
+    "ApprovalAction",
+    "Notification",
+    "AuditLog",
 ]

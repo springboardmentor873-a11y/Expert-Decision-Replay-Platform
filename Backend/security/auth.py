@@ -31,7 +31,10 @@ def get_current_user(
 
         return {
             "user_id": user_id,
-            "role_id": role_id
+            "role_id": role_id,
+            "role_name": payload.get("role_name"),
+            "email": payload.get("email"),
+            "name": payload.get("name")
         }
 
     except JWTError:

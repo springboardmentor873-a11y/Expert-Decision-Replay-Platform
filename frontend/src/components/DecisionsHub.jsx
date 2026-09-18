@@ -19,7 +19,8 @@ import {
   Send,
   Eye,
   Check,
-  RotateCcw
+  RotateCcw,
+  AlertTriangle
 } from "lucide-react";
 import AlternativeComparisonMatrix from "./AlternativeComparisonMatrix";
 
@@ -30,7 +31,15 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDecision, setSelectedDecision] = useState(null);
-  const [activeDetailTab, setActiveDetailTab] = useState("overview"); // overview | alternatives | discussion | versions | documents
+  const [activeDetailTab, setActiveDetailTab] = useState("overview"); // overview | alternatives | discussion | versions | documents | approvals
+
+  // Milestone 3 Approval & Export state
+  const [approvalHistory, setApprovalHistory] = useState(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [approvalActionType, setApprovalActionType] = useState("approve");
+  const [approvalComments, setApprovalComments] = useState("");
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+  const [approvalMessage, setApprovalMessage] = useState(null);
 
   // Create Decision Wizard state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -111,8 +120,77 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
         const data = await res.json();
         setSelectedDecision(data);
       }
+      fetchApprovalHistory(id);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchApprovalHistory = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiBase}/decisions/${id}/approval-history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApprovalHistory(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleExecuteApproval = async () => {
+    if (!selectedDecision) return;
+    setApprovalSubmitting(true);
+    setApprovalMessage(null);
+    const token = localStorage.getItem("token");
+
+    let endpoint = "";
+    let body = { action: "Approved", comments: approvalComments };
+
+    if (approvalActionType === "submit") {
+      endpoint = `${apiBase}/decisions/${selectedDecision.id}/submit-for-approval`;
+      body = { action: "Submitted", comments: approvalComments || "Submitted for Stage 1 review." };
+    } else if (approvalActionType === "approve") {
+      endpoint = `${apiBase}/decisions/${selectedDecision.id}/approve-stage`;
+      body = { action: "Approved", comments: approvalComments || "Stage requirements satisfied." };
+    } else if (approvalActionType === "reject") {
+      endpoint = `${apiBase}/decisions/${selectedDecision.id}/reject-stage`;
+      body = { action: "Rejected", comments: approvalComments || "Decision rejected during review." };
+    } else if (approvalActionType === "request_changes") {
+      endpoint = `${apiBase}/decisions/${selectedDecision.id}/request-changes`;
+      body = { action: "Changes Requested", comments: approvalComments || "Revisions requested." };
+    } else if (approvalActionType === "escalate") {
+      endpoint = `${apiBase}/decisions/${selectedDecision.id}/escalate`;
+      body = { escalation_reason: approvalComments || "Turnaround threshold exceeded." };
+    }
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setApprovalMessage({ text: data.detail || "Action failed", isError: true });
+        return;
+      }
+      setApprovalMessage({ text: data.message || "Action executed successfully!", isError: false });
+      setTimeout(async () => {
+        setIsApprovalModalOpen(false);
+        await loadDecisionDetail(selectedDecision.id);
+        fetchDecisions();
+      }, 900);
+    } catch (e) {
+      setApprovalMessage({ text: "Network error occurred", isError: true });
+    } finally {
+      setApprovalSubmitting(false);
     }
   };
 
@@ -473,52 +551,114 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
               </button>
             </div>
 
+            {/* Multi-Stage Stepper */}
+            <div style={styles.stepperContainer}>
+              {[
+                { step: 1, label: "Draft", desc: "Alternatives Formulation", active: selectedDecision.status === "Draft" || selectedDecision.status === "Changes Requested", done: selectedDecision.status === "Under Review" || selectedDecision.status === "Approved" },
+                { step: 2, label: "Stage 1: Reviewer", desc: "Technical Verification", active: selectedDecision.status === "Under Review" && (!approvalHistory?.workflow || approvalHistory.workflow.stage === 1), done: (selectedDecision.status === "Under Review" && approvalHistory?.workflow?.stage === 2) || selectedDecision.status === "Approved" },
+                { step: 3, label: "Stage 2: Manager", desc: "Executive Signoff", active: selectedDecision.status === "Under Review" && approvalHistory?.workflow?.stage === 2, done: selectedDecision.status === "Approved" },
+                { step: 4, label: "Approved", desc: "Knowledge Replay Active", active: selectedDecision.status === "Approved", done: selectedDecision.status === "Approved" }
+              ].map((s, idx) => (
+                <div key={s.step} style={styles.stepperItem}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{
+                      ...styles.stepCircle,
+                      backgroundColor: s.done ? "var(--accent-emerald)" : s.active ? "var(--primary)" : "var(--bg-surface-container-high)",
+                      color: s.done || s.active ? "#ffffff" : "var(--text-secondary)",
+                      border: s.active ? "2px solid var(--primary)" : "none"
+                    }}>
+                      {s.done ? "✓" : s.step}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "11.5px", fontWeight: s.active ? "700" : "600", color: s.active ? "var(--primary)" : "var(--text-primary)" }}>
+                        {s.label}
+                      </div>
+                      <div style={{ fontSize: "10px", color: "var(--text-secondary)" }}>
+                        {s.desc}
+                      </div>
+                    </div>
+                  </div>
+                  {idx < 3 && <div style={{ ...styles.stepperLine, backgroundColor: s.done ? "var(--accent-emerald)" : "var(--border-outline-variant)" }} />}
+                </div>
+              ))}
+            </div>
+
             {/* Workflow Action Bar */}
             <div style={styles.workflowBar}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#64748b" }}>
-                  Status Workflow:
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)" }}>
+                  Actions:
                 </span>
                 {selectedDecision.status === "Draft" && (
                   <button
-                    style={{ ...styles.wfActionBtn, backgroundColor: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe" }}
-                    onClick={() => handleStatusUpdate("Under Review")}
+                    style={{ ...styles.wfActionBtn, backgroundColor: "var(--secondary-container)", color: "var(--on-secondary-container)" }}
+                    onClick={() => {
+                      setApprovalActionType("submit");
+                      setApprovalComments("");
+                      setApprovalMessage(null);
+                      setIsApprovalModalOpen(true);
+                    }}
                   >
-                    <Clock size={13} /> Submit for Review
+                    <Send size={13} /> Submit for Review
                   </button>
                 )}
                 {selectedDecision.status === "Under Review" && (
                   <>
                     <button
-                      style={{ ...styles.wfActionBtn, backgroundColor: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" }}
-                      onClick={() => handleStatusUpdate("Approved")}
+                      style={{ ...styles.wfActionBtn, backgroundColor: "rgba(16, 185, 129, 0.12)", color: "#059669", borderColor: "rgba(16, 185, 129, 0.3)" }}
+                      onClick={() => {
+                        setApprovalActionType("approve");
+                        setApprovalComments("");
+                        setApprovalMessage(null);
+                        setIsApprovalModalOpen(true);
+                      }}
                     >
-                      <CheckCircle size={13} /> Approve Decision
+                      <CheckCircle size={13} /> {approvalHistory?.workflow?.stage === 2 ? "Final Executive Approval" : "Approve Stage 1"}
                     </button>
                     <button
-                      style={{ ...styles.wfActionBtn, backgroundColor: "#fef2f2", color: "#dc2626", borderColor: "#fecaca" }}
-                      onClick={() => handleStatusUpdate("Rejected")}
+                      style={{ ...styles.wfActionBtn, backgroundColor: "rgba(245, 158, 11, 0.12)", color: "#d97706", borderColor: "rgba(245, 158, 11, 0.3)" }}
+                      onClick={() => {
+                        setApprovalActionType("request_changes");
+                        setApprovalComments("");
+                        setApprovalMessage(null);
+                        setIsApprovalModalOpen(true);
+                      }}
+                    >
+                      <RotateCcw size={13} /> Request Changes
+                    </button>
+                    <button
+                      style={{ ...styles.wfActionBtn, backgroundColor: "rgba(220, 38, 38, 0.12)", color: "#dc2626", borderColor: "rgba(220, 38, 38, 0.3)" }}
+                      onClick={() => {
+                        setApprovalActionType("reject");
+                        setApprovalComments("");
+                        setApprovalMessage(null);
+                        setIsApprovalModalOpen(true);
+                      }}
                     >
                       <AlertCircle size={13} /> Reject Decision
                     </button>
+                    {!approvalHistory?.workflow?.is_escalated && (
+                      <button
+                        style={{ ...styles.wfActionBtn, backgroundColor: "rgba(239, 68, 68, 0.08)", color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                        onClick={() => {
+                          setApprovalActionType("escalate");
+                          setApprovalComments("");
+                          setApprovalMessage(null);
+                          setIsApprovalModalOpen(true);
+                        }}
+                      >
+                        <AlertTriangle size={13} /> Escalate Review
+                      </button>
+                    )}
                   </>
                 )}
-                {selectedDecision.status !== "Archived" && (
-                  <button
-                    style={{ ...styles.wfActionBtn, backgroundColor: "#f8fafc", color: "#64748b", borderColor: "#cbd5e1" }}
-                    onClick={() => handleStatusUpdate("Archived")}
-                  >
-                    <Archive size={13} /> Archive
-                  </button>
-                )}
-                {selectedDecision.status === "Archived" && (
-                  <button
-                    style={{ ...styles.wfActionBtn, backgroundColor: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe" }}
-                    onClick={() => handleStatusUpdate("Draft")}
-                  >
-                    <RotateCcw size={13} /> Re-open Draft
-                  </button>
-                )}
+
+                <button
+                  style={{ ...styles.wfActionBtn, backgroundColor: "var(--bg-surface-container-high)", color: "var(--text-secondary)", borderColor: "var(--border-outline-variant)" }}
+                  onClick={() => window.open(`${apiBase}/reports/export/pdf?decision_id=${selectedDecision.id}`, "_blank")}
+                >
+                  <FileText size={13} /> Export Executive PDF
+                </button>
               </div>
             </div>
 
@@ -555,7 +695,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
                 }}
                 onClick={() => setActiveDetailTab("discussion")}
               >
-                Discussions & Meeting Notes ({selectedDecision.comments?.length || 0})
+                Discussions & Notes ({selectedDecision.comments?.length || 0})
               </button>
               <button
                 style={{
@@ -577,7 +717,18 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
                 }}
                 onClick={() => setActiveDetailTab("documents")}
               >
-                Supporting Documents ({selectedDecision.documents?.length || 0})
+                Documents ({selectedDecision.documents?.length || 0})
+              </button>
+              <button
+                style={{
+                  ...styles.detailTabBtn,
+                  borderBottom: activeDetailTab === "approvals" ? "3px solid var(--primary)" : "none",
+                  color: activeDetailTab === "approvals" ? "var(--primary)" : "var(--text-secondary)",
+                  fontWeight: activeDetailTab === "approvals" ? "600" : "500",
+                }}
+                onClick={() => setActiveDetailTab("approvals")}
+              >
+                Approval & Audit ({approvalHistory?.actions?.length || 0})
               </button>
             </div>
 
@@ -812,6 +963,190 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
                   )}
                 </div>
               )}
+
+              {/* 6. Approval & Audit */}
+              {activeDetailTab === "approvals" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div style={styles.workflowSummaryCard}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                      <div>
+                        <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: "700", color: "var(--text-primary)" }}>
+                          Governance & Multi-Stage Approval Status
+                        </h4>
+                        <p style={{ margin: 0, fontSize: "12.5px", color: "var(--text-secondary)" }}>
+                          Two-tier verification protocol: Stage 1 (Peer Reviewer) &rarr; Stage 2 (Engineering Manager signoff).
+                        </p>
+                      </div>
+                      <span style={{
+                        ...styles.statusBadge,
+                        ...getStatusBadge(selectedDecision.status)
+                      }}>
+                        {selectedDecision.status}
+                      </span>
+                    </div>
+
+                    {approvalHistory?.workflow ? (
+                      <div style={styles.workflowDetailsGrid}>
+                        <div>
+                          <span style={styles.metaLabel}>Current Stage</span>
+                          <span style={styles.metaVal}>
+                            Stage {approvalHistory.workflow.stage} ({approvalHistory.workflow.stage === 1 ? "Technical Reviewer" : "Manager Approval"})
+                          </span>
+                        </div>
+                        <div>
+                          <span style={styles.metaLabel}>Assigned Reviewer</span>
+                          <span style={styles.metaVal}>
+                            {approvalHistory.workflow.reviewer_name || "Unassigned"}
+                          </span>
+                        </div>
+                        <div>
+                          <span style={styles.metaLabel}>Assigned Manager</span>
+                          <span style={styles.metaVal}>
+                            {approvalHistory.workflow.manager_name || "Unassigned"}
+                          </span>
+                        </div>
+                        <div>
+                          <span style={styles.metaLabel}>Escalation Status</span>
+                          <span style={{
+                            ...styles.metaVal,
+                            color: approvalHistory.workflow.is_escalated ? "#ef4444" : "var(--text-primary)"
+                          }}>
+                            {approvalHistory.workflow.is_escalated ? "🚨 Escalated" : "Standard SLA"}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "13px", color: "var(--text-secondary)", fontStyle: "italic" }}>
+                        No active workflow initiated. Click "Submit for Review" to begin the approval pipeline.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions History Timeline */}
+                  <h4 style={styles.sectionHeader}>Approval Audit Trail</h4>
+                  {(!approvalHistory?.actions || approvalHistory.actions.length === 0) ? (
+                    <div style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)", fontSize: "13.5px" }}>
+                      No approval actions recorded yet.
+                    </div>
+                  ) : (
+                    <div style={styles.timeline}>
+                      {approvalHistory.actions.map((act) => {
+                        const isApprove = act.action.toLowerCase().includes("approve");
+                        const isReject = act.action.toLowerCase().includes("reject");
+                        const isEscalate = act.action.toLowerCase().includes("escalat");
+                        const isChanges = act.action.toLowerCase().includes("change");
+                        const iconColor = isApprove ? "var(--accent-emerald)" : isReject ? "#dc2626" : isEscalate ? "#ef4444" : isChanges ? "#d97706" : "var(--primary)";
+
+                        return (
+                          <div key={act.id} style={styles.timelineItem}>
+                            <div style={{ ...styles.timelineDot, backgroundColor: iconColor }}>
+                              {isApprove ? "✓" : isReject ? "✕" : "•"}
+                            </div>
+                            <div style={styles.timelineContent}>
+                              <div style={styles.timelineHeader}>
+                                <span style={styles.timelineTitle}>
+                                  {act.action} (Stage {act.stage})
+                                </span>
+                                <span style={styles.timelineDate}>
+                                  {new Date(act.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                              {act.comments && (
+                                <p style={styles.timelineSummary}>"{act.comments}"</p>
+                              )}
+                              <div style={styles.timelineAuthor}>
+                                Actioned by: <strong>{act.actor_name}</strong>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Action Modal Dialog */}
+      {isApprovalModalOpen && (
+        <div style={styles.modalBackdrop}>
+          <div style={{ ...styles.detailModal, maxWidth: "520px" }} className="animate-fade-in">
+            <div style={styles.detailHeader}>
+              <div>
+                <h2 style={styles.detailTitle}>
+                  {approvalActionType === "submit" && "Submit Decision for Review"}
+                  {approvalActionType === "approve" && "Execute Approval"}
+                  {approvalActionType === "reject" && "Reject Decision"}
+                  {approvalActionType === "request_changes" && "Request Revisions / Changes"}
+                  {approvalActionType === "escalate" && "Escalate Approval SLA"}
+                </h2>
+                <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", margin: "2px 0 0 0" }}>
+                  Target: {selectedDecision?.title}
+                </p>
+              </div>
+              <button style={styles.closeBtn} onClick={() => setIsApprovalModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {approvalMessage && (
+                <div style={{
+                  padding: "10px 14px",
+                  borderRadius: "var(--radius-md)",
+                  backgroundColor: approvalMessage.isError ? "rgba(220, 38, 38, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                  color: approvalMessage.isError ? "#dc2626" : "#059669",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                }}>
+                  {approvalMessage.text}
+                </div>
+              )}
+
+              <div>
+                <label style={styles.inputLabel}>
+                  {approvalActionType === "submit" ? "Submission Notes" :
+                   approvalActionType === "approve" ? "Approval Endorsement / Rationale" :
+                   approvalActionType === "reject" ? "Rejection Reason (Required)" :
+                   approvalActionType === "request_changes" ? "Required Revisions & Feedback (Required)" :
+                   "Escalation Rationale (Required)"}
+                </label>
+                <textarea
+                  style={styles.textarea}
+                  rows={4}
+                  placeholder="Enter comments, audit feedback, or compliance notes..."
+                  value={approvalComments}
+                  onChange={(e) => setApprovalComments(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  style={styles.cancelBtn}
+                  onClick={() => setIsApprovalModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={approvalSubmitting}
+                  style={{
+                    ...styles.primaryBtn,
+                    backgroundColor:
+                      approvalActionType === "reject" ? "#dc2626" :
+                      approvalActionType === "escalate" ? "#ef4444" :
+                      approvalActionType === "request_changes" ? "#d97706" :
+                      approvalActionType === "approve" ? "#059669" : "var(--primary)"
+                  }}
+                  onClick={handleExecuteApproval}
+                >
+                  {approvalSubmitting ? "Executing..." : "Confirm & Dispatch"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1615,6 +1950,76 @@ const styles = {
     border: "1px solid var(--border-subtle)",
     borderRadius: "var(--radius-lg)",
     padding: "16px",
+  },
+  stepperContainer: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "16px 24px",
+    backgroundColor: "var(--bg-surface-container)",
+    borderBottom: "1px solid var(--border-outline-variant)",
+    gap: "12px",
+    overflowX: "auto",
+  },
+  stepperItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    flex: 1,
+    minWidth: "150px",
+  },
+  stepCircle: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "12px",
+    fontWeight: "700",
+    flexShrink: 0,
+  },
+  stepperLine: {
+    flex: 1,
+    height: "2px",
+    borderRadius: "1px",
+    marginLeft: "8px",
+  },
+  workflowBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 24px",
+    backgroundColor: "var(--bg-surface-container-low)",
+    borderBottom: "1px solid var(--border-outline-variant)",
+    flexWrap: "wrap",
+    gap: "10px",
+  },
+  wfActionBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 14px",
+    borderRadius: "var(--radius-full)",
+    fontSize: "12px",
+    fontWeight: "600",
+    cursor: "pointer",
+    border: "1px solid transparent",
+    transition: "all 0.15s ease",
+  },
+  workflowSummaryCard: {
+    backgroundColor: "var(--bg-surface-container)",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-lg)",
+    padding: "18px 20px",
+  },
+  workflowDetailsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "12px",
+    marginTop: "12px",
+    paddingTop: "12px",
+    borderTop: "1px solid var(--border-subtle)",
   },
 };
 

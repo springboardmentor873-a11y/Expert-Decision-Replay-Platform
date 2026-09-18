@@ -5,6 +5,9 @@ from Schemas.alternative import AlternativeCreate, AlternativeUpdate, Alternativ
 from Schemas.document import DocumentOut
 from Schemas.comment import CommentCreate, MeetingNoteCreate, CommentOut
 from Schemas.version import VersionOut
+from Schemas.approval import ApprovalActionCreate, ApprovalAssignCreate, ApprovalEscalateCreate, ApprovalWorkflowResponse, ApprovalActionResponse
+from Schemas.notification import NotificationResponse, NotificationListResponse
+from Schemas.audit import AuditLogResponse, AuditLogListResponse, AuditStatsResponse
 
 __all__ = [
     "UserCreate",
@@ -24,4 +27,14 @@ __all__ = [
     "MeetingNoteCreate",
     "CommentOut",
     "VersionOut",
+    "ApprovalActionCreate",
+    "ApprovalAssignCreate",
+    "ApprovalEscalateCreate",
+    "ApprovalWorkflowResponse",
+    "ApprovalActionResponse",
+    "NotificationResponse",
+    "NotificationListResponse",
+    "AuditLogResponse",
+    "AuditLogListResponse",
+    "AuditStatsResponse",
 ]

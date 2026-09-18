@@ -390,43 +390,93 @@ Milestone 2 establishes core Decision Management, Alternative Comparison & Trade
 
 ---
 
-## 📌 Current Status
+## 📌 Current Status: Phase 3 / Milestone 3 (Completed)
 
-The first milestone of the Expert Decision Replay Platform has been completed.
-
-The application currently supports:
+The platform now implements full **Governance, Multi-Stage Approvals, Immutable Audit Logging, Analytics & Multi-Format Reporting, and Dynamic Role Dashboards**:
 
 ```text
-Login
+Draft Decision
   ↓
-JWT Authentication
+Submit for Review
   ↓
-Authenticated User
+Stage 1: Peer Technical Review (Reviewer sign-off / feedback / revisions)
   ↓
-User Information
+Stage 2: Executive Sign-off (Manager approval)
   ↓
-Dashboard
+Approved Decision (Replay Active in Knowledge Graph)
   ↓
-Logout
+Automated Event Notifications & Immutable Audit Trail (Security, Activity, Access, Decision)
+  ↓
+1-Click Analytics Exports (Excel .xlsx, CSV, Executive PDF)
 ```
-
-Further milestones will extend the platform with the core expert decision capture, review, and replay functionality.
 
 ---
 
-## 👥 Project Roles
+## 🌟 Milestone 3 Capabilities
 
-The platform currently defines four user roles:
+### 1. Multi-Stage Approval State Machine
+- **Stage 1 (Peer Reviewer)**: Technical assessment, trade-off verification, and feasibility review.
+- **Stage 2 (Engineering Manager)**: Executive sign-off, budget authorization, and organizational alignment.
+- **Actions**: Approve Stage, Request Revisions / Changes, Reject Decision, and Escalate Review.
+- **SLA Tracking & Escalation**: High-priority decisions automatically flagged or manually escalated for overdue turnaround bottlenecks.
+- **Visual Stepper & Action History**: In-depth timeline recording reviewer rationale, comments, and decision audit trails.
 
-| Role | Purpose |
-|------|---------|
-| Employee | Regular platform user |
-| Reviewer | Reviews submitted decisions |
-| Manager | Manages teams and reviews |
-| Administrator | Manages the overall platform |
+### 2. In-App Notification Center
+- Real-time polling drawer with unread counter badges.
+- Filtering by category (`All`, `Unread`, `Approvals`, `Escalations`).
+- Actions for individual mark-as-read and "Mark All as Read".
+- Direct deep-links to active approval queues and decision records.
+
+### 3. Immutable Audit & Compliance Engine
+- Comprehensive logging across 4 distinct categories:
+  - **Activity**: Decision creation, alternative updates, comments, and version rollbacks.
+  - **Security**: Login successes, logout events, and authentication failures with client IP & user agent.
+  - **Access**: File downloads and confidential document access.
+  - **Decision / Governance**: Multi-stage approval submissions, endorsements, rejections, and escalations.
+- Full-text search and category filtering with detail inspection modals.
+
+### 4. Reports & Analytics Engine with 1-Click Multi-Format Exports
+- **Decision Velocity**: Average turnaround days, pipeline distribution, consensus alignment rate.
+- **Team Contribution Matrix**: Departmental decisions, active member participation, and approval volume.
+- **Multi-Format Document Export**:
+  - **Excel (`.xlsx`)**: Formatted multi-tab workbook using `pandas` and `xlsxwriter`.
+  - **CSV (`.csv`)**: Raw tabular audit and decision extracts.
+  - **Executive PDF (`.pdf`)**: Polished PDF executive summary generated via `fitz` (PyMuPDF) featuring decision problem statements, trade-offs, evaluated alternatives, and signed approval trails.
+
+### 5. Role-Based Dynamic Dashboards
+- **Employee**: My Decisions, In-Draft Tasks, Awaiting Review, Knowledge Preserved.
+- **Reviewer**: Stage 1 Review Queue, Peer Feedback dispatched, SLA Escalation Flags, Review Velocity.
+- **Manager**: Stage 2 Final Approval Queue, Team Decisions, Departmental Consensus, Turnaround Metrics.
+- **Administrator**: User Management, Immutable Audit Event Ledger, Security Alerts, System Operational Health.
+- **Role Switcher**: Fast switching between role perspectives directly from the top bar or dashboard banner.
+
+---
+
+## 👥 Seeded User Accounts (Development / Demo)
+
+| Email | Password | Role | Primary Responsibility |
+|-------|----------|------|------------------------|
+| `admin@company.com` | `password123` | Administrator | Overall platform, security logs, and compliance |
+| `emp@company.com` | `password123` | Employee | Decision authoring, alternative definition, discussions |
+| `reviewer@company.com` | `password123` | Reviewer | Stage 1 technical review and feedback |
+| `manager@company.com` | `password123` | Manager | Stage 2 executive approvals and team analytics |
+
+---
+
+## 🧪 Automated Test Verification
+
+Run the comprehensive Milestone 3 test suite:
+
+```bash
+cd Backend
+python test_milestone3.py
+```
+
+All 26 automated unit & integration tests pass with 100% test coverage across authentication, multi-tier approvals, escalation, notifications, audit logging, analytics calculation, Excel/CSV/PDF exports, and dynamic role metric endpoints.
 
 ---
 
 ## 📄 License
 
 This project is developed as part of the Expert Decision Replay Platform project.
+

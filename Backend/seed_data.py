@@ -12,6 +12,9 @@ from models.alternative import DecisionAlternative
 from models.document import Document
 from models.comment import Comment
 from models.version import DecisionVersion
+from models.approval import ApprovalWorkflow, ApprovalAction
+from models.notification import Notification
+from models.audit import AuditLog
 from security.password import hash_password
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
@@ -72,11 +75,13 @@ def seed_database():
                 db.refresh(team)
             teams[name] = team
 
-        # 3. Users - Only admin@company.com and emp@company.com
+        # 3. Users - Employee, Reviewer, Manager, Administrator
         default_pwd = hash_password("password123")
         users_data = [
             ("Admin User", "admin@company.com", roles["Administrator"].id, teams["Architecture"].id),
             ("Employee User", "emp@company.com", roles["Employee"].id, teams["AI Team"].id),
+            ("Reviewer User", "reviewer@company.com", roles["Reviewer"].id, teams["Security & Compliance"].id),
+            ("Manager User", "manager@company.com", roles["Manager"].id, teams["Cloud Infrastructure"].id),
         ]
         users = {}
         for name, email, role_id, team_id in users_data:
@@ -97,7 +102,8 @@ def seed_database():
         # 4. Check if decisions already seeded
         existing_decisions = db.query(Decision).count()
         if existing_decisions > 0:
-            print(f"Database already contains {existing_decisions} decisions. Skipping decision seed.")
+            print(f"Database already contains {existing_decisions} decisions. Seeding/updating Milestone 3 records...")
+            seed_milestone3_records(db, users, roles)
             return
 
         print("Seeding Decisions, Alternatives, Documents, Comments, and Versions...")
@@ -449,6 +455,9 @@ def seed_database():
         db.add_all([v1, v2])
         db.commit()
 
+        # Seed Milestone 3 for fresh databases too
+        seed_milestone3_records(db, users, roles)
+
         print("Database seeding completed successfully!")
 
     except Exception as e:
@@ -457,6 +466,265 @@ def seed_database():
         raise
     finally:
         db.close()
+
+
+def seed_milestone3_records(db, users, roles):
+    print("Seeding/Verifying Milestone 3 (Approvals, Notifications, Audit Logs)...")
+    now = datetime.utcnow()
+
+    # 1. Approval Workflows & Actions
+    if db.query(ApprovalWorkflow).count() == 0:
+        decisions = db.query(Decision).all()
+        for d in decisions:
+            if d.status == "Approved":
+                wf = ApprovalWorkflow(
+                    decision_id=d.id,
+                    stage=2,
+                    status="Approved",
+                    assigned_to_id=users.get("manager@company.com", list(users.values())[0]).id,
+                    assigned_role_id=roles["Manager"].id,
+                    due_date=d.created_at + timedelta(days=3),
+                    is_escalated=False,
+                    created_at=d.created_at,
+                    updated_at=d.created_at + timedelta(days=2)
+                )
+                db.add(wf)
+                db.commit()
+                db.refresh(wf)
+                a1 = ApprovalAction(
+                    workflow_id=wf.id,
+                    decision_id=d.id,
+                    user_id=d.created_by_id or users["emp@company.com"].id,
+                    stage=1,
+                    action="Submitted",
+                    comments="Submitted decision proposal and alternative matrix for formal review.",
+                    created_at=d.created_at
+                )
+                a2 = ApprovalAction(
+                    workflow_id=wf.id,
+                    decision_id=d.id,
+                    user_id=users["reviewer@company.com"].id,
+                    stage=1,
+                    action="Approved",
+                    comments="Technical feasibility and risk mitigation plans verified. Recommended for manager sign-off.",
+                    created_at=d.created_at + timedelta(days=1)
+                )
+                a3 = ApprovalAction(
+                    workflow_id=wf.id,
+                    decision_id=d.id,
+                    user_id=users["manager@company.com"].id,
+                    stage=2,
+                    action="Approved",
+                    comments="Strategic alignment and budget verified. Final executive approval granted.",
+                    created_at=d.created_at + timedelta(days=2)
+                )
+                db.add_all([a1, a2, a3])
+                db.commit()
+
+            elif d.status == "Under Review":
+                wf = ApprovalWorkflow(
+                    decision_id=d.id,
+                    stage=2,
+                    status="Pending",
+                    assigned_to_id=users["manager@company.com"].id,
+                    assigned_role_id=roles["Manager"].id,
+                    due_date=now - timedelta(hours=12),
+                    is_escalated=True,
+                    escalated_at=now - timedelta(hours=6),
+                    escalation_reason="Approval SLA deadline exceeded (pending Manager review > 72 hours).",
+                    created_at=d.created_at,
+                    updated_at=now
+                )
+                db.add(wf)
+                db.commit()
+                db.refresh(wf)
+                a1 = ApprovalAction(
+                    workflow_id=wf.id,
+                    decision_id=d.id,
+                    user_id=d.created_by_id or users["emp@company.com"].id,
+                    stage=1,
+                    action="Submitted",
+                    comments="Submitted multi-cloud strategy for peer and manager validation.",
+                    created_at=d.created_at
+                )
+                a2 = ApprovalAction(
+                    workflow_id=wf.id,
+                    decision_id=d.id,
+                    user_id=users["reviewer@company.com"].id,
+                    stage=1,
+                    action="Approved",
+                    comments="Reviewer analysis complete. Passed to Manager for infrastructure allocation.",
+                    created_at=d.created_at + timedelta(days=1)
+                )
+                a3 = ApprovalAction(
+                    workflow_id=wf.id,
+                    decision_id=d.id,
+                    user_id=users["emp@company.com"].id,
+                    stage=2,
+                    action="Escalated",
+                    comments="Escalated due to impending quarterly cloud migration deadline.",
+                    created_at=now - timedelta(hours=6)
+                )
+                db.add_all([a1, a2, a3])
+                db.commit()
+
+    # 2. Notifications
+    if db.query(Notification).count() == 0:
+        notes = [
+            Notification(
+                user_id=users["manager@company.com"].id,
+                title="Urgent: Decision Escalated",
+                message="Decision 'Cloud Deployment & Multi-Region Strategy' has exceeded review turnaround SLA and is escalated for immediate Manager approval.",
+                type="escalation",
+                link_url="/decisions/3",
+                is_read=False,
+                created_at=now - timedelta(hours=6)
+            ),
+            Notification(
+                user_id=users["manager@company.com"].id,
+                title="Pending Stage 2 Approval",
+                message="Decision 'Relational Database Architecture Migration' is awaiting your final executive sign-off.",
+                type="approval_request",
+                link_url="/decisions/2",
+                is_read=False,
+                created_at=now - timedelta(hours=18)
+            ),
+            Notification(
+                user_id=users["reviewer@company.com"].id,
+                title="Reviewer Assignment",
+                message="You have been assigned to review Decision 'Micro-frontend Architecture for Replay Portal'.",
+                type="approval_request",
+                link_url="/decisions/5",
+                is_read=False,
+                created_at=now - timedelta(days=1)
+            ),
+            Notification(
+                user_id=users["emp@company.com"].id,
+                title="Decision Approved!",
+                message="Your decision 'Enterprise AI Model Selection & Deployment' was approved by Manager User.",
+                type="decision_approved",
+                link_url="/decisions/1",
+                is_read=False,
+                created_at=now - timedelta(days=2)
+            ),
+            Notification(
+                user_id=users["emp@company.com"].id,
+                title="Stage 1 Review Completed",
+                message="'Cloud Deployment & Multi-Region Strategy' has passed Reviewer Stage 1 and progressed to Manager signoff.",
+                type="approval_request",
+                link_url="/decisions/3",
+                is_read=True,
+                created_at=now - timedelta(days=3)
+            ),
+            Notification(
+                user_id=users["admin@company.com"].id,
+                title="Compliance Audit Alert",
+                message="Quarterly decision traceability report generated with 100% audit logging coverage.",
+                type="system",
+                link_url="/reports",
+                is_read=False,
+                created_at=now - timedelta(hours=2)
+            ),
+        ]
+        db.add_all(notes)
+        db.commit()
+
+    # 3. Audit Logs
+    if db.query(AuditLog).count() == 0:
+        audit_records = [
+            AuditLog(
+                user_id=users["emp@company.com"].id,
+                user_email="emp@company.com",
+                action_category="Security",
+                action="USER_LOGIN",
+                entity_type="Session",
+                entity_id=None,
+                details="User authenticated successfully via JWT bearer token.",
+                ip_address="192.168.1.45",
+                created_at=now - timedelta(days=5)
+            ),
+            AuditLog(
+                user_id=users["emp@company.com"].id,
+                user_email="emp@company.com",
+                action_category="Decision",
+                action="DECISION_CREATED",
+                entity_type="Decision",
+                entity_id=1,
+                details="Created decision 'Enterprise AI Model Selection & Deployment' with 2 candidate alternatives.",
+                ip_address="192.168.1.45",
+                created_at=now - timedelta(days=5, hours=1)
+            ),
+            AuditLog(
+                user_id=users["emp@company.com"].id,
+                user_email="emp@company.com",
+                action_category="Approval",
+                action="APPROVAL_SUBMITTED",
+                entity_type="Approval",
+                entity_id=1,
+                details="Submitted Decision #1 to Stage 1 (Reviewer Review).",
+                ip_address="192.168.1.45",
+                created_at=now - timedelta(days=4)
+            ),
+            AuditLog(
+                user_id=users["reviewer@company.com"].id,
+                user_email="reviewer@company.com",
+                action_category="Approval",
+                action="STAGE1_APPROVED",
+                entity_type="Approval",
+                entity_id=1,
+                details="Reviewer approved Decision #1; advanced to Stage 2 (Manager Approval).",
+                ip_address="192.168.1.72",
+                created_at=now - timedelta(days=3)
+            ),
+            AuditLog(
+                user_id=users["manager@company.com"].id,
+                user_email="manager@company.com",
+                action_category="Approval",
+                action="STAGE2_APPROVED",
+                entity_type="Approval",
+                entity_id=1,
+                details="Manager granted final executive approval on Decision #1.",
+                ip_address="192.168.1.18",
+                created_at=now - timedelta(days=2)
+            ),
+            AuditLog(
+                user_id=users["admin@company.com"].id,
+                user_email="admin@company.com",
+                action_category="Export",
+                action="REPORT_EXPORTED_EXCEL",
+                entity_type="Report",
+                entity_id=None,
+                details="Exported enterprise decision analytics spreadsheet (.xlsx).",
+                ip_address="127.0.0.1",
+                created_at=now - timedelta(hours=4)
+            ),
+            AuditLog(
+                user_id=users["emp@company.com"].id,
+                user_email="emp@company.com",
+                action_category="Access",
+                action="DOCUMENT_DOWNLOADED",
+                entity_type="Document",
+                entity_id=1,
+                details="Downloaded document 'AI_Model_Evaluation_Report.pdf'.",
+                ip_address="192.168.1.45",
+                created_at=now - timedelta(hours=8)
+            ),
+            AuditLog(
+                user_id=users["emp@company.com"].id,
+                user_email="emp@company.com",
+                action_category="Approval",
+                action="DECISION_ESCALATED",
+                entity_type="Approval",
+                entity_id=3,
+                details="Escalated Decision #3 ('Cloud Deployment & Multi-Region Strategy') due to review timeout.",
+                ip_address="192.168.1.45",
+                created_at=now - timedelta(hours=6)
+            ),
+        ]
+        db.add_all(audit_records)
+        db.commit()
+
+    print("Milestone 3 records seeded successfully!")
 
 
 if __name__ == "__main__":
