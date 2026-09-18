@@ -37,5 +37,18 @@ class User(Base):
     # Relationship to DecisionVersion model (1 User to Many Decision Versions)
     decision_versions = relationship("DecisionVersion", back_populates="changer")
 
+    # Relationship to Approval model (1 User to Many Workflow Approvals)
+    approvals = relationship("Approval", back_populates="reviewer")
+
+    # Relationship to Notification model (1 User to Many Received Notifications)
+    notifications = relationship("Notification", back_populates="recipient", cascade="all, delete-orphan", order_by="Notification.created_at.desc()")
+
+    # Relationship to AuditLog model (1 User to Many Audit Logs)
+    audit_logs = relationship("AuditLog", back_populates="user", order_by="AuditLog.created_at.desc()")
+
+    # Relationship to Team models
+    created_teams = relationship("Team", back_populates="creator", cascade="all, delete-orphan")
+    team_memberships = relationship("TeamMember", back_populates="user", cascade="all, delete-orphan")
+
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role_id={self.role_id})>"

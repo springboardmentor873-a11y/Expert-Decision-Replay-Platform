@@ -12,6 +12,7 @@ class DecisionStatusEnum(str, enum.Enum):
     UNDER_REVIEW = "Under Review"
     APPROVED = "Approved"
     REJECTED = "Rejected"
+    ARCHIVED = "Archived"
 
 
 class Decision(Base):
@@ -29,6 +30,18 @@ class Decision(Base):
         String(50),
         default=DecisionStatusEnum.DRAFT.value,
         nullable=False,
+        index=True
+    )
+    category_id = Column(
+        Integer,
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+    team_id = Column(
+        Integer,
+        ForeignKey("teams.id", ondelete="SET NULL"),
+        nullable=True,
         index=True
     )
     created_by = Column(
@@ -74,6 +87,37 @@ class Decision(Base):
         back_populates="decision",
         cascade="all, delete-orphan",
         order_by="DecisionVersion.version_number.desc()"
+    )
+    approvals = relationship(
+        "Approval",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="Approval.created_at.desc()"
+    )
+    notifications = relationship(
+        "Notification",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="Notification.created_at.desc()"
+    )
+    category = relationship("Category", back_populates="decisions")
+    team = relationship("Team", back_populates="decisions")
+    meeting_notes = relationship(
+        "MeetingNote",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="MeetingNote.created_at.desc()"
+    )
+    approval_workflows = relationship(
+        "ApprovalWorkflow",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="ApprovalWorkflow.created_at.desc()"
+    )
+    tags = relationship(
+        "DecisionTag",
+        back_populates="decision",
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self):

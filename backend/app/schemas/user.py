@@ -54,3 +54,39 @@ class UserResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Updated full name")
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            stripped = v.strip()
+            if not stripped:
+                raise ValueError("Full name cannot be empty or whitespace only.")
+            return stripped
+        return v
+
+
+class UserChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, description="Current existing password")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New secure password (min 8 characters)")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if len(v.strip()) < 8:
+            raise ValueError("New password must be at least 8 characters long.")
+        return v
+
+
+class UserRosterItem(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role_name: Optional[str] = None
+    is_active: bool = True
+
+    model_config = ConfigDict(from_attributes=True)

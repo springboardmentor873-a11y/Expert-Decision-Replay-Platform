@@ -119,6 +119,34 @@ def upload_document(
     )
 
     db.add(document)
+    db.flush()
+
+    # Notify stakeholders of document upload
+    if decision:
+        from app.services.notification_service import notify_document_uploaded
+        notify_document_uploaded(db=db, decision=decision, actor=current_user, filename=original_filename)
+
+    # Audit logging for document upload
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DOCUMENT_UPLOADED,
+        entity_type="Document",
+        entity_id=document.id,
+        user_id=current_user.id,
+        description=f"Uploaded document \"{original_filename}\" to decision #{decision_id}",
+        details={
+            "document_id": document.id,
+            "decision_id": decision_id,
+            "filename": original_filename,
+            "file_size": file_size,
+            "content_type": file.content_type,
+            "uploaded_by": current_user.id,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(document)
     return document
@@ -251,6 +279,29 @@ def delete_document(
             os.remove(abs_file_path)
         except Exception:
             pass  # Best effort disk cleanup
+
+    doc_filename = document.original_filename
+    doc_uploader_id = document.uploaded_by
+
+    # Audit logging before delete
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DOCUMENT_DELETED,
+        entity_type="Document",
+        entity_id=document_id,
+        user_id=current_user.id,
+        description=f"Deleted document \"{doc_filename}\" from decision #{decision_id}",
+        details={
+            "document_id": document_id,
+            "decision_id": decision_id,
+            "filename": doc_filename,
+            "deleted_by": current_user.id,
+            "original_uploader": doc_uploader_id,
+        },
+        skip_commit=True,
+    )
 
     db.delete(document)
     db.commit()

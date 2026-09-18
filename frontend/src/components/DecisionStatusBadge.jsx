@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Send, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Clock, Send, AlertCircle, CheckCircle2, XCircle, Archive } from 'lucide-react';
 
 export const DecisionStatusBadge = ({ status }) => {
   const getStatusConfig = (statusStr) => {
@@ -34,6 +34,12 @@ export const DecisionStatusBadge = ({ status }) => {
           icon: <XCircle size={13} strokeWidth={2.3} />,
           label: 'Rejected'
         };
+      case 'archived':
+        return {
+          className: 'status-badge status-badge-archived',
+          icon: <Archive size={13} strokeWidth={2.3} />,
+          label: 'Archived'
+        };
       default:
         return {
           className: 'status-badge status-badge-default',
@@ -52,3 +58,5 @@ export const DecisionStatusBadge = ({ status }) => {
     </span>
   );
 };
+
+export default DecisionStatusBadge;

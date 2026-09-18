@@ -70,6 +70,61 @@ def create_discussion(
     )
 
     db.add(discussion)
+    db.flush()
+
+    # Trigger notifications
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if decision:
+        from app.services.notification_service import (
+            notify_discussion_created,
+            notify_discussion_reply,
+        )
+        if parent_id is not None and parent:
+            # Collect other participant IDs from this thread
+            thread_replies = db.query(Discussion).filter(Discussion.parent_id == parent_id).all()
+            participants = [r.user_id for r in thread_replies if r.user_id]
+            notify_discussion_reply(
+                db=db,
+                decision=decision,
+                actor=current_user,
+                discussion_topic=parent.content[:40],
+                parent_discussion_author_id=parent.user_id,
+                participant_user_ids=participants,
+            )
+        else:
+            notify_discussion_created(
+                db=db,
+                decision=decision,
+                actor=current_user,
+                topic=cleaned_content[:40],
+            )
+
+    # Audit logging for discussion / reply creation
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    audit_action = AuditActionEnum.DISCUSSION_REPLY_CREATED if parent_id is not None else AuditActionEnum.DISCUSSION_CREATED
+    audit_desc = (
+        f"Posted reply to comment #{parent_id} on decision #{decision_id}"
+        if parent_id is not None
+        else f"Posted discussion comment on decision #{decision_id}"
+    )
+    create_audit_log(
+        db=db,
+        action=audit_action,
+        entity_type="Discussion",
+        entity_id=discussion.id,
+        user_id=current_user.id,
+        description=audit_desc,
+        details={
+            "discussion_id": discussion.id,
+            "decision_id": decision_id,
+            "parent_id": parent_id,
+            "summary": cleaned_content[:100],
+            "author_id": current_user.id,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(discussion)
     return discussion
@@ -152,6 +207,25 @@ def update_discussion(
     cleaned_content = validate_content(content)
     discussion.content = cleaned_content
 
+    # Audit logging for discussion update
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DISCUSSION_UPDATED,
+        entity_type="Discussion",
+        entity_id=discussion.id,
+        user_id=current_user.id,
+        description=f"Updated comment #{discussion_id} on decision #{decision_id}",
+        details={
+            "discussion_id": discussion.id,
+            "decision_id": decision_id,
+            "summary": cleaned_content[:100],
+            "author_id": current_user.id,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(discussion)
     return discussion
@@ -189,6 +263,27 @@ def delete_discussion(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: You do not have permission to delete this comment."
         )
+
+    author_id = discussion.user_id
+
+    # Audit logging before delete
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DISCUSSION_DELETED,
+        entity_type="Discussion",
+        entity_id=discussion_id,
+        user_id=current_user.id,
+        description=f"Deleted comment #{discussion_id} from decision #{decision_id}",
+        details={
+            "discussion_id": discussion_id,
+            "decision_id": decision_id,
+            "deleted_by": current_user.id,
+            "original_author": author_id,
+        },
+        skip_commit=True,
+    )
 
     db.delete(discussion)
     db.commit()

@@ -54,9 +54,10 @@ try:
     print("==========================================================")
     print("1. REGISTERING USER VIA POST /auth/register")
     print("==========================================================")
+    test_email = f"logintest_{int(time.time())}@company.com"
     reg_payload = {
         "full_name": "Login Test User",
-        "email": "logintest@company.com",
+        "email": test_email,
         "password": "Password123!",
         "role": "Reviewer"
     }
@@ -69,7 +70,7 @@ try:
     print("2. TESTING LOGIN VIA POST /auth/login (Exact JSON Payload)")
     print("==========================================================")
     login_payload = {
-        "email": "logintest@company.com",
+        "email": test_email,
         "password": "Password123!"
     }
     status, login_res = make_req("/auth/login", method="POST", body=login_payload)
@@ -88,13 +89,13 @@ try:
     print(f"Authenticated User Profile: {me_res['full_name']} ({me_res['email']})")
     print(f"Role: {me_res['role']['name']}, Active: {me_res['is_active']}")
     assert status == 200
-    assert me_res["email"] == "logintest@company.com"
+    assert me_res["email"] == test_email
     assert me_res["role"]["name"] == "Reviewer"
 
     print("\n==========================================================")
     print("4. TESTING INVALID PASSWORD REJECTION")
     print("==========================================================")
-    status, err_res = make_req("/auth/login", method="POST", body={"email": "logintest@company.com", "password": "WrongPassword"})
+    status, err_res = make_req("/auth/login", method="POST", body={"email": test_email, "password": "WrongPassword"})
     print(f"Invalid Password Status: {status} -> {err_res}")
     assert status == 401
 

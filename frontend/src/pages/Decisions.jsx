@@ -1,24 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getDecisions, submitDecision } from '../services/decisionService';
+import { getCategories } from '../services/categoryService';
+import { getTags } from '../services/tagService';
 import { DecisionCard } from '../components/DecisionCard';
-import { PlusCircle, Search, Layers, Loader2, X, Filter } from 'lucide-react';
+import { PlusCircle, Search, Layers, Loader2, X, Filter, Folder, Tag as TagIcon } from 'lucide-react';
 
 export const Decisions = () => {
+  const [searchParams] = useSearchParams();
   const [decisions, setDecisions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
 
   const { user } = useAuth();
 
-  const fetchDecisionsList = async (statusFilter) => {
+  useEffect(() => {
+    const urlQuery = searchParams.get('search');
+    if (urlQuery !== null) {
+      setSearchTerm(urlQuery);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    // Load categories and tags for filtering dropdowns
+    async function loadTaxonomies() {
+      try {
+        const [catData, tagData] = await Promise.all([
+          getCategories().catch(() => []),
+          getTags().catch(() => []),
+        ]);
+        setCategories(catData || []);
+        setTags(tagData || []);
+      } catch (e) {
+        console.warn('Could not load categories/tags:', e);
+      }
+    }
+    loadTaxonomies();
+  }, []);
+
+  const fetchDecisionsList = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await getDecisions(statusFilter === 'ALL' ? null : statusFilter);
+      const filters = {
+        status: selectedStatus === 'ALL' ? null : selectedStatus,
+        search: searchTerm.trim() || null,
+        categoryId: selectedCategory ? parseInt(selectedCategory, 10) : null,
+        tagId: selectedTag ? parseInt(selectedTag, 10) : null,
+      };
+      const data = await getDecisions(filters);
       setDecisions(data);
     } catch (err) {
       setError(err.message || 'Failed to fetch decisions list.');
@@ -28,8 +65,8 @@ export const Decisions = () => {
   };
 
   useEffect(() => {
-    fetchDecisionsList(selectedStatus);
-  }, [selectedStatus]);
+    fetchDecisionsList();
+  }, [selectedStatus, selectedCategory, selectedTag]);
 
   const handleSubmitDecision = async (id) => {
     if (!window.confirm('Are you sure you want to submit this draft decision for review? Core fields will be locked for editing.')) {
@@ -38,7 +75,7 @@ export const Decisions = () => {
 
     try {
       await submitDecision(id);
-      fetchDecisionsList(selectedStatus);
+      fetchDecisionsList();
     } catch (err) {
       alert(err.message || 'Failed to submit decision.');
     }
@@ -46,6 +83,8 @@ export const Decisions = () => {
 
   const handleClearFilters = () => {
     setSelectedStatus('ALL');
+    setSelectedCategory('');
+    setSelectedTag('');
     setSearchTerm('');
   };
 
@@ -56,6 +95,7 @@ export const Decisions = () => {
     { label: 'Under Review', value: 'Under Review' },
     { label: 'Approved', value: 'Approved' },
     { label: 'Rejected', value: 'Rejected' },
+    { label: 'Archived', value: 'Archived' },
   ];
 
   const filteredDecisions = decisions.filter((d) => {
@@ -63,12 +103,13 @@ export const Decisions = () => {
     const term = searchTerm.toLowerCase();
     return (
       d.title.toLowerCase().includes(term) ||
-      d.problem_statement.toLowerCase().includes(term) ||
-      d.decision_taken.toLowerCase().includes(term)
+      (d.problem_statement && d.problem_statement.toLowerCase().includes(term)) ||
+      (d.decision_taken && d.decision_taken.toLowerCase().includes(term)) ||
+      (d.reasoning && d.reasoning.toLowerCase().includes(term))
     );
   });
 
-  const isFiltered = selectedStatus !== 'ALL' || searchTerm.trim() !== '';
+  const isFiltered = selectedStatus !== 'ALL' || selectedCategory !== '' || selectedTag !== '' || searchTerm.trim() !== '';
 
   return (
     <div className="decisions-dashboard-container">
@@ -76,7 +117,7 @@ export const Decisions = () => {
       <div className="dashboard-header-bar">
         <div className="dashboard-title-group">
           <h1>Decision Management</h1>
-          <p>Capture and manage organizational decisions.</p>
+          <p>Capture, evaluate, and trace organizational decisions across categories and workflows.</p>
         </div>
 
         <Link to="/decisions/new" className="btn btn-primary btn-lg">
@@ -100,12 +141,49 @@ export const Decisions = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {/* Category Dropdown Filter */}
+          {categories.length > 0 && (
+            <div className="select-wrapper">
+              <Folder size={14} className="input-leading-icon" />
+              <select
+                className="filter-select"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                aria-label="Filter by category"
+              >
+                <option value="">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Tag Dropdown Filter */}
+          {tags.length > 0 && (
+            <div className="select-wrapper">
+              <TagIcon size={14} className="input-leading-icon" />
+              <select
+                className="filter-select"
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                aria-label="Filter by tag"
+              >
+                <option value="">All Tags</option>
+                {tags.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Search Bar */}
           <div className="search-field-wrapper">
             <Search size={16} className="input-leading-icon" />
             <input
               type="text"
               className="search-field-input"
-              placeholder="Search decisions by title or keywords..."
+              placeholder="Search decisions by title, problem, or rationale..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -178,3 +256,5 @@ export const Decisions = () => {
     </div>
   );
 };
+
+export default Decisions;

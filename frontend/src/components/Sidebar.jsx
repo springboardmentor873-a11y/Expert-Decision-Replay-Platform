@@ -7,12 +7,14 @@ import {
   Layers,
   PlusCircle,
   Users,
-  MessageSquare,
-  FileText,
   BarChart3,
   Settings,
   LogOut,
-  X
+  X,
+  Bell,
+  Shield,
+  BookOpen,
+  CheckSquare,
 } from 'lucide-react';
 
 export const Sidebar = ({ isOpen, onClose }) => {
@@ -40,13 +42,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
   const getInitials = (name) => {
     if (!name) return 'U';
     const parts = name.split(' ');
-    return parts.map(p => p[0]).join('').substring(0, 2).toUpperCase();
+    return parts.map((p) => p[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  const handleUpcomingClick = (e, featureName) => {
-    e.preventDefault();
-    alert(`${featureName} workspace will be available in Milestone 3.`);
-  };
+  const role = user?.role?.name?.toLowerCase();
+  const canReview = ['reviewer', 'manager', 'administrator'].includes(role);
+  const canAudit = ['manager', 'administrator'].includes(role);
 
   return (
     <>
@@ -56,7 +57,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
       <aside className={`app-sidebar ${isOpen ? 'open' : ''}`}>
         {/* Sidebar Header & Brand */}
         <div className="sidebar-header">
-          <NavLink to="/home" className="sidebar-brand" onClick={onClose}>
+          <NavLink to="/dashboard" className="sidebar-brand" onClick={onClose}>
             <div className="brand-icon-box">
               <Scale size={20} strokeWidth={2.4} />
             </div>
@@ -77,11 +78,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Navigation Sections */}
         <div className="sidebar-content">
+          {/* GROUP 1: WORKSPACE */}
           <div className="sidebar-nav-group">
-            <span className="nav-group-heading">MAIN MENU</span>
+            <span className="nav-group-heading">WORKSPACE</span>
             <nav className="sidebar-nav-list">
               <NavLink
-                to="/home"
+                to="/dashboard"
                 className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
                 onClick={onClose}
               >
@@ -107,89 +109,131 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 <PlusCircle size={18} />
                 <span>Create Decision</span>
               </NavLink>
+
+              {canReview && (
+                <NavLink
+                  to="/approvals/pending"
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <CheckSquare size={18} />
+                  <span>Pending Approvals</span>
+                </NavLink>
+              )}
+
+              <NavLink
+                to="/knowledge-repository"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                <BookOpen size={18} />
+                <span>Knowledge Repository</span>
+              </NavLink>
             </nav>
           </div>
 
+          {/* GROUP 2: COLLABORATION */}
           <div className="sidebar-nav-group">
             <span className="nav-group-heading">COLLABORATION</span>
             <nav className="sidebar-nav-list">
-              <a
-                href="#teams"
-                className="sidebar-nav-item item-upcoming"
-                onClick={(e) => handleUpcomingClick(e, 'Teams')}
-                title="Teams collaboration (Milestone 3)"
+              <NavLink
+                to="/teams"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
               >
                 <Users size={18} />
                 <span>Teams</span>
-                <span className="nav-upcoming-tag">M3</span>
-              </a>
+              </NavLink>
 
-              <a
-                href="#discussions"
-                className="sidebar-nav-item item-upcoming"
-                onClick={(e) => handleUpcomingClick(e, 'Discussions')}
-                title="Discussions (Milestone 3)"
+              <NavLink
+                to="/notifications"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
               >
-                <MessageSquare size={18} />
-                <span>Discussions</span>
-                <span className="nav-upcoming-tag">M3</span>
-              </a>
-
-              <a
-                href="#documents"
-                className="sidebar-nav-item item-upcoming"
-                onClick={(e) => handleUpcomingClick(e, 'Documents')}
-                title="Documents (Milestone 3)"
-              >
-                <FileText size={18} />
-                <span>Documents</span>
-                <span className="nav-upcoming-tag">M3</span>
-              </a>
+                <Bell size={18} />
+                <span>Notifications</span>
+              </NavLink>
             </nav>
           </div>
 
+          {/* GROUP 3: ANALYTICS */}
           <div className="sidebar-nav-group">
-            <span className="nav-group-heading">SYSTEM & INSIGHTS</span>
+            <span className="nav-group-heading">ANALYTICS</span>
             <nav className="sidebar-nav-list">
-              <a
-                href="#analytics"
-                className="sidebar-nav-item item-upcoming"
-                onClick={(e) => handleUpcomingClick(e, 'Analytics')}
-                title="Analytics (Milestone 3)"
+              <NavLink
+                to="/reports"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
               >
                 <BarChart3 size={18} />
-                <span>Analytics</span>
-                <span className="nav-upcoming-tag">M3</span>
-              </a>
+                <span>Reports & Analytics</span>
+              </NavLink>
 
-              <a
-                href="#settings"
-                className="sidebar-nav-item item-upcoming"
-                onClick={(e) => handleUpcomingClick(e, 'Settings')}
-                title="Settings (Milestone 3)"
+              {canAudit && (
+                <NavLink
+                  to="/audit-logs"
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  onClick={onClose}
+                >
+                  <Shield size={18} />
+                  <span>Audit Logs</span>
+                </NavLink>
+              )}
+            </nav>
+          </div>
+
+          {/* GROUP 4: ACCOUNT */}
+          <div className="sidebar-nav-group">
+            <span className="nav-group-heading">ACCOUNT</span>
+            <nav className="sidebar-nav-list">
+              <NavLink
+                to="/settings"
+                className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                onClick={onClose}
               >
                 <Settings size={18} />
                 <span>Settings</span>
-                <span className="nav-upcoming-tag">M3</span>
-              </a>
+              </NavLink>
             </nav>
           </div>
         </div>
 
-        {/* Sidebar Footer: User Profile & Logout */}
+        {/* Sidebar Footer: User Profile, Settings Shortcut & Logout */}
         <div className="sidebar-footer">
           <div className="sidebar-user-card">
-            <div className="user-avatar">
-              {getInitials(user?.full_name)}
+            <div
+              className="sidebar-user-clickable"
+              onClick={() => {
+                navigate('/settings');
+                onClose && onClose();
+              }}
+              title="View Account & Profile Settings"
+            >
+              <div className="user-avatar">
+                {getInitials(user?.full_name)}
+              </div>
+              <div className="sidebar-user-meta">
+                <span className="sidebar-user-name" title={user?.full_name}>
+                  {user?.full_name || 'User'}
+                </span>
+                <span className={getRoleBadgeClass(user?.role?.name)}>
+                  {user?.role?.name || 'Employee'}
+                </span>
+              </div>
             </div>
-            <div className="sidebar-user-meta">
-              <span className="sidebar-user-name" title={user?.full_name}>
-                {user?.full_name || 'User'}
-              </span>
-              <span className={getRoleBadgeClass(user?.role?.name)}>
-                {user?.role?.name || 'Employee'}
-              </span>
-            </div>
+
+            <button
+              className="sidebar-settings-btn"
+              onClick={() => {
+                navigate('/settings');
+                onClose && onClose();
+              }}
+              title="Account Settings"
+              aria-label="Account Settings"
+            >
+              <Settings size={16} />
+            </button>
+
             <button
               className="sidebar-logout-btn"
               onClick={handleLogout}
@@ -204,3 +248,5 @@ export const Sidebar = ({ isOpen, onClose }) => {
     </>
   );
 };
+
+export default Sidebar;

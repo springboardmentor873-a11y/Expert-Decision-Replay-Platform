@@ -1,16 +1,20 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 from fastapi import HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.decision import Decision, DecisionStatusEnum
 from app.models.role import RoleEnum
 from app.models.user import User
+from app.models.tag import DecisionTag
+from app.models.audit_log import AuditActionEnum
 from app.schemas.decision import DecisionCreateRequest, DecisionUpdateRequest
 from app.services.decision_version_service import (
     create_initial_version,
     create_version_snapshot,
     generate_change_summary,
 )
+from app.services.audit_service import create_audit_log
 
 
 def create_decision(db: Session, decision_in: DecisionCreateRequest, user_id: int) -> Decision:
@@ -23,12 +27,37 @@ def create_decision(db: Session, decision_in: DecisionCreateRequest, user_id: in
         reasoning=decision_in.reasoning.strip(),
         expected_outcome=decision_in.expected_outcome.strip() if decision_in.expected_outcome else None,
         actual_outcome=decision_in.actual_outcome.strip() if decision_in.actual_outcome else None,
+        category_id=decision_in.category_id,
+        team_id=decision_in.team_id,
         status=DecisionStatusEnum.DRAFT.value,
         created_by=user_id,
     )
     db.add(decision)
     db.flush()
+
+    if decision_in.tag_ids:
+        for tid in decision_in.tag_ids:
+            dt = DecisionTag(decision_id=decision.id, tag_id=tid)
+            db.add(dt)
+
     create_initial_version(db=db, decision=decision, user_id=user_id)
+
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DECISION_CREATED,
+        entity_type="Decision",
+        entity_id=decision.id,
+        user_id=user_id,
+        description=f"Created decision \"{decision.title}\"",
+        details={
+            "decision_id": decision.id,
+            "title": decision.title,
+            "status": decision.status,
+            "created_by": user_id,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(decision)
     return decision
@@ -46,10 +75,6 @@ def get_decision_by_id(db: Session, decision_id: int, current_user: User) -> Dec
             detail=f"Decision with ID {decision_id} not found."
         )
 
-    # Authorization rules:
-    # 1. Administrator can view any decision.
-    # 2. Decision owner can view their own decision.
-    # 3. Reviewers / Managers can view decisions that are submitted/under review/approved/rejected or their own.
     user_role = current_user.role.name if current_user.role else ""
     is_owner = decision.created_by == current_user.id
     is_admin = user_role == RoleEnum.ADMINISTRATOR.value
@@ -68,14 +93,15 @@ def get_decisions(
     db: Session,
     current_user: User,
     status_filter: Optional[str] = None,
+    search: Optional[str] = None,
+    category_id: Optional[int] = None,
+    team_id: Optional[int] = None,
+    tag_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100
 ) -> List[Decision]:
     """
-    Lists decisions accessible to the current user.
-    - Administrators view all decisions.
-    - Reviewers and Managers view their own decisions and non-draft decisions.
-    - Regular Employees view their own decisions.
+    Lists decisions accessible to the current user with filtering and multi-field search.
     """
     user_role = current_user.role.name if current_user.role else ""
     query = db.query(Decision)
@@ -83,17 +109,37 @@ def get_decisions(
     if user_role == RoleEnum.ADMINISTRATOR.value:
         pass  # Admin can see all
     elif user_role in (RoleEnum.REVIEWER.value, RoleEnum.MANAGER.value):
-        # Can see own decisions or decisions that are not in Draft status
         query = query.filter(
             (Decision.created_by == current_user.id) |
             (Decision.status != DecisionStatusEnum.DRAFT.value)
         )
     else:
-        # Standard user / Employee: only own decisions
         query = query.filter(Decision.created_by == current_user.id)
 
-    if status_filter:
-        query = query.filter(Decision.status == status_filter)
+    if isinstance(status_filter, str) and status_filter.strip():
+        query = query.filter(Decision.status == status_filter.strip())
+
+    if isinstance(category_id, int):
+        query = query.filter(Decision.category_id == category_id)
+
+    if isinstance(team_id, int):
+        query = query.filter(Decision.team_id == team_id)
+
+    if isinstance(tag_id, int):
+        query = query.join(Decision.tags).filter(DecisionTag.tag_id == tag_id)
+
+    if isinstance(search, str) and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Decision.title.ilike(term),
+                Decision.problem_statement.ilike(term),
+                Decision.context.ilike(term),
+                Decision.decision_taken.ilike(term),
+                Decision.reasoning.ilike(term),
+                Decision.status.ilike(term),
+            )
+        )
 
     return query.order_by(Decision.updated_at.desc()).offset(skip).limit(limit).all()
 
@@ -105,14 +151,20 @@ def update_decision(
     current_user: User
 ) -> Decision:
     """
-    Updates a decision. Only the owner or an Administrator can update a decision.
-    Draft decisions can be edited freely. Non-draft decisions have restricted modification.
+    Updates a decision. Enforces read-only protection for Archived decisions.
     """
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found."
+        )
+
+    # Read-only check for Archived decisions
+    if decision.status == DecisionStatusEnum.ARCHIVED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify an archived decision. Please unarchive it first."
         )
 
     user_role = current_user.role.name if current_user.role else ""
@@ -125,7 +177,6 @@ def update_decision(
             detail="Forbidden: You do not have permission to modify this decision."
         )
 
-    # If decision is not in draft, prevent normal users from modifying core text
     if not is_admin and decision.status != DecisionStatusEnum.DRAFT.value:
         disallowed_fields = [
             field for field in ("title", "problem_statement", "context", "decision_taken", "reasoning")
@@ -134,10 +185,9 @@ def update_decision(
         if disallowed_fields:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot edit core fields ({', '.join(disallowed_fields)}) of a decision in '{decision.status}' status."
+                detail=f"Cannot edit core fields ({', '.join(disallowed_fields)}) once a decision has been submitted."
             )
 
-    # Record current values before applying updates
     old_values = {
         "title": decision.title,
         "problem_statement": decision.problem_statement,
@@ -149,7 +199,6 @@ def update_decision(
         "status": decision.status,
     }
 
-    # Apply updates
     if decision_in.title is not None:
         decision.title = decision_in.title.strip()
     if decision_in.problem_statement is not None:
@@ -167,8 +216,17 @@ def update_decision(
     if decision_in.status is not None:
         status_val = decision_in.status.value if hasattr(decision_in.status, "value") else str(decision_in.status)
         decision.status = status_val
+    if decision_in.category_id is not None:
+        decision.category_id = decision_in.category_id
+    if decision_in.team_id is not None:
+        decision.team_id = decision_in.team_id
 
-    # Detect changes and create version snapshot if changes exist
+    if decision_in.tag_ids is not None:
+        db.query(DecisionTag).filter(DecisionTag.decision_id == decision.id).delete()
+        for tid in decision_in.tag_ids:
+            dt = DecisionTag(decision_id=decision.id, tag_id=tid)
+            db.add(dt)
+
     new_values = {
         "title": decision.title,
         "problem_statement": decision.problem_statement,
@@ -187,6 +245,104 @@ def update_decision(
             changed_by=current_user.id,
             change_summary=change_summary,
         )
+        from app.services.notification_service import notify_decision_updated
+        notify_decision_updated(db=db, decision=decision, actor=current_user, change_summary=change_summary)
+
+        create_audit_log(
+            db=db,
+            action=AuditActionEnum.DECISION_UPDATED,
+            entity_type="Decision",
+            entity_id=decision.id,
+            user_id=current_user.id,
+            description=f"Updated decision \"{decision.title}\" ({change_summary})",
+            details={
+                "decision_id": decision.id,
+                "change_summary": change_summary,
+                "updated_by": current_user.id,
+            },
+            skip_commit=True,
+        )
+
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+def archive_decision(db: Session, decision_id: int, current_user: User) -> Decision:
+    """Archives a decision, putting it into read-only archived state."""
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Decision #{decision_id} not found.")
+
+    user_role = current_user.role.name if current_user.role else ""
+    is_owner = decision.created_by == current_user.id
+    is_admin_or_mgr = user_role in (RoleEnum.ADMINISTRATOR.value, RoleEnum.MANAGER.value)
+
+    if not (is_owner or is_admin_or_mgr):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to archive this decision.")
+
+    if decision.status == DecisionStatusEnum.ARCHIVED.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Decision is already archived.")
+
+    prev_status = decision.status
+    decision.status = DecisionStatusEnum.ARCHIVED.value
+
+    create_version_snapshot(
+        db=db,
+        decision=decision,
+        changed_by=current_user.id,
+        change_summary=f"Decision archived from '{prev_status}'",
+    )
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action=AuditActionEnum.DECISION_ARCHIVED.value,
+        entity_type="Decision",
+        entity_id=decision.id,
+        description=f"User '{current_user.full_name}' archived decision '{decision.title}'.",
+        details={"previous_status": prev_status}
+    )
+
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+def unarchive_decision(db: Session, decision_id: int, current_user: User) -> Decision:
+    """Restores an archived decision back to Draft status."""
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Decision #{decision_id} not found.")
+
+    user_role = current_user.role.name if current_user.role else ""
+    is_owner = decision.created_by == current_user.id
+    is_admin_or_mgr = user_role in (RoleEnum.ADMINISTRATOR.value, RoleEnum.MANAGER.value)
+
+    if not (is_owner or is_admin_or_mgr):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to unarchive this decision.")
+
+    if decision.status != DecisionStatusEnum.ARCHIVED.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only archived decisions can be unarchived.")
+
+    decision.status = DecisionStatusEnum.DRAFT.value
+
+    create_version_snapshot(
+        db=db,
+        decision=decision,
+        changed_by=current_user.id,
+        change_summary="Decision restored from archive to Draft",
+    )
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action=AuditActionEnum.DECISION_UNARCHIVED.value,
+        entity_type="Decision",
+        entity_id=decision.id,
+        description=f"User '{current_user.full_name}' unarchived decision '{decision.title}' to Draft.",
+        details={"restored_to": "Draft"}
+    )
 
     db.commit()
     db.refresh(decision)
@@ -225,6 +381,25 @@ def submit_decision(db: Session, decision_id: int, current_user: User) -> Decisi
         changed_by=current_user.id,
         change_summary="Decision submitted for review",
     )
+
+    from app.services.notification_service import notify_decision_submitted
+    notify_decision_submitted(db=db, decision=decision, actor=current_user)
+
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DECISION_SUBMITTED,
+        entity_type="Decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        description=f"Submitted decision \"{decision.title}\" for review",
+        details={
+            "decision_id": decision.id,
+            "title": decision.title,
+            "submitted_by": current_user.id,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(decision)
     return decision
@@ -249,17 +424,34 @@ def delete_decision(db: Session, decision_id: int, current_user: User) -> None:
             detail="Forbidden: You do not have permission to delete this decision."
         )
 
-    # Standard users can only delete Draft decisions
     if not is_admin and decision.status != DecisionStatusEnum.DRAFT.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot delete a decision that has already been submitted (Status: '{decision.status}')."
         )
 
+    decision_title = decision.title
+    decision_owner_id = decision.created_by
+
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.DECISION_DELETED,
+        entity_type="Decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        description=f"Deleted decision \"{decision_title}\"",
+        details={
+            "decision_id": decision_id,
+            "title": decision_title,
+            "deleted_by": current_user.id,
+            "original_creator": decision_owner_id,
+        },
+        skip_commit=True,
+    )
+
     db.delete(decision)
     db.commit()
 
-    # Clean up any document files stored on disk for this decision
     try:
         import os
         import shutil

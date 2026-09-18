@@ -70,6 +70,26 @@ def create_initial_version(db: Session, decision: Decision, user_id: int) -> Dec
         change_summary="Initial decision created",
     )
     db.add(version)
+
+    # Audit logging for version 1
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.VERSION_CREATED,
+        entity_type="DecisionVersion",
+        entity_id=decision.id,
+        user_id=user_id,
+        description=f"Created version 1 for decision \"{decision.title}\"",
+        details={
+            "decision_id": decision.id,
+            "version_number": 1,
+            "changed_by": user_id,
+            "change_summary": "Initial decision created",
+        },
+        skip_commit=True,
+    )
+
     return version
 
 
@@ -105,6 +125,26 @@ def create_version_snapshot(
         change_summary=change_summary,
     )
     db.add(version)
+
+    # Audit logging for sequential version
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.VERSION_CREATED,
+        entity_type="DecisionVersion",
+        entity_id=decision.id,
+        user_id=changed_by,
+        description=f"Created version {next_version} for decision \"{decision.title}\" ({change_summary})",
+        details={
+            "decision_id": decision.id,
+            "version_number": next_version,
+            "changed_by": changed_by,
+            "change_summary": change_summary,
+        },
+        skip_commit=True,
+    )
+
     return version
 
 

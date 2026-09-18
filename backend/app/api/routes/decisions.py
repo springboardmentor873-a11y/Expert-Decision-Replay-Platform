@@ -7,14 +7,17 @@ from app.database.database import get_db
 from app.models.user import User
 from app.schemas.decision import DecisionCreateRequest, DecisionResponse, DecisionUpdateRequest
 from app.services.decision_service import (
+    archive_decision,
     create_decision,
     delete_decision,
     get_decision_by_id,
     get_decisions,
     submit_decision,
+    unarchive_decision,
     update_decision,
 )
 from app.api.routes import alternatives, documents, discussions, decision_versions
+from app.api.routes.approvals import decision_approvals_router
 
 router = APIRouter()
 
@@ -46,6 +49,12 @@ router.include_router(
     tags=["Version Tracking"]
 )
 
+# Mount approval workflows sub-resource router
+router.include_router(
+    decision_approvals_router,
+    tags=["Approval Workflows"]
+)
+
 
 @router.post("", response_model=DecisionResponse, status_code=status.HTTP_201_CREATED, summary="Create a new decision")
 def create_new_decision(
@@ -60,13 +69,34 @@ def create_new_decision(
 @router.get("", response_model=List[DecisionResponse], summary="List accessible decisions")
 def list_decisions(
     status: Optional[str] = Query(None, description="Filter decisions by status (Draft, Submitted, etc.)"),
+    search: Optional[str] = Query(None, description="Search term across title, problem, context, and status"),
+    category_id: Optional[int] = Query(None, description="Filter by category ID"),
+    team_id: Optional[int] = Query(None, description="Filter by team ID"),
+    tag_id: Optional[int] = Query(None, description="Filter by tag ID"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieves decisions accessible to the authenticated user."""
-    return get_decisions(db=db, current_user=current_user, status_filter=status, skip=skip, limit=limit)
+    """Retrieves decisions accessible to the authenticated user with optional status filter, category, team, tag, and search query."""
+    status_val = status if isinstance(status, str) else None
+    search_val = search if isinstance(search, str) else None
+    category_val = category_id if isinstance(category_id, int) else None
+    team_val = team_id if isinstance(team_id, int) else None
+    tag_val = tag_id if isinstance(tag_id, int) else None
+    skip_val = skip if isinstance(skip, int) else 0
+    limit_val = limit if isinstance(limit, int) else 100
+    return get_decisions(
+        db=db,
+        current_user=current_user,
+        status_filter=status_val,
+        search=search_val,
+        category_id=category_val,
+        team_id=team_val,
+        tag_id=tag_val,
+        skip=skip_val,
+        limit=limit_val,
+    )
 
 
 @router.get("/{decision_id}", response_model=DecisionResponse, summary="Get decision by ID")
@@ -100,6 +130,26 @@ def submit_draft_decision(
     return submit_decision(db=db, decision_id=decision_id, current_user=current_user)
 
 
+@router.post("/{decision_id}/archive", response_model=DecisionResponse, summary="Archive a decision")
+def archive_existing_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Archives a decision making it read-only."""
+    return archive_decision(db=db, decision_id=decision_id, current_user=current_user)
+
+
+@router.post("/{decision_id}/unarchive", response_model=DecisionResponse, summary="Unarchive a decision")
+def unarchive_existing_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Restores an archived decision back to active Draft status."""
+    return unarchive_decision(db=db, decision_id=decision_id, current_user=current_user)
+
+
 @router.delete("/{decision_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a decision")
 def remove_decision(
     decision_id: int,
@@ -108,4 +158,4 @@ def remove_decision(
 ):
     """Deletes a draft decision (or any decision for Administrators)."""
     delete_decision(db=db, decision_id=decision_id, current_user=current_user)
-    return None
+    return None

@@ -62,6 +62,12 @@ def require_roles(*allowed_roles: Union[RoleEnum, str]) -> Callable[[User], User
     }
 
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         user_role_name = current_user.role.name if current_user.role else None
         if not user_role_name or user_role_name not in normalized_allowed:
             raise HTTPException(

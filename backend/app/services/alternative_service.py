@@ -108,6 +108,27 @@ def create_alternative(
     )
 
     db.add(alternative)
+    db.flush()
+
+    # Audit logging for alternative creation
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.ALTERNATIVE_CREATED,
+        entity_type="Alternative",
+        entity_id=alternative.id,
+        user_id=current_user.id,
+        description=f"Added alternative \"{alternative.name}\" to decision #{decision_id}",
+        details={
+            "alternative_id": alternative.id,
+            "decision_id": decision_id,
+            "name": alternative.name,
+            "is_selected": alternative.is_selected,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(alternative)
     return alternative
@@ -183,6 +204,25 @@ def update_alternative(
     if alternative_in.is_selected is not None:
         alternative.is_selected = bool(alternative_in.is_selected)
 
+    # Audit logging for alternative update
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.ALTERNATIVE_UPDATED,
+        entity_type="Alternative",
+        entity_id=alternative.id,
+        user_id=current_user.id,
+        description=f"Updated alternative \"{alternative.name}\" on decision #{decision_id}",
+        details={
+            "alternative_id": alternative.id,
+            "decision_id": decision_id,
+            "name": alternative.name,
+            "is_selected": alternative.is_selected,
+        },
+        skip_commit=True,
+    )
+
     db.commit()
     db.refresh(alternative)
     return alternative
@@ -231,6 +271,27 @@ def delete_alternative(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot delete alternatives of a decision in '{decision.status}' status."
         )
+
+    alt_name = alternative.name
+
+    # Audit logging before delete
+    from app.models.audit_log import AuditActionEnum
+    from app.services.audit_service import create_audit_log
+    create_audit_log(
+        db=db,
+        action=AuditActionEnum.ALTERNATIVE_DELETED,
+        entity_type="Alternative",
+        entity_id=alternative_id,
+        user_id=current_user.id,
+        description=f"Deleted alternative \"{alt_name}\" from decision #{decision_id}",
+        details={
+            "alternative_id": alternative_id,
+            "decision_id": decision_id,
+            "name": alt_name,
+            "deleted_by": current_user.id,
+        },
+        skip_commit=True,
+    )
 
     db.delete(alternative)
     db.commit()

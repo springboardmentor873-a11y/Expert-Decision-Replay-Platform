@@ -42,23 +42,49 @@ async function handleResponse(response) {
 }
 
 /**
- * Fetches all accessible decisions for the authenticated user with optional status filter.
- * Accepts either: getDecisions(status) OR getDecisions(token, status)
+ * Fetches all accessible decisions for the authenticated user with optional filters:
+ * Accepts: getDecisions(filters) OR getDecisions(status, search) OR getDecisions(token, status, search)
  */
-export async function getDecisions(statusOrToken = null, maybeStatus = null) {
+export async function getDecisions(arg1 = null, arg2 = null, arg3 = null) {
   let status = null;
+  let search = null;
+  let categoryId = null;
+  let teamId = null;
+  let tagId = null;
   let token = null;
 
-  if (typeof statusOrToken === 'string' && statusOrToken.startsWith('ey')) {
-    token = statusOrToken;
-    status = maybeStatus;
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    // Passed an options object: { status, search, categoryId, teamId, tagId, token }
+    status = arg1.status;
+    search = arg1.search;
+    categoryId = arg1.categoryId || arg1.category_id;
+    teamId = arg1.teamId || arg1.team_id;
+    tagId = arg1.tagId || arg1.tag_id;
+    token = arg1.token;
+  } else if (typeof arg1 === 'string' && arg1.startsWith('ey')) {
+    token = arg1;
+    status = arg2;
+    search = arg3;
   } else {
-    status = statusOrToken;
+    status = arg1;
+    search = arg2;
   }
 
   const url = new URL(`${API_BASE_URL}/decisions`);
   if (status && status !== 'ALL') {
     url.searchParams.append('status', status);
+  }
+  if (search && typeof search === 'string' && search.trim()) {
+    url.searchParams.append('search', search.trim());
+  }
+  if (categoryId) {
+    url.searchParams.append('category_id', categoryId.toString());
+  }
+  if (teamId) {
+    url.searchParams.append('team_id', teamId.toString());
+  }
+  if (tagId) {
+    url.searchParams.append('tag_id', tagId.toString());
   }
 
   const response = await fetch(url.toString(), {
@@ -69,8 +95,24 @@ export async function getDecisions(statusOrToken = null, maybeStatus = null) {
 }
 
 /**
+ * Searches decisions across title, problem, context, and status.
+ */
+export async function searchDecisions(query, limit = 8, token = null) {
+  const url = new URL(`${API_BASE_URL}/decisions`);
+  if (query && typeof query === 'string' && query.trim()) {
+    url.searchParams.append('search', query.trim());
+  }
+  url.searchParams.append('limit', String(limit));
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+/**
  * Fetches a single decision by its ID.
- * Accepts either: getDecision(id) OR getDecision(token, id)
  */
 export async function getDecision(idOrToken, maybeId = null) {
   let id = idOrToken;
@@ -90,7 +132,6 @@ export async function getDecision(idOrToken, maybeId = null) {
 
 /**
  * Creates a new decision. The creator is derived automatically from the JWT token.
- * Accepts either: createDecision(decisionData) OR createDecision(token, decisionData)
  */
 export async function createDecision(dataOrToken, maybeData = null) {
   let decisionData = dataOrToken;
@@ -111,7 +152,6 @@ export async function createDecision(dataOrToken, maybeData = null) {
 
 /**
  * Updates an existing decision.
- * Accepts either: updateDecision(id, decisionData) OR updateDecision(token, id, decisionData)
  */
 export async function updateDecision(idOrToken, idOrData, maybeData = null) {
   let id;
@@ -137,7 +177,6 @@ export async function updateDecision(idOrToken, idOrData, maybeData = null) {
 
 /**
  * Submits a draft decision for evaluation/review.
- * Accepts either: submitDecision(id) OR submitDecision(token, id)
  */
 export async function submitDecision(idOrToken, maybeId = null) {
   let id = idOrToken;
@@ -156,8 +195,45 @@ export async function submitDecision(idOrToken, maybeId = null) {
 }
 
 /**
+ * Archives a decision.
+ */
+export async function archiveDecision(idOrToken, maybeId = null) {
+  let id = idOrToken;
+  let token = null;
+
+  if (typeof idOrToken === 'string' && idOrToken.startsWith('ey')) {
+    token = idOrToken;
+    id = maybeId;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/decisions/${id}/archive`, {
+    method: 'POST',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Unarchives an archived decision back to Draft status.
+ */
+export async function unarchiveDecision(idOrToken, maybeId = null) {
+  let id = idOrToken;
+  let token = null;
+
+  if (typeof idOrToken === 'string' && idOrToken.startsWith('ey')) {
+    token = idOrToken;
+    id = maybeId;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/decisions/${id}/unarchive`, {
+    method: 'POST',
+    headers: getHeaders(token),
+  });
+  return handleResponse(response);
+}
+
+/**
  * Deletes a decision.
- * Accepts either: deleteDecision(id) OR deleteDecision(token, id)
  */
 export async function deleteDecision(idOrToken, maybeId = null) {
   let id = idOrToken;
@@ -176,3 +252,15 @@ export async function deleteDecision(idOrToken, maybeId = null) {
   });
   return handleResponse(response);
 }
+
+export default {
+  getDecisions,
+  searchDecisions,
+  getDecision,
+  createDecision,
+  updateDecision,
+  submitDecision,
+  archiveDecision,
+  unarchiveDecision,
+  deleteDecision,
+};

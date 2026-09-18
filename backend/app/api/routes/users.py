@@ -1,15 +1,25 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_roles
 from app.database.database import get_db
 from app.models.role import RoleEnum
 from app.models.user import User
-from app.schemas.user import UserResponse, UserRoleUpdateRequest, UserStatusUpdateRequest
+from app.schemas.user import (
+    UserChangePasswordRequest,
+    UserProfileUpdateRequest,
+    UserResponse,
+    UserRoleUpdateRequest,
+    UserRosterItem,
+    UserStatusUpdateRequest,
+)
 from app.services.user_service import (
+    change_user_password,
     get_all_users,
     get_user_by_id,
+    get_user_roster,
+    update_user_profile,
     update_user_role,
     update_user_status,
 )
@@ -33,6 +43,69 @@ def list_users(
     """Returns list of all users with safe profile payloads. Requires Administrator role."""
     users = get_all_users(db, skip=skip, limit=limit)
     return users
+
+
+@router.get(
+    "/roster",
+    response_model=List[UserRosterItem],
+    status_code=status.HTTP_200_OK,
+    summary="List user roster for team assignment",
+    description="Retrieves active user cards for team collaboration. Accessible to all authenticated users.",
+)
+def list_user_roster(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns safe user roster for team selection."""
+    return get_user_roster(db, skip=skip, limit=limit)
+
+
+@router.patch(
+    "/me/profile",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update current user profile",
+    description="Updates permitted profile fields (e.g. full_name) for the authenticated user.",
+)
+def patch_my_profile(
+    profile_in: UserProfileUpdateRequest,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Updates the calling user's own profile."""
+    updated = update_user_profile(
+        db=db,
+        user_id=current_user.id,
+        full_name=profile_in.full_name,
+        request=request,
+    )
+    return updated
+
+
+@router.post(
+    "/me/change-password",
+    status_code=status.HTTP_200_OK,
+    summary="Change current user password",
+    description="Verifies the current password, securely hashes the new password, and updates account credentials.",
+)
+def post_change_password(
+    password_in: UserChangePasswordRequest,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Securely updates password for the authenticated user."""
+    change_user_password(
+        db=db,
+        user_id=current_user.id,
+        current_password=password_in.current_password,
+        new_password=password_in.new_password,
+        request=request,
+    )
+    return {"message": "Password updated successfully"}
 
 
 @router.get(

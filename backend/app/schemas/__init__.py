@@ -19,6 +19,24 @@ from app.schemas.user import (
     UserRoleUpdateRequest,
     UserStatusUpdateRequest,
 )
+from app.schemas.approval import (
+    ApprovalActionRequest,
+    ApprovalResponse,
+    PendingApprovalResponse,
+    RejectActionRequest,
+    ReviewerSummary,
+)
+from app.schemas.notification import (
+    MarkReadResponse,
+    NotificationListResponse,
+    NotificationResponse,
+    UnreadCountResponse,
+)
+from app.schemas.audit_log import (
+    AuditLogListResponse,
+    AuditLogResponse,
+    UserAuditSummary,
+)
 
 __all__ = [
     "LoginRequest",
@@ -38,4 +56,31 @@ __all__ = [
     "DecisionVersionResponse",
     "FieldDifference",
     "VersionComparisonResponse",
+    "ApprovalActionRequest",
+    "RejectActionRequest",
+    "ApprovalResponse",
+    "PendingApprovalResponse",
+    "ReviewerSummary",
+    "NotificationResponse",
+    "UnreadCountResponse",
+    "NotificationListResponse",
+    "MarkReadResponse",
+    "AuditLogResponse",
+    "AuditLogListResponse",
+    "UserAuditSummary",
+    "DecisionSummaryReport",
+    "ApprovalReport",
+    "OutcomeReport",
+    "AlternativeReport",
+    "ActivityReport",
+    "DecisionTimelineReport",
 ]
+
+from app.schemas.report import (
+    ActivityReport,
+    AlternativeReport,
+    ApprovalReport,
+    DecisionSummaryReport,
+    DecisionTimelineReport,
+    OutcomeReport,
+)
