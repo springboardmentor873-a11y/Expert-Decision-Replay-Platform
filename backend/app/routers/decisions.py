@@ -35,6 +35,7 @@ def create_decision(
     )
 
     db.add(new_decision)
+    db.flush()
 
     audit_log = AuditLog(
         user_id=current_user.id,
@@ -178,6 +179,18 @@ def update_decision(
 
     db.add(new_version)
 
+    # Create audit log
+    audit_log = AuditLog(
+        user_id=current_user.id,
+        action="Updated",
+        entity_type="Decision",
+        entity_id=decision.id,
+        description=f'Decision "{decision.title}" was updated to version {next_version_number}.'
+    )
+
+    db.add(audit_log)
+
+    # Save decision, version, and audit log together
     db.commit()
     db.refresh(decision)
 
@@ -210,7 +223,21 @@ def delete_decision(
             detail="You do not have permission to delete this decision"
         )
 
+    # Create audit log before deleting the decision
+    audit_log = AuditLog(
+        user_id=current_user.id,
+        action="Deleted",
+        entity_type="Decision",
+        entity_id=decision.id,
+        description=f'Decision "{decision.title}" was deleted.'
+    )
+
+    db.add(audit_log)
+
+    # Delete the decision
     db.delete(decision)
+
+    # Save both operations together
     db.commit()
 
     return {
