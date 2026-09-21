@@ -32,21 +32,22 @@ export default function ApprovalWorkflowView({ user, apiBase = "http://127.0.0.1
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
-  const token = localStorage.getItem("token");
-
   useEffect(() => {
     fetchPendingApprovals();
-  }, [tab]);
+  }, [tab, user]);
 
   const fetchPendingApprovals = async () => {
     setLoading(true);
     try {
+      const currentToken = localStorage.getItem("token");
       let url = `${apiBase}/approvals/pending`;
       if (tab === "escalated") {
         url += "?escalated_only=true";
+      } else if (tab === "all") {
+        url += "?all_stages=true";
       }
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${currentToken}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -101,11 +102,12 @@ export default function ApprovalWorkflowView({ user, apiBase = "http://127.0.0.1
     }
 
     try {
+      const currentToken = localStorage.getItem("token");
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${currentToken}`
         },
         body: JSON.stringify(body)
       });
@@ -192,7 +194,7 @@ export default function ApprovalWorkflowView({ user, apiBase = "http://127.0.0.1
           {[
             { id: "my_queue", label: "My Review Queue" },
             { id: "all", label: "All Pending Approvals" },
-            { id: "escalated", label: "Escalated Decisions ⚠️" },
+            { id: "escalated", label: "Escalated Decisions" },
           ].map((t) => (
             <button
               key={t.id}

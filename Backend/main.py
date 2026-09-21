@@ -1440,23 +1440,27 @@ def get_recent_activity(db: Session = Depends(get_db)):
 def get_pending_approvals(
     stage: Optional[int] = None,
     escalated_only: bool = False,
+    all_stages: bool = False,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     query = db.query(ApprovalWorkflow).filter(ApprovalWorkflow.status == "Pending")
 
     role_name = current_user.get("role_name", "Employee")
-    if role_name == "Reviewer":
-        query = query.filter(ApprovalWorkflow.stage == 1)
-    elif role_name == "Manager":
-        query = query.filter(ApprovalWorkflow.stage == 2)
-    elif role_name == "Employee":
-        user_id = current_user.get("user_id")
-        user_dec_ids = [r[0] for r in db.query(Decision.id).filter(Decision.created_by_id == user_id).all()]
-        query = query.filter(ApprovalWorkflow.decision_id.in_(user_dec_ids))
-
-    if stage:
+    if not all_stages:
+        if stage:
+            query = query.filter(ApprovalWorkflow.stage == stage)
+        elif role_name == "Reviewer":
+            query = query.filter(ApprovalWorkflow.stage == 1)
+        elif role_name == "Manager":
+            query = query.filter(ApprovalWorkflow.stage == 2)
+        elif role_name == "Employee":
+            user_id = current_user.get("user_id")
+            user_dec_ids = [r[0] for r in db.query(Decision.id).filter(Decision.created_by_id == user_id).all()]
+            query = query.filter(ApprovalWorkflow.decision_id.in_(user_dec_ids))
+    elif stage:
         query = query.filter(ApprovalWorkflow.stage == stage)
+
     if escalated_only:
         query = query.filter(ApprovalWorkflow.is_escalated == True)
 

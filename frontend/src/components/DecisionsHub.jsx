@@ -356,7 +356,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
       case "Approved":
         return { bg: "#ecfdf5", color: "#059669", border: "#a7f3d0", icon: CheckCircle };
       case "Under Review":
-        return { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe", icon: Clock };
+        return { bg: "#f3e8ff", color: "#7c3aed", border: "#ddd6fe", icon: Clock };
       case "Draft":
         return { bg: "#fef3c7", color: "#d97706", border: "#fde68a", icon: FileText };
       case "Rejected":
@@ -1011,7 +1011,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
                             ...styles.metaVal,
                             color: approvalHistory.workflow.is_escalated ? "#ef4444" : "var(--text-primary)"
                           }}>
-                            {approvalHistory.workflow.is_escalated ? "🚨 Escalated" : "Standard SLA"}
+                            {approvalHistory.workflow.is_escalated ? "Escalated" : "Standard SLA"}
                           </span>
                         </div>
                       </div>
@@ -1275,7 +1275,7 @@ function DecisionsHub({ user, apiBase = "http://127.0.0.1:8000" }) {
 
                   {formData.initial_alternatives.map((alt, idx) => (
                     <div key={idx} style={styles.wizardAltCard}>
-                      <div style={{ fontWeight: "700", fontSize: "13px", color: "#2563eb", marginBottom: "6px" }}>
+                      <div style={{ fontWeight: "700", fontSize: "13px", color: "#7c3aed", marginBottom: "6px" }}>
                         Alternative {idx + 1}
                       </div>
                       <input

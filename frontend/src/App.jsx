@@ -320,12 +320,12 @@ function App() {
             style={{
               margin: "0 0 6px 0",
               fontSize: "26px",
-              fontWeight: "500",
+              fontWeight: "700",
               color: "var(--text-primary)",
               fontFamily: "var(--font-sans)",
             }}
           >
-            DecisionIntel
+            DecisioHub
           </h1>
           <p
             style={{
@@ -337,7 +337,7 @@ function App() {
           >
             {isRegister
               ? "Join the enterprise decision intelligence workspace"
-              : "Expert Decision Replay & Knowledge Graph Platform"}
+              : "Learn from Decisions • Expert Decision Replay Platform"}
           </p>
         </div>
 
@@ -457,15 +457,114 @@ function App() {
           </form>
         ) : (
           /* ========================================================
-             SIGN IN FORM
+             SIGN IN FORM WITH 1-CLICK DEMO LOGIN
              ======================================================== */
           <div>
+            {/* Quick 1-Click Role Logins */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
+              <button
+                type="button"
+                onClick={() => handleQuickLogin("manager@company.com", "password123")}
+                style={{
+                  width: "100%",
+                  padding: "11px 14px",
+                  backgroundColor: "#7c3aed",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "13.5px",
+                  fontWeight: "700",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 5px rgba(124, 58, 237, 0.28)",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#6d28d9")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#7c3aed")}
+              >
+                <Shield size={16} />
+                <span>Sign In as Manager (Approvals & Governance)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin("emp@company.com", "password123")}
+                style={{
+                  width: "100%",
+                  padding: "9px 14px",
+                  backgroundColor: "#f5f0fb",
+                  color: "#7c3aed",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd6fe",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#ede7f6")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f5f0fb")}
+              >
+                <User size={15} />
+                <span>Sign In as Employee</span>
+              </button>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("reviewer@company.com", "password123")}
+                  style={{
+                    flex: 1,
+                    padding: "7px 8px",
+                    backgroundColor: "#ffffff",
+                    color: "#6b21a8",
+                    border: "1px solid #ede7f6",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Reviewer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("admin@company.com", "password123")}
+                  style={{
+                    flex: 1,
+                    padding: "7px 8px",
+                    backgroundColor: "#ffffff",
+                    color: "#6b21a8",
+                    border: "1px solid #ede7f6",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Administrator
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "16px 0" }}>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-subtle)" }} />
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "500" }}>or enter credentials</span>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border-subtle)" }} />
+            </div>
+
             {/* Credentials Login Form */}
             <form onSubmit={handleLogin}>
               <MD3TextField
-                label="Email Address"
+                label="Work Email Address"
                 type="email"
-                placeholder="admin@company.com or emp@company.com"
+                placeholder="emp@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -475,7 +574,7 @@ function App() {
               <MD3TextField
                 label="Password"
                 type="password"
-                placeholder="password123"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

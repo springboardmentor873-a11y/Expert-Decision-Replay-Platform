@@ -87,7 +87,7 @@ export default function AuditComplianceView({ apiBase = "http://127.0.0.1:8000" 
       case "Decision":
         return { background: "var(--secondary-container)", color: "var(--on-secondary-container)" };
       case "Access":
-        return { background: "rgba(59, 130, 246, 0.12)", color: "#2563eb" };
+        return { background: "rgba(124, 58, 237, 0.12)", color: "#7c3aed" };
       case "Export":
         return { background: "rgba(245, 158, 11, 0.12)", color: "#d97706" };
       default:

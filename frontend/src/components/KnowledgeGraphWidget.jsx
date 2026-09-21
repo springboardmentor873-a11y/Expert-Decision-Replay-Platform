@@ -20,12 +20,12 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
 
   // Positions mapped in a 400x320 SVG viewBox matching the exact design
   const defaultPositions = {
-    "decision-1": { x: 200, y: 160, type: "decision", label: "Choose AI Model", sub: "Decision", color: "#2563eb" },
+    "decision-1": { x: 200, y: 160, type: "decision", label: "Choose AI Model", sub: "Decision", color: "#7c3aed" },
     "team-1": { x: 80, y: 70, type: "team", label: "AI Team", sub: "Team", color: "#10b981", edgeLabel: "created by" },
     "user-3": { x: 200, y: 55, type: "person", label: "Sarah Khan", sub: "Reviewer", color: "#f43f5e", edgeLabel: "discussed by" },
     "doc-1": { x: 320, y: 75, type: "document", label: "AI Model\nReport.pdf", sub: "Doc", color: "#f59e0b", edgeLabel: "supported by" },
     "topic-model-eval": { x: 75, y: 190, type: "topic", label: "Model\nEvaluation", sub: "Topic", color: "#8b5cf6", edgeLabel: "related to" },
-    "outcome-approved": { x: 330, y: 205, type: "outcome", label: "Approved", sub: "Status", color: "#3b82f6", edgeLabel: "resulted in" },
+    "outcome-approved": { x: 330, y: 205, type: "outcome", label: "Approved", sub: "Status", color: "#9333ea", edgeLabel: "resulted in" },
     "influence-future": { x: 200, y: 275, type: "influence", label: "Future Projects", sub: "Influence", color: "#14b8a6", edgeLabel: "influences" },
   };
 
@@ -83,7 +83,7 @@ function KnowledgeGraphWidget({ graphData, onNodeClick }) {
               <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15" />
             </filter>
             <filter id="centerGlow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#2563eb" floodOpacity="0.3" />
+              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#7c3aed" floodOpacity="0.3" />
             </filter>
             {/* Arrow Marker */}
             <marker

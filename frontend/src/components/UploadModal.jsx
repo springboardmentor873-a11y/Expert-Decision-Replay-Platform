@@ -74,7 +74,7 @@ function UploadModal({ isOpen, onClose, onUploadSuccess, decisions = [], apiBase
         <div style={styles.header}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={styles.iconCircle}>
-              <Upload size={20} color="#2563eb" />
+              <Upload size={20} color="var(--primary)" />
             </div>
             <div>
               <h2 style={styles.title}>Upload Knowledge Document</h2>
@@ -104,7 +104,7 @@ function UploadModal({ isOpen, onClose, onUploadSuccess, decisions = [], apiBase
             />
             <label htmlFor="file-upload" style={styles.dropZoneLabel}>
               <div style={styles.uploadIcon}>
-                <FileText size={32} color="#3b82f6" />
+                <FileText size={32} color="var(--primary)" />
               </div>
               {file ? (
                 <div>

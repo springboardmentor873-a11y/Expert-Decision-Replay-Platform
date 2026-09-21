@@ -724,8 +724,313 @@ def seed_milestone3_records(db, users, roles):
         db.add_all(audit_records)
         db.commit()
 
+    # DecisioHub specific entities seeding
+    seed_decisiohub_entities(db)
+
     print("Milestone 3 records seeded successfully!")
+
+
+def seed_decisiohub_entities(db):
+    print("Seeding/Verifying DecisioHub teams, Ipsita Priyadarshini user, and reference decisions...")
+    
+    # 1. Teams
+    decisio_teams_data = [
+        ("Product Team", "Building innovative products for a better tomorrow."),
+        ("AI Research Team", "Exploring AI solutions for real-world problems."),
+        ("Engineering Team", "Building reliable and scalable systems."),
+        ("Data & Analytics Team", "Turning data into actionable insights."),
+        ("Compliance Team", "Ensuring governance and regulatory compliance."),
+        ("Cloud Team", "Cloud platforms, DevOps, CI/CD, and scaling.")
+    ]
+    teams = {}
+    for name, desc in decisio_teams_data:
+        team = db.query(Team).filter(Team.name == name).first()
+        if not team:
+            team = Team(name=name, description=desc)
+            db.add(team)
+            db.commit()
+            db.refresh(team)
+        teams[name] = team
+
+    # Roles lookup
+    emp_role = db.query(Role).filter(Role.name == "Employee").first()
+    if not emp_role:
+        emp_role = Role(name="Employee", description="Employee")
+        db.add(emp_role)
+        db.commit()
+        db.refresh(emp_role)
+
+    # 2. User Ipsita Priyadarshini
+    default_pwd = hash_password("password123")
+    ipsita = db.query(User).filter(User.email == "ipsita@company.com").first()
+    if not ipsita:
+        ipsita = User(
+            name="Ipsita Priyadarshini",
+            email="ipsita@company.com",
+            password_hash=default_pwd,
+            role_id=emp_role.id,
+            team_id=teams["Product Team"].id
+        )
+        db.add(ipsita)
+        db.commit()
+        db.refresh(ipsita)
+        print("Created user Ipsita Priyadarshini (ipsita@company.com)")
+
+    # 3. Reference Decisions from DecisioHub Screenshots
+    decisions_data = [
+        {
+            "title": "Adopt new cloud infrastructure",
+            "problem_statement": "Improve scalability and reduce cost across cloud services.",
+            "objective": "Adopt resilient multi-cloud architecture with auto-scaling capabilities.",
+            "category": "Cloud",
+            "status": "Under Review",
+            "team": "Cloud Team",
+            "priority": "High",
+            "days_ago": 10,
+            "alternatives": [
+                {
+                    "title": "Multi-Cloud Kubernetes Infrastructure",
+                    "description": "Distribute workloads across AWS EKS and GCP GKE.",
+                    "pros": ["Zero vendor lock-in", "High disaster recovery capability"],
+                    "cons": ["Higher operational complexity"],
+                    "cost": "$12,000 / month",
+                    "score": 9,
+                    "risk": "Low",
+                    "selected": True
+                },
+                {
+                    "title": "Single-Cloud AWS Consolidation",
+                    "description": "Consolidate into single AWS region with reserved instances.",
+                    "pros": ["Simple billing", "Single control plane"],
+                    "cons": ["Single point of vendor dependency"],
+                    "cost": "$9,500 / month",
+                    "score": 7,
+                    "risk": "Medium",
+                    "selected": False
+                }
+            ]
+        },
+        {
+            "title": "Implement AI-based support bot",
+            "problem_statement": "Enhance customer query resolution using intelligent conversational AI.",
+            "objective": "Automate 60% of tier-1 customer inquiries with high satisfaction.",
+            "category": "AI",
+            "status": "Under Review",
+            "team": "Product Team",
+            "priority": "High",
+            "days_ago": 11,
+            "alternatives": [
+                {
+                    "title": "RAG-Powered LLM Assistant",
+                    "description": "Hybrid RAG architecture connected to internal support knowledge base.",
+                    "pros": ["Context-aware answers", "Continuous learning"],
+                    "cons": ["Requires document sync pipeline"],
+                    "cost": "$3,000 / month",
+                    "score": 9,
+                    "risk": "Low",
+                    "selected": True
+                }
+            ]
+        },
+        {
+            "title": "Data retention policy update",
+            "problem_statement": "Review and align data retention with global regulatory compliance.",
+            "objective": "Enforce automated 90-day PII purging and SOC2 / GDPR compliance.",
+            "category": "Compliance",
+            "status": "Approved",
+            "team": "Compliance Team",
+            "priority": "Critical",
+            "days_ago": 13,
+            "alternatives": [
+                {
+                    "title": "Automated Lifecycle Tiering & Cryptographic Erasure",
+                    "description": "Scheduled database table partition dropping and AWS S3 lifecycle rules.",
+                    "pros": ["100% automated compliance", "Zero manual DBA intervention"],
+                    "cons": ["Requires audit verification triggers"],
+                    "cost": "$500 / month",
+                    "score": 10,
+                    "risk": "Low",
+                    "selected": True
+                }
+            ]
+        },
+        {
+            "title": "Frontend framework selection",
+            "problem_statement": "Evaluate React vs Angular for standardized enterprise frontend applications.",
+            "objective": "Select a unified UI framework for next-generation platform development.",
+            "category": "Engineering",
+            "status": "Under Review",
+            "team": "Engineering Team",
+            "priority": "Medium",
+            "days_ago": 14,
+            "alternatives": [
+                {
+                    "title": "React 19 with Vite & TypeScript",
+                    "description": "Modern React ecosystem with component-driven architecture.",
+                    "pros": ["Huge ecosystem", "Fast development velocity", "Vite HMR"],
+                    "cons": ["Requires opinionated state management setup"],
+                    "cost": "$0 (Open Source)",
+                    "score": 9,
+                    "risk": "Low",
+                    "selected": True
+                },
+                {
+                    "title": "Angular Enterprise Framework",
+                    "description": "Full-batteries included TypeScript framework.",
+                    "pros": ["Strict structure", "Built-in dependency injection"],
+                    "cons": ["Steeper learning curve"],
+                    "cost": "$0 (Open Source)",
+                    "score": 7,
+                    "risk": "Medium",
+                    "selected": False
+                }
+            ]
+        },
+        {
+            "title": "AI-based user onboarding flow",
+            "problem_statement": "Personalize user onboarding journey through conversational AI.",
+            "objective": "Increase user onboarding completion rate by 35%.",
+            "category": "Product",
+            "status": "Approved",
+            "team": "Product Team",
+            "priority": "Medium",
+            "days_ago": 2,
+            "alternatives": []
+        },
+        {
+            "title": "Product roadmap for Q4",
+            "problem_statement": "Define strategic product milestones and feature deliverables for Q4.",
+            "objective": "Align engineering resources with enterprise customer roadmap commitments.",
+            "category": "Product",
+            "status": "Under Review",
+            "team": "Product Team",
+            "priority": "High",
+            "days_ago": 7,
+            "alternatives": []
+        },
+        {
+            "title": "Evaluate LLM providers",
+            "problem_statement": "Benchmark commercial LLM APIs across accuracy, cost, and latency.",
+            "objective": "Select top 2 providers for enterprise redundancy.",
+            "category": "AI",
+            "status": "Under Review",
+            "team": "AI Research Team",
+            "priority": "High",
+            "days_ago": 3,
+            "alternatives": []
+        },
+        {
+            "title": "Data privacy considerations",
+            "problem_statement": "Formulate AI prompt anonymization and privacy filters.",
+            "objective": "Prevent confidential intellectual property leakage in external LLM calls.",
+            "category": "Security",
+            "status": "Approved",
+            "team": "AI Research Team",
+            "priority": "Critical",
+            "days_ago": 7,
+            "alternatives": []
+        },
+        {
+            "title": "Cloud infrastructure upgrade",
+            "problem_statement": "Upgrade Kubernetes clusters to version 1.30 and upgrade node pools.",
+            "objective": "Improve cluster networking and patch security CVEs.",
+            "category": "Engineering",
+            "status": "Approved",
+            "team": "Engineering Team",
+            "priority": "High",
+            "days_ago": 4,
+            "alternatives": []
+        },
+        {
+            "title": "CI/CD pipeline improvements",
+            "problem_statement": "Accelerate pull request automated testing and container build times.",
+            "objective": "Reduce average CI pipeline duration from 18 minutes to sub-5 minutes.",
+            "category": "Engineering",
+            "status": "Under Review",
+            "team": "Engineering Team",
+            "priority": "Medium",
+            "days_ago": 7,
+            "alternatives": []
+        },
+        {
+            "title": "Security compliance framework",
+            "problem_statement": "Formalize SOC2 Type II and ISO 27001 continuous audit controls.",
+            "objective": "Pass annual third-party SOC2 compliance audit with zero findings.",
+            "category": "Compliance",
+            "status": "Approved",
+            "team": "Compliance Team",
+            "priority": "Critical",
+            "days_ago": 6,
+            "alternatives": []
+        },
+        {
+            "title": "Access control policy update",
+            "problem_statement": "Implement Zero Trust Least Privilege RBAC across all production environments.",
+            "objective": "Mandate hardware key MFA and ephemeral access approvals.",
+            "category": "Compliance",
+            "status": "Under Review",
+            "team": "Compliance Team",
+            "priority": "High",
+            "days_ago": 14,
+            "alternatives": []
+        },
+        {
+            "title": "Analytics dashboard requirements",
+            "problem_statement": "Design real-time telemetry and decision KPI reporting dashboards.",
+            "objective": "Provide executive visibility into organizational decision velocity.",
+            "category": "Analytics",
+            "status": "Under Review",
+            "team": "Data & Analytics Team",
+            "priority": "Medium",
+            "days_ago": 7,
+            "alternatives": []
+        }
+    ]
+
+    now = datetime.utcnow()
+    for item in decisions_data:
+        existing = db.query(Decision).filter(Decision.title == item["title"]).first()
+        target_team = teams.get(item["team"])
+        if not existing and target_team:
+            d = Decision(
+                title=item["title"],
+                problem_statement=item["problem_statement"],
+                objective=item.get("objective", item["problem_statement"]),
+                category=item["category"],
+                status=item["status"],
+                priority=item.get("priority", "Medium"),
+                created_by_id=ipsita.id,
+                team_id=target_team.id,
+                current_version=1,
+                created_at=now - timedelta(days=item.get("days_ago", 3))
+            )
+            db.add(d)
+            db.commit()
+            db.refresh(d)
+
+            # Add alternatives if any
+            for alt in item.get("alternatives", []):
+                new_alt = DecisionAlternative(
+                    decision_id=d.id,
+                    title=alt["title"],
+                    description=alt["description"],
+                    pros=json.dumps(alt["pros"]),
+                    cons=json.dumps(alt["cons"]),
+                    cost_estimate=alt["cost"],
+                    feasibility_score=alt["score"],
+                    risk_level=alt["risk"],
+                    is_selected=alt["selected"]
+                )
+                db.add(new_alt)
+                db.commit()
+                db.refresh(new_alt)
+                if alt["selected"]:
+                    d.selected_alternative_id = new_alt.id
+                    db.commit()
+
+    print("DecisioHub entities successfully seeded!")
 
 
 if __name__ == "__main__":
     seed_database()
+

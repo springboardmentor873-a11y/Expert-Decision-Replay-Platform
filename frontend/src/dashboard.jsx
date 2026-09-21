@@ -1,34 +1,30 @@
 import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
-  GitPullRequest,
-  MessageSquare,
-  BookOpen,
   Users,
-  BarChart3,
-  User,
-  Settings,
-  Bell,
+  GitPullRequest,
+  FolderKanban,
+  BookOpen,
+  MessageSquare,
   Search,
+  BarChart3,
+  HelpCircle,
   LogOut,
+  Bell,
   ChevronDown,
+  ChevronRight,
   Brain,
-  ShieldCheck,
-  Sparkles,
-  ArrowRight,
-  TrendingUp,
   CheckCircle2,
-  Activity,
-  Check,
-  CheckSquare,
-  ShieldAlert,
-  FileSpreadsheet,
-  AlertTriangle,
   Clock,
-  ExternalLink,
-  Filter,
-  Layers,
-  Award
+  FileText,
+  ArrowRight,
+  ShieldCheck,
+  CheckSquare,
+  User,
+  X,
+  Plus,
+  Network,
+  Filter
 } from "lucide-react";
 import KnowledgeRepository from "./components/KnowledgeRepository";
 import DecisionsHub from "./components/DecisionsHub";
@@ -37,34 +33,59 @@ import ApprovalWorkflowView from "./components/ApprovalWorkflowView";
 import AuditComplianceView from "./components/AuditComplianceView";
 import ReportsAnalyticsView from "./components/ReportsAnalyticsView";
 import NotificationCenter from "./components/NotificationCenter";
-import MD3Button from "./components/md3/MD3Button";
-import MD3Card from "./components/md3/MD3Card";
+import TeamsView from "./components/TeamsView";
 
 const API_BASE = "http://127.0.0.1:8000";
 
-function Dashboard({ user, onLogout }) {
-  const [activeNav, setActiveNav] = useState("Dashboard");
+export default function Dashboard({ user, onLogout }) {
+  const [currentUser, setCurrentUser] = useState(user);
+  const [activeNav, setActiveNav] = useState("Home");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
-
-  // Milestone 3: Notifications, Approvals, Role Perspective & Governance State
-  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
-  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(3);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(6);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
-  const [rolePerspective, setRolePerspective] = useState(user?.role_name || "Employee");
-  const [roleMetrics, setRoleMetrics] = useState(null);
+  const [rolePerspective, setRolePerspective] = useState(user?.role_name || "Manager");
+  const [selectedDecisionForReplay, setSelectedDecisionForReplay] = useState(null);
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState("All");
+  const [inspectingDecision, setInspectingDecision] = useState(null);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   useEffect(() => {
     fetchNotificationCount();
     fetchPendingApprovalsCount();
-    fetchRoleMetrics(rolePerspective);
+  }, [rolePerspective, currentUser]);
 
-    const interval = setInterval(() => {
-      fetchNotificationCount();
-      fetchPendingApprovalsCount();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [rolePerspective]);
+  const handleRoleSwitch = async (newRole) => {
+    setRolePerspective(newRole);
+    let targetEmail = "manager@company.com";
+    if (newRole === "Employee") targetEmail = "emp@company.com";
+    else if (newRole === "Reviewer") targetEmail = "reviewer@company.com";
+    else if (newRole === "Administrator") targetEmail = "admin@company.com";
+
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail, password: "password123" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem("token", data.access_token);
+        const meRes = await fetch(`${API_BASE}/me`, {
+          headers: { Authorization: `Bearer ${data.access_token}` },
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          setCurrentUser(meData);
+        }
+        fetchNotificationCount();
+        fetchPendingApprovalsCount();
+      }
+    } catch (e) {
+      console.error("Error switching role session:", e);
+    }
+  };
 
   const fetchNotificationCount = async () => {
     try {
@@ -74,8 +95,10 @@ function Dashboard({ user, onLogout }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const notifs = await res.json();
-        const unread = notifs.filter((n) => !n.is_read).length;
+        const data = await res.json();
+        const unread = typeof data.unread_count === "number"
+          ? data.unread_count
+          : (Array.isArray(data) ? data.filter((n) => !n.is_read).length : (data.notifications ? data.notifications.filter(n => !n.is_read).length : 3));
         setUnreadNotifsCount(unread);
       }
     } catch (e) {
@@ -92,292 +115,313 @@ function Dashboard({ user, onLogout }) {
       });
       if (res.ok) {
         const data = await res.json();
-        setPendingApprovalsCount(data.length);
+        setPendingApprovalsCount(data.length || 0);
       }
     } catch (e) {
       console.error("Error fetching pending approvals:", e);
     }
   };
 
-  const fetchRoleMetrics = async (role) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch(`${API_BASE}/dashboard/role-metrics?role_name=${encodeURIComponent(role)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRoleMetrics(data);
-      }
-    } catch (e) {
-      console.error("Error fetching role metrics:", e);
-    }
-  };
-
+  // Nav Items with Purple highlights (Includes Milestone 3: Approvals and Audit Logs)
   const navItems = [
-    { name: "Dashboard", icon: LayoutDashboard },
-    { name: "My Decisions", icon: GitPullRequest },
-    { name: "Approvals", icon: CheckSquare, badge: pendingApprovalsCount },
-    { name: "Audit & Compliance", icon: ShieldCheck },
-    { name: "Analytics & Reports", icon: BarChart3 },
-    { name: "Knowledge Repository", icon: BookOpen },
-    { name: "Discussions", icon: MessageSquare },
-    { name: "Teams", icon: Users },
-    { name: "Profile", icon: User },
-    { name: "Settings", icon: Settings },
+    { id: "Home", label: "Dashboard", icon: LayoutDashboard },
+    { id: "My Decisions", label: "Decisions", icon: GitPullRequest },
+    { id: "Approvals", label: "Approvals", icon: CheckSquare },
+    { id: "Audit & Compliance", label: "Audit Logs", icon: ShieldCheck },
+    { id: "Insights", label: "Analytics & Reports", icon: BarChart3 },
+    { id: "My Teams", label: "Teams", icon: Users },
+    { id: "Knowledge Repository", label: "Knowledge Base", icon: BookOpen },
+    { id: "Discussions", label: "Discussions", icon: MessageSquare },
   ];
 
-  // User initials
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "AU";
+  const displayName = currentUser?.name || user?.name || "Manager User";
+  const displayRole = currentUser?.role_name || rolePerspective || "Manager";
+
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  // Clean, focused decisions dataset
+  const decisionsData = [
+    {
+      id: 1,
+      code: "RFC-101",
+      title: "Adopt new cloud infrastructure",
+      problem: "Evaluate multi-cloud vs single-cloud strategy to scale workloads and optimize monthly operational cost.",
+      category: "Cloud",
+      team: "Cloud Team",
+      status: "In Review",
+      date: "10 Sep 2025",
+      selectedAlternative: "Multi-Cloud Kubernetes (AWS + GCP)",
+      competingAlternative: "Single-Cloud AWS Consolidation",
+      cost: "$12,000/mo vs $9,500/mo",
+      rationale: "Multi-cloud architecture prevents single-vendor dependency and provides seamless disaster recovery across regions.",
+      reviewerStatus: "Approved by Technical Reviewer",
+      managerStatus: "Awaiting final manager sign-off"
+    },
+    {
+      id: 2,
+      code: "AI-204",
+      title: "Implement AI-based support bot",
+      problem: "Automate tier-1 customer inquiries while preserving enterprise privacy standards and fast response latency.",
+      category: "AI",
+      team: "Product Team",
+      status: "Discussion",
+      date: "9 Sep 2025",
+      selectedAlternative: "Hybrid RAG with Private VPC Gateway",
+      competingAlternative: "Self-Hosted Llama 3 70B GPU Cluster",
+      cost: "$3,000/mo vs $8,500/mo",
+      rationale: "Hybrid enterprise endpoint avoids upfront GPU capital expenditures while guaranteeing zero-data-retention compliance.",
+      reviewerStatus: "Under review by AI Safety Guild",
+      managerStatus: "Queued"
+    },
+    {
+      id: 3,
+      code: "SEC-019",
+      title: "Data retention policy update",
+      problem: "Automate cryptographic shredding and database purge lifecycles to comply with GDPR and SOC2 standards.",
+      category: "Compliance",
+      team: "Compliance Team",
+      status: "Approved",
+      date: "7 Sep 2025",
+      selectedAlternative: "Automated Lifecycle Tiering & Cryptographic Erasure",
+      competingAlternative: "Manual Periodic Partition Dropping",
+      cost: "$500/mo automated",
+      rationale: "Eliminates human errors, guarantees 90-day PII purging criteria, and produces audit-ready compliance logs.",
+      reviewerStatus: "Approved by InfoSec",
+      managerStatus: "Executive Sign-Off Completed"
+    },
+    {
+      id: 4,
+      code: "ENG-088",
+      title: "Frontend framework selection",
+      problem: "Standardize client web technology stack across enterprise platforms to minimize maintenance overhead.",
+      category: "Engineering",
+      team: "Engineering Team",
+      status: "Discussion",
+      date: "6 Sep 2025",
+      selectedAlternative: "React 19 with Vite & Modular Components",
+      competingAlternative: "Angular Enterprise Framework",
+      cost: "Open Source ($0)",
+      rationale: "React 19 offers immediate developer availability, sub-second development cycles, and deep component library compatibility.",
+      reviewerStatus: "Consensus vote active",
+      managerStatus: "Queued"
+    },
+    {
+      id: 5,
+      code: "DB-014",
+      title: "Database architecture migration",
+      problem: "Migrate legacy relational database to modern PostgreSQL Aurora with vector extensions for semantic knowledge search.",
+      category: "Architecture",
+      team: "Architecture",
+      status: "Approved",
+      date: "3 Sep 2025",
+      selectedAlternative: "Managed PostgreSQL Aurora with pgvector",
+      competingAlternative: "Self-Hosted PostgreSQL on Kubernetes",
+      cost: "$1,800/mo cloud",
+      rationale: "High availability multi-AZ failover and native vector search capabilities out of the box without DBA maintenance burden.",
+      reviewerStatus: "Architecture Board Approved",
+      managerStatus: "Executive Sign-Off Completed"
+    }
+  ];
+
+  const filteredDecisions = decisionsData.filter((d) => {
+    const matchesCat = activeCategoryFilter === "All" || d.category === activeCategoryFilter;
+    const matchesSearch = !globalSearch ||
+      d.title.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      d.code.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      d.team.toLowerCase().includes(globalSearch.toLowerCase());
+    return matchesCat && matchesSearch;
+  });
 
   return (
     <div style={styles.layout}>
-      {/* =========================================================================
-          MATERIAL YOU (MD3) NAVIGATION DRAWER
-          ========================================================================= */}
+      {/* =====================================================================
+          PURPLE THEMED SIDEBAR (Sleek Dark Violet #181126)
+          ===================================================================== */}
       <aside style={styles.sidebar}>
-        {/* Brand Header */}
-        <div style={styles.brand}>
+        {/* Brand */}
+        <div style={styles.brand} onClick={() => setActiveNav("Home")}>
           <div style={styles.brandIconWrap}>
-            <Brain size={22} color="var(--primary)" />
+            <Brain size={20} color="#ffffff" />
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={styles.brandTitle}>DecisionIntel</span>
-              <span style={styles.versionBadge}>MD3</span>
-            </div>
-            <div style={styles.brandTagline}>Expert Decision Platform</div>
+          <div>
+            <div style={styles.brandTitle}>DecisioHub</div>
+            <div style={styles.brandTagline}>Decision Intelligence</div>
           </div>
         </div>
 
-        {/* Navigation Items (Full Pill MD3 Chips) */}
+        {/* Navigation items */}
         <nav style={styles.nav}>
-          <div style={styles.navSectionLabel}>PLATFORM</div>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeNav === item.name;
+            const isActive = activeNav === item.id;
             return (
               <button
-                key={item.name}
+                key={item.id}
+                type="button"
                 style={{
                   ...styles.navItem,
-                  backgroundColor: isActive
-                    ? "var(--secondary-container)"
-                    : "transparent",
-                  color: isActive
-                    ? "var(--on-secondary-container)"
-                    : "var(--text-secondary)",
+                  backgroundColor: isActive ? "#7c3aed" : "transparent",
+                  color: isActive ? "#ffffff" : "#c4b5fd",
                   fontWeight: isActive ? "600" : "500",
                 }}
-                onClick={() => setActiveNav(item.name)}
+                onClick={() => setActiveNav(item.id)}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.backgroundColor = "rgba(103, 80, 164, 0.08)";
-                    e.currentTarget.style.color = "var(--text-primary)";
+                    e.currentTarget.style.backgroundColor = "rgba(124, 58, 237, 0.15)";
+                    e.currentTarget.style.color = "#ffffff";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) {
                     e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "var(--text-secondary)";
+                    e.currentTarget.style.color = "#c4b5fd";
                   }
                 }}
               >
-                <div style={styles.navIconBox}>
-                  <Icon
-                    size={18}
-                    color={isActive ? "var(--primary)" : "var(--text-secondary)"}
-                  />
-                </div>
-                <span style={{ flex: 1, textAlign: "left" }}>{item.name}</span>
-                {item.badge > 0 && (
-                  <span style={styles.navBadgePill}>{item.badge}</span>
-                )}
-                {isActive && <div style={styles.activeGlowPip} />}
+                <Icon size={17} color={isActive ? "#ffffff" : "#a78bfa"} />
+                <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer (Material You Tonal Telemetry Card) */}
+        {/* Footer actions */}
         <div style={styles.sidebarFooter}>
-          <div style={styles.milestoneCard}>
-            <div style={styles.milestoneBadge}>
-              <div style={styles.statusDotLive} />
-              <span>Cluster Synced</span>
-              <span style={styles.latencyTag}>12ms</span>
-            </div>
-            <p style={styles.milestoneDesc}>
-              Material You runtime & Replay Engine active.
-            </p>
-          </div>
+          <button
+            type="button"
+            style={styles.navItemFooter}
+            onClick={() => setShowHelpModal(true)}
+          >
+            <HelpCircle size={16} />
+            <span>Support & Help</span>
+          </button>
+          <button
+            type="button"
+            style={{ ...styles.navItemFooter, marginTop: "4px", color: "#fca5a5" }}
+            onClick={onLogout}
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 
-      {/* =========================================================================
-          MAIN APPLICATION SHELL
-          ========================================================================= */}
+      {/* =====================================================================
+          MAIN APP SHELL (Warm Lilac-Tinted Canvas #fbf9fe)
+          ===================================================================== */}
       <div style={styles.mainWrapper}>
-        {/* Top App Bar with Frosted Tonal Glass & Pill Controls */}
+        {/* Top Header */}
         <header style={styles.header}>
-          {/* Material You Pill Search Field */}
+          {/* Clean Search Input */}
           <div style={styles.searchBar}>
-            <Search size={17} color="var(--primary)" />
+            <Search size={16} color="#7c3aed" />
             <input
               type="text"
-              placeholder="Search documents, decisions, topics, or audit logs..."
-              style={styles.searchInput}
+              placeholder="Search decisions, RFC codes, teams..."
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
+              style={styles.searchInput}
             />
-            <div style={styles.shortcutKbd}>
-              <span style={{ fontSize: "10.5px", fontWeight: "600" }}>Ctrl</span>
-              <span style={{ fontSize: "10.5px", fontWeight: "600" }}>K</span>
-            </div>
           </div>
 
           {/* Right Header Actions */}
           <div style={styles.headerRight}>
-            {/* Role Perspective Quick-Switcher */}
-            <div style={styles.roleSwitcherWrap} title="Switch active dashboard role perspective">
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase" }}>
+            {/* Role Switcher */}
+            <div style={styles.roleSwitcherWrap} title="Switch active role perspective">
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "#7c3aed", textTransform: "uppercase" }}>
                 Role:
               </span>
               <select
                 value={rolePerspective}
-                onChange={(e) => {
-                  setRolePerspective(e.target.value);
-                  fetchRoleMetrics(e.target.value);
-                }}
+                onChange={(e) => handleRoleSwitch(e.target.value)}
                 style={styles.roleSelectPill}
               >
-                <option value="Employee">Employee (Author)</option>
-                <option value="Reviewer">Reviewer (Stage 1)</option>
-                <option value="Manager">Manager (Stage 2)</option>
-                <option value="Administrator">Administrator (Audit/Sec)</option>
+                <option value="Manager">Manager</option>
+                <option value="Reviewer">Reviewer</option>
+                <option value="Employee">Employee</option>
+                <option value="Administrator">Admin</option>
               </select>
             </div>
 
-            {/* Circular Notification Button */}
+            {(rolePerspective === "Reviewer" || rolePerspective === "Manager") && (
+              <button
+                type="button"
+                onClick={() => setActiveNav("Approvals")}
+                style={styles.approvalsBtn}
+              >
+                <CheckSquare size={13} />
+                <span>Approvals ({pendingApprovalsCount})</span>
+              </button>
+            )}
+
+            {/* Notification Bell */}
             <button
               type="button"
               style={styles.notificationBtn}
-              title="Notifications Center"
               onClick={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--secondary-container)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--bg-surface-container-high)";
-              }}
+              title="Notifications"
             >
-              <Bell size={18} color={unreadNotifsCount > 0 ? "var(--primary)" : "var(--text-secondary)"} />
-              {unreadNotifsCount > 0 && (
-                <div style={styles.notificationBadgePill}>
-                  {unreadNotifsCount > 9 ? "9+" : unreadNotifsCount}
-                </div>
-              )}
+              <Bell size={17} color="#6b21a8" />
+              {unreadNotifsCount > 0 && <span style={styles.notifDot} />}
             </button>
 
-            {/* User Profile Pill Chip */}
-            <div style={styles.profileWrapper}>
+            {/* Profile Chip */}
+            <div style={{ position: "relative" }}>
               <div
                 style={styles.profileChip}
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--secondary-container)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--bg-surface-container-high)";
-                }}
               >
                 <div style={styles.avatarCircle}>{initials}</div>
-                <div style={styles.profileInfo}>
-                  <span style={styles.profileName}>
-                    {user?.name || "Admin User"}
-                  </span>
-                  <span style={styles.profileRole}>
-                    {user?.role_name || "Employee"}
-                  </span>
+                <div style={styles.profileText}>
+                  <div style={styles.profileName}>{displayName}</div>
+                  <div style={styles.profileRole}>{displayRole}</div>
                 </div>
-                <ChevronDown size={15} color="var(--text-secondary)" />
+                <ChevronDown size={14} color="#7c3aed" />
               </div>
 
-              {/* Profile Dropdown Sheet with MD3 Organic Radius */}
+              {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div style={styles.dropdownMenu} className="animate-fade-in">
+                <div style={styles.dropdownMenu}>
                   <div style={styles.dropdownHeader}>
-                    <div style={{ fontWeight: "600", color: "var(--text-primary)" }}>
-                      {user?.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "var(--text-secondary)",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {user?.email}
+                    <div style={{ fontWeight: "700", color: "#1e1438" }}>{displayName}</div>
+                    <div style={{ fontSize: "12px", color: "#7c3aed" }}>
+                      {user?.email || "employee@company.com"}
                     </div>
                   </div>
                   <button
+                    type="button"
                     style={styles.dropdownItem}
                     onClick={() => {
-                      setActiveNav("Profile");
+                      setActiveNav("My Teams");
                       setShowProfileMenu(false);
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        "var(--bg-surface-container)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
                   >
-                    <User size={16} color="var(--primary)" />
-                    <span>My Profile</span>
+                    <Users size={14} color="#7c3aed" />
+                    <span>Teams</span>
                   </button>
                   <button
+                    type="button"
                     style={styles.dropdownItem}
                     onClick={() => {
-                      setActiveNav("Settings");
+                      setActiveNav("My Decisions");
                       setShowProfileMenu(false);
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        "var(--bg-surface-container)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
                   >
-                    <Settings size={16} color="var(--primary)" />
-                    <span>Settings & Config</span>
+                    <GitPullRequest size={14} color="#7c3aed" />
+                    <span>My Decisions</span>
                   </button>
-                  <div style={styles.dropdownDivider} />
+                  <div style={{ height: "1px", backgroundColor: "#f3e8ff", margin: "4px 0" }} />
                   <button
-                    style={{
-                      ...styles.dropdownItem,
-                      color: "var(--accent-rose)",
-                    }}
+                    type="button"
+                    style={{ ...styles.dropdownItem, color: "#dc2626" }}
                     onClick={onLogout}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        "var(--accent-rose-subtle)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor = "transparent")
-                    }
                   >
-                    <LogOut size={16} />
+                    <LogOut size={14} />
                     <span>Sign Out</span>
                   </button>
                 </div>
@@ -386,8 +430,322 @@ function Dashboard({ user, onLogout }) {
           </div>
         </header>
 
-        {/* Dynamic View Area */}
+        {/* =====================================================================
+            MAIN CONTENT AREA
+            ===================================================================== */}
         <main style={styles.contentArea}>
+          {/* ==================== 1. DASHBOARD VIEW (CLEAN & UNCLUTTERED) ==================== */}
+          {activeNav === "Home" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* Clean Header Bar */}
+              <div style={styles.overviewHeader}>
+                <div>
+                  <h1 style={styles.overviewTitle}>Decision Intelligence</h1>
+                  <p style={styles.overviewSubtitle}>
+                    Structured decision records, competing alternatives, and approval verification.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveNav("My Decisions")}
+                  style={styles.newDecisionBtn}
+                >
+                  <Plus size={16} />
+                  <span>New Decision</span>
+                </button>
+              </div>
+
+              {/* 4 Clean, Uncluttered Stat Cards */}
+              <div style={styles.statsGrid}>
+                <div
+                  style={styles.statCard}
+                  onClick={() => setActiveNav("My Decisions")}
+                >
+                  <div style={{ ...styles.statIconBox, backgroundColor: "#f3e8ff", color: "#7c3aed" }}>
+                    <GitPullRequest size={18} />
+                  </div>
+                  <div>
+                    <div style={styles.statValue}>22</div>
+                    <div style={styles.statLabel}>Total Decisions</div>
+                  </div>
+                </div>
+
+                <div
+                  style={styles.statCard}
+                  onClick={() => {
+                    setActiveCategoryFilter("All");
+                  }}
+                >
+                  <div style={{ ...styles.statIconBox, backgroundColor: "#fef3c7", color: "#b45309" }}>
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <div style={styles.statValue}>4</div>
+                    <div style={styles.statLabel}>In Review</div>
+                  </div>
+                </div>
+
+                <div
+                  style={styles.statCard}
+                  onClick={() => {
+                    setActiveCategoryFilter("All");
+                  }}
+                >
+                  <div style={{ ...styles.statIconBox, backgroundColor: "#dcfce7", color: "#15803d" }}>
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <div>
+                    <div style={styles.statValue}>16</div>
+                    <div style={styles.statLabel}>Approved & Live</div>
+                  </div>
+                </div>
+
+                <div
+                  style={styles.statCard}
+                  onClick={() => setActiveNav("My Teams")}
+                >
+                  <div style={{ ...styles.statIconBox, backgroundColor: "#e0e7ff", color: "#4338ca" }}>
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <div style={styles.statValue}>5</div>
+                    <div style={styles.statLabel}>Active Teams</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Two-Column Section: Clean Decision Table (Left) & Focused Quick Panel (Right) */}
+              <div style={styles.twoColumnLayout}>
+                {/* LEFT: DECISIONS TABLE (CLEAN & CLEAR) */}
+                <div style={styles.tableCard}>
+                  {/* Table Filter Tabs */}
+                  <div style={styles.tableHeaderRow}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                      {["All", "Cloud", "AI", "Compliance", "Engineering", "Architecture"].map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setActiveCategoryFilter(cat)}
+                          style={{
+                            ...styles.categoryTab,
+                            backgroundColor: activeCategoryFilter === cat ? "#7c3aed" : "transparent",
+                            color: activeCategoryFilter === cat ? "#ffffff" : "#6b21a8",
+                            fontWeight: activeCategoryFilter === cat ? "600" : "500",
+                          }}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    <span style={{ fontSize: "12px", color: "#7c3aed", fontWeight: "600" }}>
+                      {filteredDecisions.length} decisions
+                    </span>
+                  </div>
+
+                  {/* Clean Table */}
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={styles.cleanTable}>
+                      <thead>
+                        <tr>
+                          <th style={{ ...styles.th, width: "14%" }}>ID</th>
+                          <th style={{ ...styles.th, width: "46%" }}>Decision Title</th>
+                          <th style={{ ...styles.th, width: "18%" }}>Team</th>
+                          <th style={{ ...styles.th, width: "14%" }}>Status</th>
+                          <th style={{ ...styles.th, width: "8%", textAlign: "right" }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredDecisions.map((item) => (
+                          <tr
+                            key={item.id}
+                            style={styles.tr}
+                            onClick={() => setInspectingDecision(item)}
+                          >
+                            <td style={styles.td}>
+                              <span style={styles.codeBadge}>{item.code}</span>
+                            </td>
+                            <td style={styles.td}>
+                              <div style={{ fontWeight: "600", color: "#1e1438", fontSize: "13.5px" }}>
+                                {item.title}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px", lineHeight: 1.35 }}>
+                                {item.problem}
+                              </div>
+                            </td>
+                            <td style={styles.td}>
+                              <span style={{ fontSize: "12.5px", color: "#374151", fontWeight: "500" }}>
+                                {item.team}
+                              </span>
+                            </td>
+                            <td style={styles.td}>
+                              <span
+                                style={{
+                                  ...styles.statusPill,
+                                  backgroundColor:
+                                    item.status === "Approved"
+                                      ? "#ecfdf5"
+                                      : item.status === "In Review"
+                                      ? "#fef3c7"
+                                      : "#f3e8ff",
+                                  color:
+                                    item.status === "Approved"
+                                      ? "#047857"
+                                      : item.status === "In Review"
+                                      ? "#92400e"
+                                      : "#7c3aed",
+                                }}
+                              >
+                                {item.status}
+                              </span>
+                            </td>
+                            <td style={{ ...styles.td, textAlign: "right" }}>
+                              <button
+                                type="button"
+                                style={styles.replayActionBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInspectingDecision(item);
+                                }}
+                              >
+                                <span>Replay</span>
+                                <ChevronRight size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* RIGHT: CLEAN FOCUSED OPERATIONAL WIDGETS */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Action Queue */}
+                  <div style={styles.sideCard}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                      <h3 style={styles.sideCardTitle}>Pending Action</h3>
+                      <button
+                        type="button"
+                        onClick={() => setActiveNav("Approvals")}
+                        style={styles.linkText}
+                      >
+                        Approvals &rarr;
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <div
+                        style={styles.pendingItem}
+                        onClick={() => {
+                          setSelectedDecisionForReplay("Adopt new cloud infrastructure");
+                          setActiveNav("My Decisions");
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={styles.purpleTag}>RFC-101</span>
+                          <span style={{ fontSize: "11px", color: "#b45309", fontWeight: "600" }}>Review Due</span>
+                        </div>
+                        <div style={{ fontSize: "13px", fontWeight: "600", color: "#1e1438", marginTop: "4px" }}>
+                          Adopt new cloud infrastructure
+                        </div>
+                        <div style={{ fontSize: "11.5px", color: "#6b7280", marginTop: "2px" }}>
+                          Stage 1 technical review
+                        </div>
+                      </div>
+
+                      <div
+                        style={styles.pendingItem}
+                        onClick={() => {
+                          setSelectedDecisionForReplay("Implement AI-based support bot");
+                          setActiveNav("My Decisions");
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={styles.purpleTag}>AI-204</span>
+                          <span style={{ fontSize: "11px", color: "#7c3aed", fontWeight: "600" }}>Discussion</span>
+                        </div>
+                        <div style={{ fontSize: "13px", fontWeight: "600", color: "#1e1438", marginTop: "4px" }}>
+                          Implement AI-based support bot
+                        </div>
+                        <div style={{ fontSize: "11.5px", color: "#6b7280", marginTop: "2px" }}>
+                          3 comments awaiting feedback
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Knowledge Base Fast Filter */}
+                  <div style={styles.sideCard}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                      <h3 style={styles.sideCardTitle}>Popular Topics</h3>
+                      <button
+                        type="button"
+                        onClick={() => setActiveNav("Knowledge Repository")}
+                        style={styles.linkText}
+                      >
+                        Explore &rarr;
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {["AI Models", "Cloud", "Security", "Compliance", "PostgreSQL", "React 19"].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            setActiveNav("Knowledge Repository");
+                          }}
+                          style={styles.topicPill}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== 2. MY DECISIONS VIEW ==================== */}
+          {activeNav === "My Decisions" && (
+            <DecisionsHub
+              user={user}
+              apiBase={API_BASE}
+              initialDecisionTitle={selectedDecisionForReplay}
+            />
+          )}
+
+          {/* ==================== 3. PIPELINE VIEW ==================== */}
+          {activeNav === "Team Decisions" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <h1 style={{ margin: "0 0 4px 0", fontSize: "20px", fontWeight: "700", color: "#1e1438" }}>
+                  Team Pipeline
+                </h1>
+                <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>
+                  Active decisions across organization working groups.
+                </p>
+              </div>
+              <DecisionsHub user={user} apiBase={API_BASE} />
+            </div>
+          )}
+
+          {/* ==================== 4. TEAMS VIEW ==================== */}
+          {activeNav === "My Teams" && (
+            <TeamsView
+              user={user}
+              apiBase={API_BASE}
+              onSelectDecision={(decTitle) => {
+                setSelectedDecisionForReplay(decTitle);
+                setActiveNav("My Decisions");
+              }}
+            />
+          )}
+
+          {/* ==================== 5. KNOWLEDGE REPOSITORY ==================== */}
           {activeNav === "Knowledge Repository" && (
             <KnowledgeRepository
               user={user}
@@ -396,26 +754,7 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
-          {activeNav === "My Decisions" && (
-            <DecisionsHub user={user} apiBase={API_BASE} />
-          )}
-
-          {activeNav === "Approvals" && (
-            <ApprovalWorkflowView
-              user={user}
-              apiBase={API_BASE}
-              onNavigateDecision={() => setActiveNav("My Decisions")}
-            />
-          )}
-
-          {activeNav === "Audit & Compliance" && (
-            <AuditComplianceView apiBase={API_BASE} />
-          )}
-
-          {(activeNav === "Analytics & Reports" || activeNav === "Analytics") && (
-            <ReportsAnalyticsView apiBase={API_BASE} />
-          )}
-
+          {/* ==================== 6. DISCUSSIONS ==================== */}
           {activeNav === "Discussions" && (
             <DiscussionsView
               onSelectDecision={() => setActiveNav("My Decisions")}
@@ -423,590 +762,186 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
-          {/* =====================================================================
-              DASHBOARD OVERVIEW HOME (ROLE-BASED GOVERNANCE & METRICS)
-              ===================================================================== */}
-          {activeNav === "Dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
-              {/* Material You 36px Hero Banner with Role Perspective Selection */}
-              <div style={styles.overviewBanner}>
-                <div style={{ display: "flex", alignItems: "center", gap: "22px" }}>
-                  <div style={styles.avatarLarge}>{initials}</div>
-                  <div>
-                    <div style={styles.bannerBadge}>
-                      <Sparkles size={13} color="var(--primary)" />
-                      <span>EXPERT DECISION REPLAY PLATFORM &bull; GOVERNANCE SUITE</span>
-                    </div>
-                    <h1 style={styles.bannerTitle}>
-                      Welcome back, {user?.name || "User"}!
-                    </h1>
-                    <p style={styles.bannerSubtitle}>
-                      Viewing dynamic dashboard perspective as <strong>{rolePerspective}</strong>. Replay strategic alternatives, manage two-stage approvals, and monitor immutable compliance trails.
-                    </p>
-
-                    {/* Role Selector Chips */}
-                    <div style={styles.roleChipsRow}>
-                      <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase" }}>
-                        Perspective:
-                      </span>
-                      {["Employee", "Reviewer", "Manager", "Administrator"].map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          style={{
-                            ...styles.roleChipBtn,
-                            backgroundColor: rolePerspective === r ? "var(--primary)" : "var(--bg-surface-container-high)",
-                            color: rolePerspective === r ? "#ffffff" : "var(--text-secondary)",
-                            boxShadow: rolePerspective === r ? "0 2px 8px rgba(103, 80, 164, 0.3)" : "none",
-                          }}
-                          onClick={() => {
-                            setRolePerspective(r);
-                            fetchRoleMetrics(r);
-                          }}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignSelf: "flex-start" }}>
-                  {rolePerspective === "Reviewer" ? (
-                    <MD3Button
-                      variant="filled"
-                      size="md"
-                      onClick={() => setActiveNav("Approvals")}
-                      icon={<CheckSquare size={17} />}
-                    >
-                      Stage 1 Review Queue ({pendingApprovalsCount})
-                    </MD3Button>
-                  ) : rolePerspective === "Manager" ? (
-                    <MD3Button
-                      variant="filled"
-                      size="md"
-                      onClick={() => setActiveNav("Approvals")}
-                      icon={<CheckCircle2 size={17} />}
-                    >
-                      Stage 2 Sign-off Queue ({pendingApprovalsCount})
-                    </MD3Button>
-                  ) : rolePerspective === "Administrator" ? (
-                    <MD3Button
-                      variant="filled"
-                      size="md"
-                      onClick={() => setActiveNav("Audit & Compliance")}
-                      icon={<ShieldCheck size={17} />}
-                    >
-                      Audit & Security Logs
-                    </MD3Button>
-                  ) : (
-                    <MD3Button
-                      variant="filled"
-                      size="md"
-                      onClick={() => setActiveNav("My Decisions")}
-                      icon={<GitPullRequest size={17} />}
-                    >
-                      My Decisions Hub
-                    </MD3Button>
-                  )}
-
-                  <MD3Button
-                    variant="tonal"
-                    size="md"
-                    onClick={() => setActiveNav("Analytics & Reports")}
-                    icon={<BarChart3 size={17} />}
-                  >
-                    Reports & Analytics
-                  </MD3Button>
-                </div>
-              </div>
-
-              {/* Dynamic Role-Based KPI Metrics Grid */}
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                  <h3 style={styles.sectionHeader}>
-                    {rolePerspective} Operational Indicators
-                  </h3>
-                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                    Real-time governance telemetry
-                  </span>
-                </div>
-
-                <div style={styles.roleKpiGrid}>
-                  {rolePerspective === "Employee" && (
-                    <>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>My Authored Decisions</span>
-                          <div style={styles.statIconBadgeIndigo}><GitPullRequest size={16} color="var(--primary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.my_decisions_total ?? 8}</div>
-                        <div style={styles.statSub}>Total records formulated</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Pending Tasks / In Review</span>
-                          <div style={styles.statIconBadgeCyan}><Clock size={16} color="var(--secondary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.pending_tasks ?? 4}</div>
-                        <div style={styles.statSub}>Drafts & awaiting verification</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Approved & Live</span>
-                          <div style={styles.statIconBadgeEmerald}><CheckCircle2 size={16} color="var(--accent-emerald)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.my_approved ?? 2}</div>
-                        <div style={styles.statSub}>Replay knowledge preserved</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Review Pipeline</span>
-                          <div style={styles.statIconBadgeIndigo}><Activity size={16} color="var(--primary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.my_in_review ?? 2}</div>
-                        <div style={styles.statSub}>Active in two-stage approval</div>
-                      </div>
-                    </>
-                  )}
-
-                  {rolePerspective === "Reviewer" && (
-                    <>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Stage 1 Pending Reviews</span>
-                          <div style={{ ...styles.statIconBadgeIndigo, backgroundColor: "rgba(239, 68, 68, 0.12)" }}>
-                            <Clock size={16} color="#ef4444" />
-                          </div>
-                        </div>
-                        <div style={{ ...styles.statNum, color: (roleMetrics?.kpis?.pending_stage1_reviews || 0) > 0 ? "#ef4444" : "var(--text-primary)" }}>
-                          {roleMetrics?.kpis?.pending_stage1_reviews ?? pendingApprovalsCount}
-                        </div>
-                        <div style={styles.statSub}>Awaiting technical sign-off</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Completed Reviews</span>
-                          <div style={styles.statIconBadgeEmerald}><CheckCircle2 size={16} color="var(--accent-emerald)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.completed_reviews ?? 3}</div>
-                        <div style={styles.statSub}>Peer assessments dispatched</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Escalated Warnings</span>
-                          <div style={{ ...styles.statIconBadgeIndigo, backgroundColor: "rgba(245, 158, 11, 0.12)" }}>
-                            <AlertTriangle size={16} color="#d97706" />
-                          </div>
-                        </div>
-                        <div style={{ ...styles.statNum, color: "#d97706" }}>
-                          {roleMetrics?.kpis?.escalated_reviews ?? 1}
-                        </div>
-                        <div style={styles.statSub}>SLA threshold flagged</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Review Velocity</span>
-                          <div style={styles.statIconBadgeIndigo}><TrendingUp size={16} color="var(--primary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.review_velocity ?? "1.4 days"}</div>
-                        <div style={styles.statSub}>Stage 1 turnaround benchmark</div>
-                      </div>
-                    </>
-                  )}
-
-                  {rolePerspective === "Manager" && (
-                    <>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Stage 2 Executive Approvals</span>
-                          <div style={{ ...styles.statIconBadgeIndigo, backgroundColor: "rgba(239, 68, 68, 0.12)" }}>
-                            <CheckSquare size={16} color="#ef4444" />
-                          </div>
-                        </div>
-                        <div style={{ ...styles.statNum, color: (roleMetrics?.kpis?.pending_approvals || 0) > 0 ? "#ef4444" : "var(--text-primary)" }}>
-                          {roleMetrics?.kpis?.pending_approvals ?? 2}
-                        </div>
-                        <div style={styles.statSub}>Awaiting final signoff</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Team Decisions Active</span>
-                          <div style={styles.statIconBadgeCyan}><Users size={16} color="var(--secondary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.team_decisions_count ?? 8}</div>
-                        <div style={styles.statSub}>Departmental scope</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Team Consensus Rate</span>
-                          <div style={styles.statIconBadgeEmerald}><CheckCircle2 size={16} color="var(--accent-emerald)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.team_consensus_rate ?? "92.4%"}</div>
-                        <div style={styles.statSub}>Multi-alternative alignment</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Average Turnaround</span>
-                          <div style={styles.statIconBadgeIndigo}><TrendingUp size={16} color="var(--primary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.avg_turnaround_days ?? 2.6}d</div>
-                        <div style={styles.statSub}>Workflow cycle speed</div>
-                      </div>
-                    </>
-                  )}
-
-                  {rolePerspective === "Administrator" && (
-                    <>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Active Platform Users</span>
-                          <div style={styles.statIconBadgeIndigo}><Users size={16} color="var(--primary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.total_users ?? 4}</div>
-                        <div style={styles.statSub}>Employees, Reviewers, Managers</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Immutable Audit Logs</span>
-                          <div style={styles.statIconBadgeCyan}><ShieldCheck size={16} color="var(--secondary)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.audit_logs_recorded ?? 16}</div>
-                        <div style={styles.statSub}>100% Traceability across actions</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Security Events</span>
-                          <div style={styles.statIconBadgeEmerald}><ShieldAlert size={16} color="var(--accent-emerald)" /></div>
-                        </div>
-                        <div style={styles.statNum}>{roleMetrics?.kpis?.security_alerts ?? 4}</div>
-                        <div style={styles.statSub}>Auth & credential tracking</div>
-                      </div>
-                      <div style={styles.roleKpiCard}>
-                        <div style={styles.statTopRow}>
-                          <span style={styles.statLabel}>Governance Engine Health</span>
-                          <div style={styles.statIconBadgeEmerald}><Activity size={16} color="var(--accent-emerald)" /></div>
-                        </div>
-                        <div style={{ ...styles.statNum, fontSize: "19px", color: "var(--accent-emerald)" }}>Operational</div>
-                        <div style={styles.statSub}>FastAPI & SQLite cluster synchronized</div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Material You Feature Cards Grid (24px Organic Cards) */}
-              <div style={styles.dashboardGrid}>
-                <div
-                  style={styles.dashCard}
-                  onClick={() => setActiveNav("My Decisions")}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
-                  }}
-                >
-                  <div style={styles.cardIconWrapIndigo}>
-                    <GitPullRequest size={22} color="var(--primary)" />
-                  </div>
-                  <h3 style={styles.dashCardTitle}>Decision Replay Engine</h3>
-                  <p style={styles.dashCardText}>
-                    Capture organizational decisions, evaluate competing alternatives with trade-off matrices, and preserve decision rationale.
-                  </p>
-                  <div style={styles.cardActionLinkIndigo}>
-                    <span>Open Decisions Hub</span>
-                    <ArrowRight size={15} />
-                  </div>
-                </div>
-
-                <div
-                  style={styles.dashCard}
-                  onClick={() => setActiveNav("Approvals")}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
-                  }}
-                >
-                  <div style={styles.cardIconWrapEmerald}>
-                    <CheckSquare size={22} color="var(--accent-emerald)" />
-                  </div>
-                  <h3 style={styles.dashCardTitle}>Multi-Stage Approvals</h3>
-                  <p style={styles.dashCardText}>
-                    Two-tier governance pipeline: Stage 1 Peer Technical Review &rarr; Stage 2 Engineering Manager signoff with SLA escalations.
-                  </p>
-                  <div style={styles.cardActionLinkEmerald}>
-                    <span>Manage Approvals</span>
-                    <ArrowRight size={15} />
-                  </div>
-                </div>
-
-                <div
-                  style={styles.dashCard}
-                  onClick={() => setActiveNav("Audit & Compliance")}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "none";
-                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
-                  }}
-                >
-                  <div style={styles.cardIconWrapCyan}>
-                    <ShieldCheck size={22} color="var(--secondary)" />
-                  </div>
-                  <h3 style={styles.dashCardTitle}>Audit & Compliance</h3>
-                  <p style={styles.dashCardText}>
-                    Immutable event ledger tracking Activity, Security logins, Access downloads, and Decision state transitions.
-                  </p>
-                  <div style={styles.cardActionLinkCyan}>
-                    <span>Inspect Compliance Logs</span>
-                    <ArrowRight size={15} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Platform Vital Stats (Tonal Metric Cards) */}
-              <div style={{ marginTop: "6px" }}>
-                <h3 style={styles.sectionHeader}>Platform Vital Stats</h3>
-                <div style={styles.statsGrid}>
-                  <div style={styles.statBox}>
-                    <div style={styles.statTopRow}>
-                      <span style={styles.statLabel}>Consensus Rate</span>
-                      <div style={styles.statIconBadgeEmerald}>
-                        <CheckCircle2 size={16} color="var(--accent-emerald)" />
-                      </div>
-                    </div>
-                    <div style={styles.statNum}>92.4%</div>
-                    <div style={styles.statSub}>
-                      <span style={styles.trendUp}>+4.2%</span> cross-functional alignment
-                    </div>
-                  </div>
-
-                  <div style={styles.statBox}>
-                    <div style={styles.statTopRow}>
-                      <span style={styles.statLabel}>Avg. Turnaround</span>
-                      <div style={styles.statIconBadgeIndigo}>
-                        <TrendingUp size={16} color="var(--primary)" />
-                      </div>
-                    </div>
-                    <div style={styles.statNum}>3.4 Days</div>
-                    <div style={styles.statSub}>
-                      <span style={styles.trendUp}>-1.2d</span> fast approval velocity
-                    </div>
-                  </div>
-
-                  <div style={styles.statBox}>
-                    <div style={styles.statTopRow}>
-                      <span style={styles.statLabel}>Audit Traceability</span>
-                      <div style={styles.statIconBadgeEmerald}>
-                        <ShieldCheck size={16} color="var(--accent-emerald)" />
-                      </div>
-                    </div>
-                    <div style={styles.statNum}>100%</div>
-                    <div style={styles.statSub}>
-                      Immutable event ledger active
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* ==================== 7. INSIGHTS / ANALYTICS ==================== */}
+          {activeNav === "Insights" && (
+            <ReportsAnalyticsView apiBase={API_BASE} />
           )}
 
-          {/* =====================================================================
-              TEAMS VIEW (MATERIAL YOU)
-              ===================================================================== */}
-          {activeNav === "Teams" && (
-            <div style={styles.subviewCard}>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
-                  Enterprise Teams & Working Groups
-                </h2>
-                <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: 0 }}>
-                  Active organizational departments contributing to expert knowledge bases.
-                </p>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
-                {[
-                  { name: "AI Team", lead: "Employee User", count: 8, decisions: 14, tag: "Machine Learning" },
-                  { name: "Architecture", lead: "Admin User", count: 12, decisions: 26, tag: "System Design" },
-                  { name: "Cloud Infrastructure", lead: "Employee User", count: 15, decisions: 32, tag: "DevOps & SRE" },
-                  { name: "Security & Compliance", lead: "Admin User", count: 7, decisions: 19, tag: "InfoSec" },
-                ].map((t, idx) => (
-                  <div
-                    key={idx}
-                    style={styles.teamCard}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-3px)";
-                      e.currentTarget.style.boxShadow = "var(--shadow-md)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "none";
-                      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                      <span style={styles.teamTagPill}>{t.tag}</span>
-                      <Users size={18} color="var(--primary)" />
-                    </div>
-                    <h3 style={{ margin: "0 0 6px 0", fontSize: "17px", fontWeight: "600", color: "var(--text-primary)" }}>
-                      {t.name}
-                    </h3>
-                    <div style={{ fontSize: "13.5px", color: "var(--text-secondary)" }}>
-                      Lead: <strong style={{ color: "var(--text-primary)" }}>{t.lead}</strong>
-                    </div>
-                    <div style={{ fontSize: "12.5px", color: "var(--primary)", marginTop: "14px", fontWeight: "600" }}>
-                      {t.decisions} Decisions Documented &bull; {t.count} Members
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* ==================== 8. APPROVALS ==================== */}
+          {activeNav === "Approvals" && (
+            <ApprovalWorkflowView
+              user={currentUser}
+              apiBase={API_BASE}
+              onNavigateDecision={() => setActiveNav("My Decisions")}
+            />
           )}
 
-          {/* =====================================================================
-              ANALYTICS VIEW (MATERIAL YOU)
-              ===================================================================== */}
-          {activeNav === "Analytics" && (
-            <div style={styles.subviewCard}>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
-                  Decision Analytics & Performance
-                </h2>
-                <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: 0 }}>
-                  Key governance indicators across approval velocity, alternatives consideration, and compliance.
-                </p>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "18px" }}>
-                <div style={styles.analyticsBox}>
-                  <div style={styles.statNum}>3.4 days</div>
-                  <div style={styles.statSub}>Avg. Turnaround Time</div>
-                </div>
-                <div style={styles.analyticsBox}>
-                  <div style={styles.statNum}>92.4%</div>
-                  <div style={styles.statSub}>Consensus Rate</div>
-                </div>
-                <div style={styles.analyticsBox}>
-                  <div style={styles.statNum}>100%</div>
-                  <div style={styles.statSub}>Audit Traceability</div>
-                </div>
-                <div style={styles.analyticsBox}>
-                  <div style={styles.statNum}>2.8</div>
-                  <div style={styles.statSub}>Avg. Alternatives per Decision</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* =====================================================================
-              PROFILE VIEW (MATERIAL YOU)
-              ===================================================================== */}
-          {activeNav === "Profile" && (
-            <div style={{ ...styles.subviewCard, maxWidth: "660px" }}>
-              <h2 style={{ margin: "0 0 22px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
-                User Profile & Account
-              </h2>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "18px", marginBottom: "26px" }}>
-                <div style={styles.avatarLarge}>{initials}</div>
-                <div>
-                  <h3 style={{ margin: "0 0 4px 0", fontSize: "19px", fontWeight: "600", color: "var(--text-primary)" }}>
-                    {user?.name}
-                  </h3>
-                  <div style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                    {user?.email}
-                  </div>
-                  <span style={styles.userRoleBadge}>{user?.role_name || "Employee"}</span>
-                </div>
-              </div>
-
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>User ID:</span>
-                <span style={styles.profileValue}>#{user?.id}</span>
-              </div>
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Department Team:</span>
-                <span style={styles.profileValue}>{user?.team_name || "AI Team"}</span>
-              </div>
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Role Level:</span>
-                <span style={styles.profileValue}>{user?.role_name} (Role ID: {user?.role_id})</span>
-              </div>
-
-              <div style={{ marginTop: "28px" }}>
-                <MD3Button
-                  variant="outlined"
-                  size="md"
-                  onClick={onLogout}
-                  icon={<LogOut size={16} />}
-                  style={{ color: "var(--accent-rose)", borderColor: "var(--accent-rose-subtle)" }}
-                >
-                  Sign Out
-                </MD3Button>
-              </div>
-            </div>
-          )}
-
-          {/* =====================================================================
-              SETTINGS VIEW (MATERIAL YOU)
-              ===================================================================== */}
-          {activeNav === "Settings" && (
-            <div style={{ ...styles.subviewCard, maxWidth: "660px" }}>
-              <h2 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "500", color: "var(--text-primary)" }}>
-                System Configuration
-              </h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: "0 0 24px 0" }}>
-                Active backend services, design tokens, and runtime environments.
-              </p>
-
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>FastAPI REST Endpoint:</span>
-                <span style={styles.profileValue}>{API_BASE}</span>
-              </div>
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Active Design System:</span>
-                <span style={styles.profileValue}>Material You (MD3 Purple Seed #6750A4)</span>
-              </div>
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Platform Milestone:</span>
-                <span style={styles.profileValue}>Milestone 2 (Alternative Replay Active)</span>
-              </div>
-              <div style={styles.profileRow}>
-                <span style={styles.profileLabel}>Storage Engine:</span>
-                <span style={styles.profileValue}>SQLite Database & Local Disk</span>
-              </div>
-            </div>
+          {/* ==================== 9. AUDIT & COMPLIANCE ==================== */}
+          {activeNav === "Audit & Compliance" && (
+            <AuditComplianceView apiBase={API_BASE} />
           )}
         </main>
       </div>
 
-      {/* Material You Notification Center Modal / Drawer */}
-      <NotificationCenter
-        isOpen={isNotificationCenterOpen}
-        onClose={() => {
-          setIsNotificationCenterOpen(false);
-          fetchNotificationCount();
-        }}
-        user={user}
-        apiBase={API_BASE}
-        onSelectNotification={(notif) => {
-          setIsNotificationCenterOpen(false);
-          if (notif.target_type === "approval" || notif.title?.toLowerCase().includes("approval") || notif.title?.toLowerCase().includes("review")) {
-            setActiveNav("Approvals");
-          } else {
-            setActiveNav("My Decisions");
-          }
-        }}
-      />
+      {/* =====================================================================
+          PURPLE THEMED REPLAY DRAWER (CLEAN & MINIMALIST)
+          ===================================================================== */}
+      {inspectingDecision && (
+        <div
+          style={styles.drawerOverlay}
+          onClick={() => setInspectingDecision(null)}
+        >
+          <div
+            style={styles.drawerContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={styles.drawerHeader}>
+              <div>
+                <span style={styles.purpleTag}>{inspectingDecision.code}</span>
+                <h2 style={{ margin: "6px 0 2px 0", fontSize: "17px", fontWeight: "700", color: "#1e1438" }}>
+                  {inspectingDecision.title}
+                </h2>
+                <div style={{ fontSize: "12px", color: "#7c3aed", fontWeight: "500" }}>{inspectingDecision.team}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingDecision(null)}
+                style={styles.closeBtn}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={styles.drawerBody}>
+              <div>
+                <div style={styles.drawerSectionLabel}>Problem Statement</div>
+                <p style={{ margin: 0, fontSize: "13px", color: "#374151", lineHeight: 1.5 }}>
+                  {inspectingDecision.problem}
+                </p>
+              </div>
+
+              <div>
+                <div style={styles.drawerSectionLabel}>Selected Solution</div>
+                <div style={styles.selectedBox}>
+                  <div style={{ fontSize: "13px", fontWeight: "600", color: "#047857" }}>
+                    {inspectingDecision.selectedAlternative}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
+                    Cost: {inspectingDecision.cost}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={styles.drawerSectionLabel}>Alternative Evaluated</div>
+                <div style={styles.rejectedBox}>
+                  <div style={{ fontSize: "12.5px", color: "#4b5563" }}>
+                    {inspectingDecision.competingAlternative}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={styles.drawerSectionLabel}>Decision Rationale</div>
+                <div style={styles.rationaleBox}>
+                  "{inspectingDecision.rationale}"
+                </div>
+              </div>
+
+              <div>
+                <div style={styles.drawerSectionLabel}>Approval Verification</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={styles.statusRow}>
+                    <span style={{ fontSize: "12.5px", fontWeight: "500", color: "#1e1438" }}>Stage 1 (Reviewer)</span>
+                    <span style={{ fontSize: "12px", color: "#059669", fontWeight: "600" }}>{inspectingDecision.reviewerStatus}</span>
+                  </div>
+                  <div style={styles.statusRow}>
+                    <span style={{ fontSize: "12.5px", fontWeight: "500", color: "#1e1438" }}>Stage 2 (Manager)</span>
+                    <span style={{ fontSize: "12px", color: inspectingDecision.status === "Approved" ? "#059669" : "#b45309", fontWeight: "600" }}>
+                      {inspectingDecision.managerStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action */}
+            <div style={styles.drawerFooter}>
+              <button
+                type="button"
+                onClick={() => {
+                  const title = inspectingDecision.title;
+                  setInspectingDecision(null);
+                  setSelectedDecisionForReplay(title);
+                  setActiveNav("My Decisions");
+                }}
+                style={styles.drawerBtn}
+              >
+                <span>Open Full Decision Hub</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Center Popover */}
+      {isNotificationCenterOpen && (
+        <NotificationCenter
+          apiBase={API_BASE}
+          onClose={() => setIsNotificationCenterOpen(false)}
+          onNavigate={(dest) => {
+            setIsNotificationCenterOpen(false);
+            setActiveNav(dest);
+          }}
+          onCountUpdate={(count) => setUnreadNotifsCount(count)}
+        />
+      )}
+
+      {/* Clean Support Modal */}
+      {showHelpModal && (
+        <div
+          style={styles.drawerOverlay}
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div
+            style={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Brain size={18} color="#7c3aed" />
+                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1e1438" }}>
+                  DecisioHub Overview
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(false)}
+                style={styles.closeBtn}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.5, margin: "0 0 16px 0" }}>
+              Centralized platform for recording and replaying strategic decisions with multi-alternative evaluations and two-stage governance.
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(false)}
+                style={styles.modalCloseBtn}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1015,622 +950,556 @@ const styles = {
   layout: {
     display: "flex",
     minHeight: "100vh",
-    backgroundColor: "var(--bg-canvas)",
-    color: "var(--text-primary)",
-    fontFamily: "var(--font-sans)",
+    backgroundColor: "#fbf9fe", // Warm Lilac-Tinted Canvas
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif",
   },
   sidebar: {
-    width: "270px",
-    backgroundColor: "var(--bg-surface-container-low)",
-    borderRight: "1px solid var(--border-subtle)",
+    width: "220px",
+    backgroundColor: "#181126", // Deep Dark Purple
+    color: "#ffffff",
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
-    boxSizing: "border-box",
+    borderRight: "1px solid rgba(124, 58, 237, 0.15)",
   },
   brand: {
+    padding: "18px 16px 14px 16px",
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "24px 20px",
-    borderBottom: "1px solid var(--border-subtle)",
+    gap: "10px",
+    cursor: "pointer",
   },
   brandIconWrap: {
-    width: "42px",
-    height: "42px",
-    borderRadius: "14px",
-    backgroundColor: "var(--primary-container)",
+    width: "34px",
+    height: "34px",
+    borderRadius: "8px",
+    backgroundColor: "#7c3aed",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "var(--shadow-sm)",
   },
   brandTitle: {
-    fontSize: "17px",
-    fontWeight: "700",
-    color: "var(--text-primary)",
-    letterSpacing: "-0.2px",
-  },
-  versionBadge: {
-    fontSize: "11px",
-    fontWeight: "600",
-    padding: "2px 8px",
-    borderRadius: "var(--radius-full)",
-    backgroundColor: "var(--secondary-container)",
-    color: "var(--on-secondary-container)",
+    fontSize: "16px",
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: "-0.01em",
   },
   brandTagline: {
-    fontSize: "12px",
-    color: "var(--text-secondary)",
-    marginTop: "2px",
+    fontSize: "11px",
+    color: "#c4b5fd",
+    marginTop: "1px",
   },
   nav: {
+    flex: 1,
+    padding: "6px 10px",
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
-    padding: "20px 14px",
-    flex: 1,
-  },
-  navSectionLabel: {
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "0.6px",
-    color: "var(--text-muted)",
-    padding: "0 16px 8px 16px",
+    gap: "3px",
   },
   navItem: {
     display: "flex",
     alignItems: "center",
-    gap: "14px",
-    padding: "11px 18px",
+    gap: "10px",
+    padding: "8px 12px",
+    borderRadius: "6px",
     border: "none",
-    borderRadius: "var(--radius-full)",
-    fontSize: "14px",
+    fontSize: "13px",
     cursor: "pointer",
-    transition: "all var(--md3-duration-short) var(--md3-easing)",
+    transition: "all 0.15s ease",
     textAlign: "left",
     width: "100%",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "var(--font-sans)",
-  },
-  navIconBox: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "22px",
-    height: "22px",
-  },
-  activeGlowPip: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    backgroundColor: "var(--primary)",
   },
   sidebarFooter: {
-    padding: "18px 14px",
-    borderTop: "1px solid var(--border-subtle)",
+    padding: "12px 10px 16px 10px",
+    borderTop: "1px solid rgba(124, 58, 237, 0.15)",
   },
-  milestoneCard: {
-    padding: "14px 16px",
-    borderRadius: "var(--radius-md)",
-    backgroundColor: "var(--bg-surface-container)",
-    border: "1px solid var(--border-subtle)",
-  },
-  milestoneBadge: {
+  navItemFooter: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    fontSize: "12px",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-    marginBottom: "4px",
-  },
-  statusDotLive: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    backgroundColor: "var(--accent-emerald)",
-  },
-  latencyTag: {
-    marginLeft: "auto",
-    fontSize: "11px",
-    color: "var(--primary)",
-    fontWeight: "600",
-  },
-  milestoneDesc: {
-    fontSize: "11.5px",
-    color: "var(--text-secondary)",
-    margin: 0,
-    lineHeight: 1.4,
+    padding: "6px 10px",
+    background: "none",
+    border: "none",
+    color: "#c4b5fd",
+    fontSize: "12.5px",
+    cursor: "pointer",
+    width: "100%",
+    textAlign: "left",
   },
   mainWrapper: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    overflowX: "hidden",
-    backgroundColor: "var(--bg-canvas)",
+    minWidth: 0,
   },
   header: {
-    height: "70px",
-    backgroundColor: "var(--bg-surface-glass)",
-    backdropFilter: "blur(16px)",
-    borderBottom: "1px solid var(--border-subtle)",
+    height: "58px",
+    backgroundColor: "#ffffff",
+    borderBottom: "1px solid #ede7f6",
+    padding: "0 22px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 36px",
     position: "sticky",
     top: 0,
-    zIndex: 100,
-    boxSizing: "border-box",
+    zIndex: 20,
   },
   searchBar: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    backgroundColor: "var(--bg-surface-container-high)",
-    borderRadius: "var(--radius-full)",
-    padding: "9px 18px",
-    width: "420px",
-    transition: "all var(--md3-duration-short) var(--md3-easing)",
+    gap: "8px",
+    backgroundColor: "#faf7fd",
+    border: "1px solid #ede7f6",
+    borderRadius: "6px",
+    padding: "6px 12px",
+    width: "360px",
   },
   searchInput: {
     border: "none",
     outline: "none",
-    background: "transparent",
-    fontSize: "14px",
+    fontSize: "13px",
+    color: "#1e1438",
     width: "100%",
-    color: "var(--text-primary)",
-    fontFamily: "var(--font-sans)",
-  },
-  shortcutKbd: {
-    display: "flex",
-    gap: "3px",
-    padding: "2px 7px",
-    borderRadius: "var(--radius-full)",
-    backgroundColor: "var(--bg-surface)",
-    color: "var(--text-muted)",
-    boxShadow: "var(--shadow-sm)",
+    backgroundColor: "transparent",
   },
   headerRight: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
-  },
-  notificationBtn: {
-    position: "relative",
-    cursor: "pointer",
-    width: "42px",
-    height: "42px",
-    borderRadius: "var(--radius-full)",
-    backgroundColor: "var(--bg-surface-container-high)",
-    border: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all var(--md3-duration-short) var(--md3-easing)",
-    outline: "none",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: "10px",
-    right: "10px",
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    backgroundColor: "var(--accent-rose)",
-  },
-  notificationBadgePill: {
-    position: "absolute",
-    top: "-3px",
-    right: "-3px",
-    backgroundColor: "var(--accent-rose)",
-    color: "#ffffff",
-    fontSize: "10px",
-    fontWeight: "700",
-    padding: "2px 5px",
-    borderRadius: "var(--radius-full)",
-    lineHeight: "1",
-    boxShadow: "0 2px 5px rgba(220, 38, 38, 0.4)",
+    gap: "12px",
   },
   roleSwitcherWrap: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    backgroundColor: "var(--bg-surface-container)",
-    padding: "5px 14px",
-    borderRadius: "var(--radius-full)",
-    border: "1px solid var(--border-subtle)",
+    gap: "6px",
+    backgroundColor: "#f5f0fb",
+    borderRadius: "6px",
+    padding: "3px 8px",
+    border: "1px solid #ede7f6",
   },
   roleSelectPill: {
-    backgroundColor: "transparent",
     border: "none",
-    color: "var(--text-primary)",
-    fontSize: "13px",
+    backgroundColor: "transparent",
+    fontSize: "12px",
     fontWeight: "600",
-    outline: "none",
+    color: "#6b21a8",
     cursor: "pointer",
-    fontFamily: "var(--font-sans)",
+    outline: "none",
   },
-  navBadgePill: {
-    backgroundColor: "var(--accent-rose)",
-    color: "#ffffff",
-    fontSize: "11px",
-    fontWeight: "700",
-    padding: "2px 8px",
-    borderRadius: "var(--radius-full)",
-    lineHeight: "1",
+  approvalsBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "5px 10px",
+    borderRadius: "6px",
+    fontSize: "12px",
+    fontWeight: "600",
+    backgroundColor: "#f5f0fb",
+    color: "#7c3aed",
+    border: "1px solid #ddd6fe",
+    cursor: "pointer",
   },
-  profileWrapper: {
+  notificationBtn: {
+    width: "34px",
+    height: "34px",
+    borderRadius: "6px",
+    border: "1px solid #ede7f6",
+    backgroundColor: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
     position: "relative",
+  },
+  notifDot: {
+    position: "absolute",
+    top: "6px",
+    right: "6px",
+    width: "7px",
+    height: "7px",
+    borderRadius: "50%",
+    backgroundColor: "#7c3aed",
   },
   profileChip: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "8px",
     cursor: "pointer",
-    padding: "6px 14px 6px 6px",
-    borderRadius: "var(--radius-full)",
-    backgroundColor: "var(--bg-surface-container-high)",
-    transition: "all var(--md3-duration-short) var(--md3-easing)",
-    userSelect: "none",
+    padding: "3px 6px",
+    borderRadius: "6px",
   },
   avatarCircle: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "var(--primary)",
-    color: "var(--on-primary)",
+    width: "30px",
+    height: "30px",
+    borderRadius: "6px",
+    backgroundColor: "#7c3aed",
+    color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "600",
-    fontSize: "13px",
+    fontSize: "11.5px",
+    fontWeight: "700",
   },
-  profileInfo: {
+  profileText: {
     display: "flex",
     flexDirection: "column",
   },
   profileName: {
-    fontSize: "13.5px",
+    fontSize: "12.5px",
     fontWeight: "600",
-    color: "var(--text-primary)",
+    color: "#1e1438",
+    lineHeight: 1.2,
   },
   profileRole: {
-    fontSize: "11.5px",
-    color: "var(--text-muted)",
+    fontSize: "11px",
+    color: "#7c3aed",
   },
   dropdownMenu: {
     position: "absolute",
     right: 0,
-    top: "48px",
-    width: "230px",
-    backgroundColor: "var(--bg-surface)",
-    borderRadius: "var(--radius-lg)",
-    boxShadow: "var(--shadow-lg)",
-    padding: "8px",
-    zIndex: 1000,
-    border: "1px solid var(--border-subtle)",
+    top: "42px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #ede7f6",
+    borderRadius: "8px",
+    padding: "6px",
+    boxShadow: "0 8px 16px rgba(124, 58, 237, 0.08)",
+    width: "180px",
+    zIndex: 50,
   },
   dropdownHeader: {
-    padding: "12px 14px",
-  },
-  dropdownDivider: {
-    height: "1px",
-    backgroundColor: "var(--border-subtle)",
-    margin: "6px 0",
+    padding: "6px 8px",
+    borderBottom: "1px solid #ede7f6",
+    marginBottom: "4px",
   },
   dropdownItem: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "8px",
     width: "100%",
-    padding: "10px 14px",
-    border: "none",
+    padding: "6px 8px",
     background: "none",
-    fontSize: "13.5px",
-    color: "var(--text-primary)",
+    border: "none",
+    borderRadius: "4px",
+    fontSize: "12.5px",
+    color: "#374151",
     cursor: "pointer",
-    borderRadius: "var(--radius-full)",
     textAlign: "left",
-    transition: "background-color var(--md3-duration-short) var(--md3-easing)",
-    fontFamily: "var(--font-sans)",
   },
   contentArea: {
-    padding: "36px 40px 60px 40px",
     flex: 1,
-    boxSizing: "border-box",
+    padding: "20px 24px",
+    overflowY: "auto",
   },
-  overviewBanner: {
-    padding: "32px 36px",
+  overviewHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: "24px",
-    borderRadius: "var(--radius-2xl)",
-    backgroundColor: "var(--bg-surface-container)",
-    boxShadow: "var(--shadow-sm)",
+    gap: "12px",
   },
-  avatarLarge: {
-    width: "60px",
-    height: "60px",
-    borderRadius: "20px",
-    backgroundColor: "var(--primary-container)",
-    color: "var(--on-primary-container)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "700",
-    fontSize: "22px",
-    boxShadow: "var(--shadow-sm)",
-  },
-  bannerBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "11.5px",
-    fontWeight: "700",
-    letterSpacing: "0.5px",
-    color: "var(--primary)",
-    backgroundColor: "var(--primary-container)",
-    padding: "3px 12px",
-    borderRadius: "var(--radius-full)",
-    marginBottom: "8px",
-  },
-  bannerTitle: {
-    margin: "0 0 4px 0",
-    fontSize: "26px",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-    letterSpacing: "-0.3px",
-  },
-  bannerSubtitle: {
+  overviewTitle: {
     margin: 0,
-    color: "var(--text-secondary)",
-    fontSize: "14px",
-    lineHeight: 1.5,
+    fontSize: "20px",
+    fontWeight: "700",
+    color: "#1e1438",
   },
-  dashboardGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
-    gap: "22px",
+  overviewSubtitle: {
+    margin: 0,
+    fontSize: "13px",
+    color: "#6b7280",
   },
-  dashCard: {
-    padding: "26px",
-    backgroundColor: "var(--bg-surface)",
-    borderRadius: "var(--radius-lg)",
-    boxShadow: "var(--shadow-card)",
-    display: "flex",
-    flexDirection: "column",
+  newDecisionBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "7px 14px",
+    backgroundColor: "#7c3aed",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: "600",
     cursor: "pointer",
-    transition: "all var(--md3-duration-normal) var(--md3-easing)",
-    border: "1px solid var(--border-subtle)",
-  },
-  cardIconWrapIndigo: {
-    width: "46px",
-    height: "46px",
-    borderRadius: "16px",
-    backgroundColor: "var(--primary-container)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: "18px",
-  },
-  cardIconWrapCyan: {
-    width: "46px",
-    height: "46px",
-    borderRadius: "16px",
-    backgroundColor: "var(--secondary-container)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: "18px",
-  },
-  cardIconWrapEmerald: {
-    width: "46px",
-    height: "46px",
-    borderRadius: "16px",
-    backgroundColor: "var(--tertiary-container)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: "18px",
-  },
-  dashCardTitle: {
-    margin: "0 0 8px 0",
-    fontSize: "17.5px",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-  },
-  dashCardText: {
-    fontSize: "13.5px",
-    color: "var(--text-secondary)",
-    lineHeight: 1.5,
-    margin: "0 0 20px 0",
-    flex: 1,
-  },
-  cardActionLinkIndigo: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    color: "var(--primary)",
-    fontWeight: "600",
-    fontSize: "13.5px",
-  },
-  cardActionLinkCyan: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    color: "var(--secondary)",
-    fontWeight: "600",
-    fontSize: "13.5px",
-  },
-  cardActionLinkEmerald: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    color: "var(--tertiary)",
-    fontWeight: "600",
-    fontSize: "13.5px",
-  },
-  sectionHeader: {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "var(--text-primary)",
-    margin: "0 0 16px 0",
+    transition: "background 0.15s",
   },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-    gap: "18px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    gap: "14px",
   },
-  statBox: {
-    padding: "22px",
-    backgroundColor: "var(--bg-surface)",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid var(--border-subtle)",
-    boxShadow: "var(--shadow-card)",
-  },
-  statTopRow: {
+  statCard: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #ede7f6",
+    borderRadius: "8px",
+    padding: "16px",
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "12px",
+    gap: "14px",
+    boxShadow: "0 1px 3px rgba(124, 58, 237, 0.04)",
+    cursor: "pointer",
+  },
+  statIconBox: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statValue: {
+    fontSize: "20px",
+    fontWeight: "700",
+    color: "#1e1438",
+    lineHeight: 1.1,
   },
   statLabel: {
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: "500",
-    color: "var(--text-secondary)",
+    color: "#6b7280",
+    marginTop: "2px",
   },
-  statIconBadgeEmerald: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "rgba(22, 163, 74, 0.12)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  twoColumnLayout: {
+    display: "grid",
+    gridTemplateColumns: "2.4fr 1fr",
+    gap: "18px",
   },
-  statIconBadgeIndigo: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "var(--primary-container)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+  tableCard: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #ede7f6",
+    borderRadius: "8px",
+    padding: "16px",
+    boxShadow: "0 1px 3px rgba(124, 58, 237, 0.04)",
   },
-  statIconBadgeCyan: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "var(--secondary-container)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statNum: {
-    fontSize: "28px",
-    fontWeight: "700",
-    color: "var(--text-primary)",
-    letterSpacing: "-0.5px",
-  },
-  statSub: {
-    fontSize: "12.5px",
-    color: "var(--text-muted)",
-    marginTop: "4px",
-  },
-  trendUp: {
-    color: "var(--accent-emerald)",
-    fontWeight: "600",
-  },
-  subviewCard: {
-    padding: "32px",
-    borderRadius: "var(--radius-2xl)",
-    backgroundColor: "var(--bg-surface)",
-    border: "1px solid var(--border-subtle)",
-    boxShadow: "var(--shadow-card)",
-  },
-  teamCard: {
-    padding: "22px",
-    borderRadius: "var(--radius-md)",
-    backgroundColor: "var(--bg-surface-container)",
-    border: "1px solid var(--border-subtle)",
-    transition: "all var(--md3-duration-normal) var(--md3-easing)",
-  },
-  teamTagPill: {
-    fontSize: "11.5px",
-    fontWeight: "600",
-    backgroundColor: "var(--primary-container)",
-    color: "var(--on-primary-container)",
-    padding: "3px 10px",
-    borderRadius: "var(--radius-full)",
-  },
-  analyticsBox: {
-    padding: "24px",
-    backgroundColor: "var(--bg-surface-container)",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid var(--border-subtle)",
-    textAlign: "center",
-  },
-  userRoleBadge: {
-    display: "inline-block",
-    padding: "4px 12px",
-    backgroundColor: "var(--primary-container)",
-    color: "var(--on-primary-container)",
-    borderRadius: "var(--radius-full)",
-    fontSize: "12.5px",
-    fontWeight: "600",
-    marginTop: "8px",
-  },
-  profileRow: {
+  tableHeaderRow: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "16px 0",
-    borderBottom: "1px solid var(--border-subtle)",
-    fontSize: "14px",
-  },
-  profileLabel: {
-    color: "var(--text-secondary)",
-  },
-  profileValue: {
-    fontWeight: "600",
-    color: "var(--text-primary)",
-  },
-  roleChipsRow: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-    marginTop: "14px",
     alignItems: "center",
+    paddingBottom: "12px",
+    borderBottom: "1px solid #ede7f6",
+    marginBottom: "8px",
   },
-  roleChipBtn: {
+  categoryTab: {
+    padding: "4px 10px",
+    borderRadius: "6px",
+    border: "none",
+    fontSize: "12px",
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  cleanTable: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    textAlign: "left",
+    padding: "8px 10px",
+    fontSize: "11.5px",
+    fontWeight: "600",
+    color: "#6b7280",
+    borderBottom: "1px solid #ede7f6",
+    textTransform: "uppercase",
+    letterSpacing: "0.03em",
+  },
+  tr: {
+    cursor: "pointer",
+    borderBottom: "1px solid #faf7fd",
+    transition: "background 0.15s",
+  },
+  td: {
+    padding: "10px",
+    verticalAlign: "middle",
+  },
+  codeBadge: {
+    fontFamily: "ui-monospace, monospace",
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#6b21a8",
+    backgroundColor: "#f5f0fb",
+    padding: "2px 6px",
+    borderRadius: "4px",
+    border: "1px solid #ddd6fe",
+  },
+  statusPill: {
+    display: "inline-block",
+    padding: "2px 7px",
+    borderRadius: "4px",
+    fontSize: "11.5px",
+    fontWeight: "600",
+  },
+  replayActionBtn: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "6px",
-    padding: "5px 14px",
-    borderRadius: "var(--radius-full)",
-    fontSize: "12px",
+    gap: "4px",
+    padding: "4px 8px",
+    backgroundColor: "#f5f0fb",
+    color: "#7c3aed",
+    border: "1px solid #ddd6fe",
+    borderRadius: "4px",
+    fontSize: "11.5px",
     fontWeight: "600",
     cursor: "pointer",
+  },
+  sideCard: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #ede7f6",
+    borderRadius: "8px",
+    padding: "16px",
+    boxShadow: "0 1px 3px rgba(124, 58, 237, 0.04)",
+  },
+  sideCardTitle: {
+    margin: 0,
+    fontSize: "14px",
+    fontWeight: "700",
+    color: "#1e1438",
+  },
+  linkText: {
+    background: "none",
     border: "none",
-    transition: "all 0.15s ease",
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#7c3aed",
+    cursor: "pointer",
+    padding: 0,
   },
-  roleKpiGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "16px",
+  pendingItem: {
+    padding: "10px",
+    backgroundColor: "#faf7fd",
+    borderRadius: "6px",
+    border: "1px solid #ede7f6",
+    cursor: "pointer",
   },
-  roleKpiCard: {
-    backgroundColor: "var(--bg-surface-container)",
-    borderRadius: "var(--radius-xl)",
-    padding: "20px 22px",
-    border: "1px solid var(--border-subtle)",
-    boxShadow: "var(--shadow-sm)",
-    transition: "all 0.2s ease",
+  purpleTag: {
+    fontFamily: "ui-monospace, monospace",
+    fontSize: "10.5px",
+    fontWeight: "700",
+    color: "#7c3aed",
+    backgroundColor: "#f3e8ff",
+    padding: "1px 5px",
+    borderRadius: "3px",
+  },
+  topicPill: {
+    padding: "4px 10px",
+    backgroundColor: "#faf7fd",
+    border: "1px solid #ede7f6",
+    borderRadius: "16px",
+    fontSize: "11.5px",
+    color: "#6b21a8",
+    fontWeight: "500",
+    cursor: "pointer",
+  },
+  drawerOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(24, 17, 38, 0.4)",
+    backdropFilter: "blur(2px)",
+    zIndex: 1000,
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  drawerContent: {
+    width: "100%",
+    maxWidth: "460px",
+    backgroundColor: "#ffffff",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    boxShadow: "-8px 0 24px rgba(124, 58, 237, 0.12)",
+  },
+  drawerHeader: {
+    padding: "16px 20px",
+    borderBottom: "1px solid #ede7f6",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  closeBtn: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#9ca3af",
+    padding: "4px",
+  },
+  drawerBody: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "18px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  drawerSectionLabel: {
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#7c3aed",
+    textTransform: "uppercase",
+    marginBottom: "4px",
+  },
+  selectedBox: {
+    padding: "10px 12px",
+    backgroundColor: "#ecfdf5",
+    border: "1px solid #a7f3d0",
+    borderRadius: "6px",
+  },
+  rejectedBox: {
+    padding: "8px 10px",
+    backgroundColor: "#faf7fd",
+    border: "1px solid #ede7f6",
+    borderRadius: "6px",
+  },
+  rationaleBox: {
+    padding: "10px 12px",
+    backgroundColor: "#faf7fd",
+    borderLeft: "3px solid #7c3aed",
+    fontSize: "12.5px",
+    color: "#374151",
+    lineHeight: 1.45,
+  },
+  statusRow: {
+    padding: "6px 8px",
+    backgroundColor: "#faf7fd",
+    borderRadius: "4px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  drawerFooter: {
+    padding: "12px 20px",
+    borderTop: "1px solid #ede7f6",
+  },
+  drawerBtn: {
+    width: "100%",
+    padding: "8px 0",
+    backgroundColor: "#7c3aed",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: "600",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    cursor: "pointer",
+  },
+  modalCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: "10px",
+    width: "100%",
+    maxWidth: "420px",
+    padding: "20px",
+    margin: "auto",
+    boxShadow: "0 16px 32px rgba(124, 58, 237, 0.12)",
+  },
+  modalCloseBtn: {
+    padding: "6px 14px",
+    backgroundColor: "#7c3aed",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
 };
-
-export default Dashboard;

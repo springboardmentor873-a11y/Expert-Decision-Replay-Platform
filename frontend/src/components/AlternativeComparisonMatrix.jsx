@@ -123,10 +123,10 @@ function AlternativeComparisonMatrix({
                 key={alt.id || index}
                 style={{
                   ...styles.altCard,
-                  borderColor: isChosen ? "#2563eb" : "#e2e8f0",
-                  backgroundColor: isChosen ? "#f8faff" : "#ffffff",
+                  borderColor: isChosen ? "#7c3aed" : "#ede7f6",
+                  backgroundColor: isChosen ? "#faf7fd" : "#ffffff",
                   boxShadow: isChosen
-                    ? "0 4px 12px -2px rgba(37, 99, 235, 0.15)"
+                    ? "0 4px 12px -2px rgba(124, 58, 237, 0.18)"
                     : "0 1px 3px rgba(0,0,0,0.05)",
                 }}
               >
@@ -443,9 +443,9 @@ const styles = {
     alignItems: "center",
     gap: "6px",
     padding: "8px 14px",
-    backgroundColor: "#eff6ff",
-    color: "#2563eb",
-    border: "1px solid #bfdbfe",
+    backgroundColor: "#f5f0fb",
+    color: "#7c3aed",
+    border: "1px solid #ddd6fe",
     borderRadius: "8px",
     fontWeight: "600",
     fontSize: "13px",
@@ -477,7 +477,7 @@ const styles = {
     position: "absolute",
     top: "-10px",
     right: "14px",
-    backgroundColor: "#2563eb",
+    backgroundColor: "#7c3aed",
     color: "#ffffff",
     padding: "3px 10px",
     borderRadius: "20px",
@@ -496,7 +496,7 @@ const styles = {
   optLetter: {
     fontSize: "11px",
     fontWeight: "700",
-    color: "#2563eb",
+    color: "#7c3aed",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
   },
@@ -637,8 +637,8 @@ const styles = {
     width: "100%",
     padding: "8px",
     backgroundColor: "#ffffff",
-    color: "#2563eb",
-    border: "1px solid #2563eb",
+    color: "#7c3aed",
+    border: "1px solid #7c3aed",
     borderRadius: "8px",
     fontSize: "12px",
     fontWeight: "600",
@@ -651,8 +651,8 @@ const styles = {
     justifyContent: "center",
     gap: "6px",
     padding: "8px",
-    backgroundColor: "#dbeafe",
-    color: "#1e40af",
+    backgroundColor: "#f3e8ff",
+    color: "#6b21a8",
     borderRadius: "8px",
     fontSize: "12px",
     fontWeight: "700",
@@ -721,7 +721,7 @@ const styles = {
   },
   primaryBtn: {
     padding: "8px 18px",
-    backgroundColor: "#2563eb",
+    backgroundColor: "#7c3aed",
     color: "#ffffff",
     border: "none",
     borderRadius: "6px",
