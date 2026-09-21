@@ -27,6 +27,87 @@ class Token(BaseModel):
 
 
 # ==========================================
+# TEAM
+# ==========================================
+
+class TeamCreate(BaseModel):
+    team_name: str
+    description: Optional[str] = None
+    manager_user_id: Optional[int] = None
+
+
+class TeamUpdate(BaseModel):
+    team_name: Optional[str] = None
+    description: Optional[str] = None
+    manager_user_id: Optional[int] = None
+    is_archived: Optional[bool] = None
+
+
+class TeamMemberOut(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    role_id: int
+    role_name: Optional[str] = None
+    team_id: Optional[int] = None
+    team_name: Optional[str] = None
+
+
+class TeamDecisionOut(BaseModel):
+    decision_id: int
+    title: str
+    status: Optional[str] = None
+    category: Optional[str] = None
+    category_name: Optional[str] = None
+    expert_name: Optional[str] = None
+    decision_date: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    priority: Optional[str] = None
+
+
+class TeamOut(BaseModel):
+    team_id: int
+    team_name: str
+    description: Optional[str] = None
+    is_archived: Optional[bool] = False
+    manager_user_id: Optional[int] = None
+    manager_name: Optional[str] = None
+    created_at: Optional[datetime] = None
+    member_count: int = 0
+    recent_decisions: Optional[List[TeamDecisionOut]] = []
+
+
+class TeamDetailOut(TeamOut):
+    members: Optional[List[TeamMemberOut]] = []
+
+
+class TeamAddMember(BaseModel):
+    user_id: int
+
+
+class TeamAssignMemberRole(BaseModel):
+    role_id: int
+
+
+class TeamJoinRequestCreate(BaseModel):
+    team_id: int
+
+
+class TeamJoinRequestOut(BaseModel):
+    request_id: int
+    team_id: int
+    user_id: int
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    status: str
+    created_at: Optional[datetime] = None
+
+
+class TeamJoinRequestDecision(BaseModel):
+    decision: Optional[str] = "approve"
+
+
+# ==========================================
 # DECISION
 # ==========================================
 
@@ -97,7 +178,6 @@ class DecisionCreate(BaseModel):
     implementation_status: Optional[str] = "Not Started"
     priority: Optional[str] = "Medium"
     decision_date: Optional[datetime] = None
-    status: Optional[str] = "Active"
     assigned_to: Optional[int] = None
     alternatives: Optional[List[AlternativeBase]] = []
 
@@ -116,13 +196,14 @@ class DecisionUpdate(BaseModel):
     implementation_status: Optional[str] = None
     priority: Optional[str] = None
     decision_date: Optional[datetime] = None
-    status: Optional[str] = None
     assigned_to: Optional[int] = None
     alternatives: Optional[List[AlternativeBase]] = None
+    status: Optional[str] = None
 
 
-class DecisionStatusUpdate(BaseModel):
-    status: str
+class DecisionReviewRequest(BaseModel):
+    action: str
+    reason: Optional[str] = None
 
 
 # ==========================================
@@ -195,3 +276,15 @@ class DecisionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MeetingCreate(BaseModel):
+    title: str
+    team_id: Optional[int] = None
+    organizer_id: Optional[int] = None
+    decision_id: Optional[int] = None
+    scheduled_at: datetime
+    duration_minutes: Optional[int] = 30
+    location: Optional[str] = None
+    agenda: Optional[str] = None
+    status: Optional[str] = "Scheduled"

@@ -18,6 +18,9 @@ from app.models import Decision
 from app.models import DecisionDocument
 from app.auth import get_current_user
 from app.routes.decisions import record_version
+from app.audit import record_audit
+from app.audit import ACTION_DOCUMENT_UPLOADED
+from app.audit import ACTION_DOCUMENT_DELETED
 
 
 # ==========================================
@@ -274,11 +277,27 @@ async def upload_document(
 
     db.add(document)
 
+    db.flush()
+
     record_version(
         db,
         decision,
         current_user,
         f"Document uploaded: {original_name}"
+    )
+
+    record_audit(
+        db,
+        user_id=current_user.user_id,
+        action=ACTION_DOCUMENT_UPLOADED,
+        description=(
+            f"Document '{original_name}' uploaded"
+            f" for decision '{decision.title}'"
+        ),
+        entity_type="Document",
+        entity_id=document.document_id,
+        decision_id=decision.decision_id,
+        new_value=original_name
     )
 
     try:
@@ -435,6 +454,20 @@ def delete_document(
         decision,
         current_user,
         f"Document deleted: {original_name}"
+    )
+
+    record_audit(
+        db,
+        user_id=current_user.user_id,
+        action=ACTION_DOCUMENT_DELETED,
+        description=(
+            f"Document '{original_name}' deleted"
+            f" from decision '{decision.title}'"
+        ),
+        entity_type="Document",
+        entity_id=document.document_id,
+        decision_id=decision.decision_id,
+        old_value=original_name
     )
 
     db.commit()

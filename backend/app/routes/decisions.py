@@ -16,12 +16,18 @@ from app.models import Decision
 from app.models import DecisionAlternative
 from app.models import DecisionVersion
 from app.models import DecisionDocument
+from app.models import DecisionApproval
 from app.models import User
 from app.models import Team
 from app.auth import get_current_user
+from app.routes.notifications import create_workflow_notifications
+from app.audit import record_audit
+from app.audit import record_workflow_audit
+from app.audit import record_decision_created_audit
+from app.audit import record_decision_updated_audit
 from app.schemas import DecisionCreate
 from app.schemas import DecisionUpdate
-from app.schemas import DecisionStatusUpdate
+from app.schemas import DecisionReviewRequest
 
 
 # ==========================================
@@ -39,8 +45,9 @@ router = APIRouter(
 # ==========================================
 
 VALID_STATUSES = [
-    "Active",
+    "Draft",
     "Under Review",
+    "Reviewer Approved",
     "Approved",
     "Rejected",
     "Archived"
@@ -164,6 +171,31 @@ def record_version(
 
 
 # ==========================================
+# HELPER: RECORD APPROVAL HISTORY
+# ==========================================
+
+def record_approval(
+    db: Session,
+    decision: Decision,
+    action: str,
+    user,
+    reason: Optional[str] = None
+):
+
+    approval = DecisionApproval(
+        decision_id=decision.decision_id,
+        action=action,
+        role_id=user.role_id,
+        user_id=user.user_id,
+        reason=reason
+    )
+
+    db.add(approval)
+
+    return approval
+
+
+# ==========================================
 # HELPER: REPLACE ALTERNATIVES
 # ==========================================
 
@@ -265,6 +297,16 @@ def decision_dict(
             if decision.assigned
             else None
         ),
+        "category_id": (
+            decision.category_id
+            if decision.category_id
+            else None
+        ),
+        "category_name": (
+            decision.category.category_name
+            if decision.category
+            else None
+        ),
         "created_at": decision.created_at,
         "updated_at": decision.updated_at
     }
@@ -344,6 +386,32 @@ def decision_dict(
             )
         ]
 
+        data["approvals"] = [
+            {
+                "approval_id": a.approval_id,
+                "decision_id": a.decision_id,
+                "action": a.action,
+                "role_id": a.role_id,
+                "role_name": (
+                    a.role.role_name
+                    if a.role
+                    else None
+                ),
+                "user_id": a.user_id,
+                "user_name": (
+                    a.user.name
+                    if a.user
+                    else None
+                ),
+                "reason": a.reason,
+                "created_at": a.created_at
+            }
+            for a in sorted(
+                decision.approvals,
+                key=lambda x: x.approval_id
+            )
+        ]
+
     return data
 
 
@@ -375,13 +443,6 @@ def create_decision(
             detail="Problem statement is required"
         )
 
-    if decision_data.status not in VALID_STATUSES:
-
-        raise HTTPException(
-            status_code=422,
-            detail="Invalid decision status"
-        )
-
     decision_date = (
         decision_data.decision_date
         if decision_data.decision_date
@@ -394,7 +455,7 @@ def create_decision(
         description=decision_data.description,
         decision_context=decision_data.decision_context,
         decision_date=decision_date,
-        status=decision_data.status or "Active",
+        status="Draft",
         problem_statement=decision_data.problem_statement.strip(),
         objective=decision_data.objective,
         evaluation_criteria=decision_data.evaluation_criteria,
@@ -461,6 +522,19 @@ def create_decision(
         "Decision created"
     )
 
+    record_approval(
+        db,
+        new_decision,
+        "Created",
+        current_user
+    )
+
+    record_decision_created_audit(
+        db,
+        current_user.user_id,
+        new_decision
+    )
+
     db.commit()
 
     db.refresh(new_decision)
@@ -477,6 +551,10 @@ def get_all_decisions(
     search: Optional[str] = None,
     status: Optional[str] = None,
     team: Optional[int] = None,
+    mine: Optional[bool] = False,
+    assigned_to_user: Optional[bool] = False,
+    priority: Optional[str] = None,
+    exclude_archived: Optional[bool] = False,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -506,10 +584,34 @@ def get_all_decisions(
             Decision.status == status
         )
 
+    if priority:
+
+        query = query.filter(
+            Decision.priority == priority
+        )
+
     if team:
 
         query = query.filter(
             User.team_id == team
+        )
+
+    if mine:
+
+        query = query.filter(
+            Decision.expert_id == current_user.user_id
+        )
+
+    if assigned_to_user:
+
+        query = query.filter(
+            Decision.assigned_to == current_user.user_id
+        )
+
+    if exclude_archived:
+
+        query = query.filter(
+            Decision.status != "Archived"
         )
 
     decisions = (
@@ -555,6 +657,63 @@ def get_single_decision(
 
 
 # ==========================================
+# VALIDATE STATUS TRANSITIONS
+# ==========================================
+
+_TRANSITION_ROLES = {
+    ("Draft", "Under Review"): lambda user, dec: (
+        user.user_id == dec.expert_id
+        or user.role_id in (3, 4)
+    ),
+    ("Under Review", "Rejected"): lambda user, dec: (
+        user.role_id in (2, 3)
+    ),
+    ("Under Review", "Reviewer Approved"): lambda user, dec: (
+        user.role_id == 2
+    ),
+    ("Reviewer Approved", "Approved"): lambda user, dec: (
+        user.role_id in (3, 4)
+    ),
+    ("Reviewer Approved", "Rejected"): lambda user, dec: (
+        user.role_id in (3, 4)
+    ),
+    ("Approved", "Archived"): lambda user, dec: (
+        user.role_id in (3, 4)
+    ),
+}
+
+
+def _validate_transition(old_status, new_status, user, decision):
+
+    if old_status == new_status:
+        return
+
+    key = (old_status, new_status)
+
+    if key not in _TRANSITION_ROLES:
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Cannot change status from "
+                f"'{old_status}' to '{new_status}'. "
+                f"Invalid transition."
+            )
+        )
+
+    if not _TRANSITION_ROLES[key](user, decision):
+
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"You do not have permission to "
+                f"change status from '{old_status}' "
+                f"to '{new_status}'."
+            )
+        )
+
+
+# ==========================================
 # UPDATE DECISION
 # ==========================================
 
@@ -583,16 +742,30 @@ def update_decision(
 
     changed = []
 
+    audit_changes = []
+
     def apply_text(field_name, value):
 
         nonlocal changed
 
+        nonlocal audit_changes
+
         if value is None:
             return
+
+        old_value = getattr(decision, field_name)
 
         setattr(decision, field_name, value)
 
         changed.append(field_name)
+
+        if str(old_value) != str(value):
+
+            audit_changes.append({
+                "field": field_name,
+                "old": old_value,
+                "new": value
+            })
 
     if decision_data.title is not None:
 
@@ -605,9 +778,17 @@ def update_decision(
 
         if decision_data.title.strip() != decision.title:
 
+            old_title = decision.title
+
             decision.title = decision_data.title.strip()
 
             changed.append("title")
+
+            audit_changes.append({
+                "field": "title",
+                "old": old_title,
+                "new": decision.title
+            })
 
     apply_text("description", decision_data.description)
     apply_text("decision_context", decision_data.decision_context)
@@ -631,40 +812,53 @@ def update_decision(
                 detail="Invalid implementation status"
             )
 
+        old_impl_status = decision.implementation_status
+
         decision.implementation_status = (
             decision_data.implementation_status
         )
 
         changed.append("implementation_status")
 
+        if old_impl_status != decision.implementation_status:
+
+            audit_changes.append({
+                "field": "implementation_status",
+                "old": old_impl_status,
+                "new": decision.implementation_status
+            })
+
     if decision_data.priority is not None:
+
+        old_priority = decision.priority
 
         decision.priority = decision_data.priority
 
         changed.append("priority")
 
-    if decision_data.status is not None:
+        if old_priority != decision.priority:
 
-        if decision_data.status not in VALID_STATUSES:
-
-            raise HTTPException(
-                status_code=422,
-                detail="Invalid status"
-            )
-
-        if decision_data.status != decision.status:
-
-            changed.append(
-                f"status -> {decision_data.status}"
-            )
-
-        decision.status = decision_data.status
+            audit_changes.append({
+                "field": "priority",
+                "old": old_priority,
+                "new": decision.priority
+            })
 
     if decision_data.decision_date is not None:
+
+        old_decision_date = decision.decision_date
 
         decision.decision_date = decision_data.decision_date
 
         changed.append("decision_date")
+
+        if old_decision_date != decision.decision_date:
+
+            audit_changes.append({
+                "field": "decision_date",
+                "old": old_decision_date,
+                "new": decision.decision_date
+            })
 
     if "assigned_to" in decision_data.model_fields_set:
 
@@ -704,6 +898,12 @@ def update_decision(
 
                 changed.append("unassigned")
 
+            audit_changes.append({
+                "field": "assigned_to",
+                "old": old_name,
+                "new": new_name
+            })
+
     if decision_data.alternatives is not None:
 
         replace_alternatives(
@@ -714,6 +914,38 @@ def update_decision(
         )
 
         changed.append("alternatives")
+
+    status_changed = False
+
+    if decision_data.status is not None:
+
+        new_status = decision_data.status.strip()
+
+        if new_status not in VALID_STATUSES:
+
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid status value"
+            )
+
+        if new_status != decision.status:
+
+            _validate_transition(
+                decision.status,
+                new_status,
+                current_user,
+                decision
+            )
+
+            old_status = decision.status
+
+            decision.status = new_status
+
+            changed.append(
+                f"status from '{old_status}' to '{new_status}'"
+            )
+
+            status_changed = True
 
     decision.updated_at = datetime.utcnow()
 
@@ -738,6 +970,40 @@ def update_decision(
 
     record_version(db, decision, current_user, summary)
 
+    if status_changed:
+
+        record_approval(
+            db,
+            decision,
+            f"Status changed to {decision.status}",
+            current_user,
+            summary
+        )
+
+        create_workflow_notifications(
+            db,
+            decision,
+            old_status,
+            decision.status,
+            None
+        )
+
+        record_workflow_audit(
+            db,
+            current_user.user_id,
+            decision,
+            old_status,
+            decision.status,
+            None
+        )
+
+    record_decision_updated_audit(
+        db,
+        current_user.user_id,
+        decision,
+        audit_changes
+    )
+
     db.commit()
 
     db.refresh(decision)
@@ -746,16 +1012,10 @@ def update_decision(
 
 
 # ==========================================
-# UPDATE STATUS
+# APPROVAL WORKFLOW
 # ==========================================
 
-@router.patch("/{decision_id}/status")
-def update_decision_status(
-    decision_id: int,
-    status_data: DecisionStatusUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
+def _get_decision_or_404(db: Session, decision_id: int):
 
     decision = (
         db.query(Decision)
@@ -772,60 +1032,65 @@ def update_decision_status(
             detail="Decision not found"
         )
 
-    if status_data.status not in VALID_STATUSES:
+    return decision
+
+
+def _change_status(
+    db: Session,
+    decision: Decision,
+    new_status: str,
+    current_user,
+    action: str,
+    summary: str,
+    reason: Optional[str] = None
+):
+
+    old_status = decision.status
+
+    if old_status == new_status:
 
         raise HTTPException(
             status_code=422,
             detail=(
-                f"Invalid status. "
-                f"Allowed values: {', '.join(VALID_STATUSES)}"
+                f"Decision is already "
+                f"'{old_status}'"
             )
         )
 
-    # Only Managers (role_id=3) and Reviewers (role_id=2) may
-    # approve or reject a decision. All other roles are denied.
-    APPROVAL_ROLES = [2, 3]
-
-    if (
-        status_data.status in ("Approved", "Rejected")
-        and current_user.role_id not in APPROVAL_ROLES
-    ):
-
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "Only a Manager or Reviewer can approve "
-                "or reject a decision"
-            )
-        )
-
-    old_status = decision.status
-
-    decision.status = status_data.status
+    decision.status = new_status
 
     decision.updated_at = datetime.utcnow()
-
-    status_summary = {
-        "Approved": "Decision approved",
-        "Rejected": "Decision rejected",
-        "Active": "Decision activated",
-        "Archived": "Decision archived"
-    }.get(
-        status_data.status,
-        f"Status changed from {old_status} to {status_data.status}"
-    )
-
-    from_suffix = (
-        f" (from {old_status})"
-        if old_status != status_data.status
-        else ""
-    )
 
     record_version(
         db,
         decision,
         current_user,
-        status_summary + from_suffix
+        summary
+    )
+
+    record_approval(
+        db,
+        decision,
+        action,
+        current_user,
+        reason
+    )
+
+    create_workflow_notifications(
+        db,
+        decision,
+        old_status,
+        new_status,
+        reason
+    )
+
+    record_workflow_audit(
+        db,
+        current_user.user_id,
+        decision,
+        old_status,
+        new_status,
+        reason
     )
 
     db.commit()
@@ -833,6 +1098,229 @@ def update_decision_status(
     db.refresh(decision)
 
     return decision_dict(decision, include_details=True)
+
+
+@router.post("/{decision_id}/submit")
+def submit_decision_for_review(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    decision = _get_decision_or_404(db, decision_id)
+
+    if decision.status != "Draft":
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Only draft decisions can be "
+                "submitted for review"
+            )
+        )
+
+    if (
+        current_user.user_id != decision.expert_id
+        and current_user.role_id not in (3, 4)
+    ):
+
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Only the decision owner, a Manager, "
+                "or an Administrator can submit "
+                "a decision for review"
+            )
+        )
+
+    return _change_status(
+        db,
+        decision,
+        "Under Review",
+        current_user,
+        "Submitted for Review",
+        "Decision submitted for review"
+    )
+
+
+@router.post("/{decision_id}/review")
+def reviewer_review_decision(
+    decision_id: int,
+    review_data: DecisionReviewRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    if current_user.role_id != 2:
+
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Only a Reviewer can perform "
+                "the reviewer review"
+            )
+        )
+
+    action = (review_data.action or "").lower()
+
+    if action not in ("approve", "reject"):
+
+        raise HTTPException(
+            status_code=422,
+            detail="Action must be 'approve' or 'reject'"
+        )
+
+    if action == "reject" and (
+        not review_data.reason
+        or not review_data.reason.strip()
+    ):
+
+        raise HTTPException(
+            status_code=422,
+            detail="A rejection reason is required"
+        )
+
+    decision = _get_decision_or_404(db, decision_id)
+
+    if decision.status != "Under Review":
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Reviewer review is only allowed for "
+                "decisions in 'Under Review' status"
+            )
+        )
+
+    if action == "approve":
+
+        return _change_status(
+            db,
+            decision,
+            "Reviewer Approved",
+            current_user,
+            "Reviewer Approved",
+            "Decision approved by reviewer"
+        )
+
+    return _change_status(
+        db,
+        decision,
+        "Rejected",
+        current_user,
+        "Reviewer Rejected",
+        "Decision rejected by reviewer",
+        review_data.reason.strip()
+    )
+
+
+@router.post("/{decision_id}/manager-review")
+def manager_review_decision(
+    decision_id: int,
+    review_data: DecisionReviewRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    if current_user.role_id != 3:
+
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Only a Manager can perform "
+                "the final approval"
+            )
+        )
+
+    action = (review_data.action or "").lower()
+
+    if action not in ("approve", "reject"):
+
+        raise HTTPException(
+            status_code=422,
+            detail="Action must be 'approve' or 'reject'"
+        )
+
+    if action == "reject" and (
+        not review_data.reason
+        or not review_data.reason.strip()
+    ):
+
+        raise HTTPException(
+            status_code=422,
+            detail="A rejection reason is required"
+        )
+
+    decision = _get_decision_or_404(db, decision_id)
+
+    if decision.status != "Reviewer Approved":
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Final approval is only allowed for "
+                "decisions in 'Reviewer Approved' status"
+            )
+        )
+
+    if action == "approve":
+
+        return _change_status(
+            db,
+            decision,
+            "Approved",
+            current_user,
+            "Manager Approved",
+            "Decision finally approved by manager"
+        )
+
+    return _change_status(
+        db,
+        decision,
+        "Rejected",
+        current_user,
+        "Manager Rejected",
+        "Decision rejected by manager",
+        review_data.reason.strip()
+    )
+
+
+@router.post("/{decision_id}/archive")
+def archive_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+
+    decision = _get_decision_or_404(db, decision_id)
+
+    if current_user.role_id not in (3, 4):
+
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Only a Manager or an Administrator "
+                "can archive decisions"
+            )
+        )
+
+    if decision.status != "Approved":
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Only approved decisions can be archived"
+            )
+        )
+
+    return _change_status(
+        db,
+        decision,
+        "Archived",
+        current_user,
+        "Archived",
+        "Decision archived"
+    )
 
 
 # ==========================================
@@ -883,8 +1371,14 @@ def delete_or_archive_decision(
         )
 
     # Permanent delete is only allowed for decisions that have not
-    # been approved or activated (Under Review / Rejected).
-    if decision.status in ("Under Review", "Rejected"):
+    # been finally approved (Draft / Under Review / Reviewer
+    # Approved / Rejected).
+    if decision.status in (
+        "Draft",
+        "Under Review",
+        "Reviewer Approved",
+        "Rejected"
+    ):
 
         _remove_documents_for_decision(db, decision_id)
 
@@ -898,11 +1392,9 @@ def delete_or_archive_decision(
         }
 
 
-    # Approved / Active decisions can only be archived, never
-    # permanently deleted.
-    if decision.status in ("Approved", "Active"):
-
-        old_status = decision.status
+    # Approved decisions can only be archived, never permanently
+    # deleted.
+    if decision.status == "Approved":
 
         decision.status = "Archived"
 
@@ -912,10 +1404,32 @@ def delete_or_archive_decision(
             db,
             decision,
             current_user,
-            (
-                "Decision archived "
-                f"(previous status: {old_status})"
-            )
+            "Decision archived (previous status: Approved)"
+        )
+
+        record_approval(
+            db,
+            decision,
+            "Archived",
+            current_user,
+            "Approved decision archived"
+        )
+
+        create_workflow_notifications(
+            db,
+            decision,
+            "Approved",
+            "Archived",
+            None
+        )
+
+        record_workflow_audit(
+            db,
+            current_user.user_id,
+            decision,
+            "Approved",
+            "Archived",
+            None
         )
 
         db.commit()

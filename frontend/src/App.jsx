@@ -1,8 +1,42 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import "./App.css";
 import translations, { LANGUAGES } from "./translations";
+import { API_BASE_URL, AppSidebar, NotificationBell } from "./shared";
+import {
+  MyTeamsPage,
+  MyDecisionsPage,
+  TeamDecisionsPage
+} from "./TempComponents1.jsx";
+import { DashboardPage } from "./DashboardPage.jsx";
+import { MeetingsPage } from "./MeetingsPage.jsx";
+import {
+  KnowledgeRepositoryPage,
+  DiscussionsPage,
+  SearchPage
+} from "./TempComponents2.jsx";
+import { ReportsPage } from "./ReportsPage.jsx";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const routeToPage = (path) => {
+  if (/^\/decisions\/\d+\/edit/.test(path)) return "decision-edit";
+  if (/^\/decisions\/\d+\/?$/.test(path)) return "decision-view";
+  if (path === "/decisions") return "decisions";
+  if (path === "/decisions/create") return "decision-create";
+  if (path === "/documents") return "documents";
+  if (path === "/notifications") return "notifications";
+  if (path === "/audit-logs") return "audit-logs";
+  if (/^\/teams\/\d+\/?$/.test(path)) return "team-view";
+  if (path === "/teams") return "teams";
+  if (path === "/my-teams") return "my-teams";
+  if (path === "/my-decisions") return "my-decisions";
+  if (path === "/team-decisions") return "team-decisions";
+  if (path === "/knowledge") return "knowledge";
+  if (path === "/discussions") return "discussions";
+  if (path === "/search") return "search";
+  if (path === "/reports") return "reports";
+  if (path === "/profile") return "profile";
+  if (path === "/settings") return "settings";
+  return "home";
+};
 
 function App() {
   // ==========================================
@@ -10,9 +44,20 @@ function App() {
   // ==========================================
 
   const [page, setPage] = useState(() => {
-    return localStorage.getItem("access_token")
-      ? "home"
-      : "login";
+    if (!localStorage.getItem("access_token")) return "login";
+    return routeToPage(window.location.pathname);
+  });
+
+  const [pendingDecisionId, setPendingDecisionId] = useState(() => {
+    const path = window.location.pathname;
+    const m = path.match(/\/decisions\/(\d+)/);
+    return m ? Number(m[1]) : null;
+  });
+
+  const [pendingTeamId, setPendingTeamId] = useState(() => {
+    const path = window.location.pathname;
+    const m = path.match(/\/teams\/(\d+)/);
+    return m ? Number(m[1]) : null;
   });
 
   // ==========================================
@@ -44,7 +89,6 @@ function App() {
 
 const [roles, setRoles] = useState([]);
 const [teams, setTeams] = useState([]);
-const [assignedUsers, setAssignedUsers] = useState([]);
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
 
@@ -57,6 +101,8 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
   const [decisions, setDecisions] = useState([]);
   const [selectedDecision, setSelectedDecision] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teamLoadFailed, setTeamLoadFailed] = useState(false);
 
   const [decisionTitle, setDecisionTitle] = useState("");
   const [decisionDescription, setDecisionDescription] = useState("");
@@ -72,7 +118,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
     useState("Not Started");
   const [decisionPriority, setDecisionPriority] = useState("Medium");
   const [decisionDate, setDecisionDate] = useState("");
-  const [decisionStatus, setDecisionStatus] = useState("Active");
   const [decisionAlternatives, setDecisionAlternatives] = useState([]);
   const [decisionAssignedTo, setDecisionAssignedTo] = useState(null);
 
@@ -82,6 +127,20 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [submitTarget, setSubmitTarget] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [reviewTarget, setReviewTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [reviewStep, setReviewStep] = useState("reviewer");
+  const [isReviewing, setIsReviewing] = useState(false);
+
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  const [createdConfirmTarget, setCreatedConfirmTarget] = useState(null);
+  const createdConfirmRef = useRef(null);
 
   const [altModalMode, setAltModalMode] = useState(null);
   const [altForm, setAltForm] = useState({
@@ -144,6 +203,26 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   const [decisionsLoading, setDecisionsLoading] = useState(false);
 
   // ==========================================
+  // DASHBOARD
+  // ==========================================
+
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  // ==========================================
+  // EMPLOYER HOME / NEW PAGES DATA
+  // ==========================================
+
+  const [discussionList, setDiscussionList] = useState([]);
+  const [discussionListLoading, setDiscussionListLoading] = useState(false);
+  const [knowledgeArticles, setKnowledgeArticles] = useState([]);
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false);
+  const [insightsData, setInsightsData] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [globalSearchResults, setGlobalSearchResults] = useState(null);
+  const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
+
+  // ==========================================
   // MESSAGE
   // ==========================================
 
@@ -152,17 +231,64 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
   const [loading, setLoading] = useState(false);
 
-  const navigateTo = (targetPage) => {
-    window.history.pushState({ page: targetPage }, "", "");
+  const navigateTo = (targetPage, params = {}) => {
+    const decisionId = params.decision_id || null;
+    const teamId = params.team_id || null;
+    let url = "/";
+    switch (targetPage) {
+      case "decision-view":
+        url = decisionId ? `/decisions/${decisionId}` : "/decisions";
+        break;
+      case "decision-edit":
+        url = decisionId ? `/decisions/${decisionId}/edit` : "/decisions";
+        break;
+      case "team-view":
+        url = teamId ? `/teams/${teamId}` : "/teams";
+        break;
+      case "my-teams": url = "/my-teams"; break;
+      case "my-decisions": url = "/my-decisions"; break;
+      case "team-decisions": url = "/team-decisions"; break;
+      case "knowledge": url = "/knowledge"; break;
+      case "discussions": url = "/discussions"; break;
+      case "search": url = "/search"; break;
+      case "reports": url = "/reports"; break;
+      case "decisions": url = "/decisions"; break;
+      case "decision-create": url = "/decisions/create"; break;
+      case "documents": url = "/documents"; break;
+      case "notifications": url = "/notifications"; break;
+      case "audit-logs": url = "/audit-logs"; break;
+      case "teams": url = "/teams"; break;
+      case "profile": url = "/profile"; break;
+      case "settings": url = "/settings"; break;
+      default: url = "/";
+    }
+    window.history.pushState(
+      { page: targetPage, decision_id: decisionId, team_id: teamId },
+      "",
+      url
+    );
     setPage(targetPage);
+    if (decisionId) setPendingDecisionId(decisionId);
+    if (teamId) setPendingTeamId(teamId);
   };
 
   useEffect(() => {
     const handlePopState = (event) => {
       if (event.state && event.state.page) {
         setPage(event.state.page);
+        if (event.state.decision_id) {
+          setPendingDecisionId(event.state.decision_id);
+        }
+        if (event.state.team_id) {
+          setPendingTeamId(event.state.team_id);
+        }
       } else if (localStorage.getItem("access_token")) {
-        setPage("home");
+        const path = window.location.pathname;
+        const m = path.match(/\/decisions\/(\d+)/);
+        const t = path.match(/\/teams\/(\d+)/);
+        if (t) setPendingTeamId(Number(t[1]));
+        if (m) setPendingDecisionId(Number(m[1]));
+        setPage(routeToPage(path));
       } else {
         setPage("login");
       }
@@ -180,8 +306,18 @@ const [assignedUsers, setAssignedUsers] = useState([]);
       "decision-edit",
       "documents",
       "teams",
+      "team-view",
       "profile",
-      "settings"
+      "settings",
+      "notifications",
+      "audit-logs",
+      "my-teams",
+      "my-decisions",
+      "team-decisions",
+      "knowledge",
+      "discussions",
+      "search",
+      "reports"
     ];
 
     if (
@@ -191,6 +327,44 @@ const [assignedUsers, setAssignedUsers] = useState([]);
       setPage("login");
     }
   }, [page]);
+
+  useEffect(() => {
+    if (
+      (page === "decision-view" || page === "decision-edit") &&
+      pendingDecisionId &&
+      (!selectedDecision ||
+        selectedDecision.decision_id !== pendingDecisionId)
+    ) {
+      loadSingleDecision(pendingDecisionId).then((full) => {
+        if (!full) return;
+        setSelectedDecision(full);
+        if (page === "decision-view") {
+          loadComments(full.decision_id);
+          loadDocuments(full.decision_id);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pendingDecisionId, selectedDecision]);
+
+  useEffect(() => {
+    if (
+      page === "team-view" &&
+      pendingTeamId &&
+      (!selectedTeam || selectedTeam.team_id !== pendingTeamId)
+    ) {
+      loadTeamDetail(pendingTeamId).then((team) => {
+        if (team) {
+          setSelectedTeam(team);
+          setTeamLoadFailed(false);
+        } else {
+          setSelectedTeam(null);
+          setTeamLoadFailed(true);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pendingTeamId, selectedTeam]);
 
   // ==========================================
   // I18N / SETTINGS PERSISTENCE
@@ -262,7 +436,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   useEffect(() => {
     loadRoles();
     loadTeams();
-    loadAssignedUsers();
   }, []);
 
   useEffect(() => {
@@ -276,7 +449,19 @@ const [assignedUsers, setAssignedUsers] = useState([]);
       loadAllDocuments();
     } else if (page === "teams") {
       loadAllUsers();
+      loadTeams(true);
+    } else if (page === "home") {
+      loadDashboard();
+      loadDiscussions();
+    } else if (page === "knowledge") {
+      loadKnowledgeArticles();
+      loadAllDocuments();
+      loadDecisions();
+      loadDiscussions();
+      loadAllUsers();
+      loadInsights();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   // ==========================================
@@ -303,10 +488,19 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   // LOAD TEAMS
   // ==========================================
 
-  const loadTeams = async () => {
+  const loadTeams = async (includeArchived = false) => {
     try {
+      const suffix = includeArchived
+        ? "?include_archived=true"
+        : "";
+      const token = getToken();
       const response = await fetch(
-        `${API_BASE_URL}/teams/`
+        `${API_BASE_URL}/teams/${suffix}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
       );
 
       if (!response.ok) return;
@@ -319,16 +513,11 @@ const [assignedUsers, setAssignedUsers] = useState([]);
     }
   };
 
-  // ==========================================
-  // LOAD ASSIGNED USERS (REVIEWERS / MANAGERS)
-  // ==========================================
-
-  const loadAssignedUsers = async () => {
+  const loadTeamDetail = async (teamId) => {
     try {
       const token = getToken();
-
       const response = await fetch(
-        `${API_BASE_URL}/users/`,
+        `${API_BASE_URL}/teams/${teamId}`,
         {
           headers: {
             "Authorization": `Bearer ${token}`
@@ -336,22 +525,153 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         }
       );
 
-      if (!response.ok) {
-        setAssignedUsers([]);
-        return;
-      }
+      if (!response.ok) return null;
 
-      const data = await response.json();
-
-      const filtered = (data || []).filter(
-        (u) =>
-          Number(u.role_id) === 2 ||
-          Number(u.role_id) === 3
-      );
-
-      setAssignedUsers(filtered);
+      return await response.json();
     } catch (error) {
-      console.error("Assigned users error:", error);
+      console.error("Team detail error:", error);
+      return null;
+    }
+  };
+
+  // ==========================================
+  // DASHBOARD
+  // ==========================================
+
+  const loadDashboard = async () => {
+    try {
+      setDashboardLoading(true);
+      const token = getToken();
+      const response = await fetch(
+        `${API_BASE_URL}/dashboard/`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (error) {
+      console.error("Dashboard error:", error);
+    } finally {
+      setDashboardLoading(false);
+    }
+  };
+
+  // ==========================================
+  // LOAD DISCUSSIONS
+  // ==========================================
+
+  const loadDiscussions = async (search = "") => {
+    try {
+      setDiscussionListLoading(true);
+      const token = getToken();
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      const qs = params.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/discussions/${qs ? `?${qs}` : ""}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setDiscussionList(data);
+    } catch (error) {
+      console.error("Discussions error:", error);
+    } finally {
+      setDiscussionListLoading(false);
+    }
+  };
+
+  // ==========================================
+  // LOAD KNOWLEDGE ARTICLES
+  // ==========================================
+
+  const loadKnowledgeArticles = async (search = "") => {
+    try {
+      setKnowledgeLoading(true);
+      const token = getToken();
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      const qs = params.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/knowledge/${qs ? `?${qs}` : ""}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setKnowledgeArticles(data);
+    } catch (error) {
+      console.error("Knowledge error:", error);
+    } finally {
+      setKnowledgeLoading(false);
+    }
+  };
+
+  // ==========================================
+  // LOAD INSIGHTS
+  // ==========================================
+
+  const loadInsights = async () => {
+    try {
+      setInsightsLoading(true);
+      const token = getToken();
+      const response = await fetch(
+        `${API_BASE_URL}/insights/`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setInsightsData(data);
+    } catch (error) {
+      console.error("Insights error:", error);
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
+  // ==========================================
+  // RUN GLOBAL SEARCH
+  // ==========================================
+
+  const runGlobalSearch = async (q) => {
+    const query = (q || "").trim();
+    if (!query) {
+      setGlobalSearchResults(null);
+      return;
+    }
+    try {
+      setGlobalSearchLoading(true);
+      const token = getToken();
+      const response = await fetch(
+        `${API_BASE_URL}/search/?q=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setGlobalSearchResults(data);
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setGlobalSearchLoading(false);
     }
   };
 
@@ -474,7 +794,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
     setDecisionImplementationStatus("Not Started");
     setDecisionPriority("Medium");
     setDecisionDate("");
-    setDecisionStatus("Active");
     setDecisionAlternatives([]);
   };
 
@@ -646,10 +965,30 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
     if (full) {
       setSelectedDecision(full);
-      navigateTo("decision-view");
+      setPendingDecisionId(full.decision_id);
+      navigateTo("decision-view", { decision_id: full.decision_id });
 
       await loadComments(full.decision_id);
       await loadDocuments(full.decision_id);
+    }
+  };
+
+  // ==========================================
+  // OPEN VIEW TEAM
+  // ==========================================
+
+  const openViewTeam = async (team) => {
+    const teamId = team.team_id;
+    setTeamLoadFailed(false);
+    const full = await loadTeamDetail(teamId);
+    if (full) {
+      setSelectedTeam(full);
+      setPendingTeamId(full.team_id);
+      navigateTo("team-view", { team_id: full.team_id });
+    } else {
+      setSelectedTeam(null);
+      setTeamLoadFailed(true);
+      navigateTo("team-view", { team_id: teamId });
     }
   };
 
@@ -685,7 +1024,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
     setDecisionDate(
       toDateTimeLocal(full.decision_date)
     );
-    setDecisionStatus(full.status || "Active");
     setDecisionAlternatives(
       (full.alternatives || []).map((a) => ({
         title: a.title || "",
@@ -705,7 +1043,7 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
     await loadDocuments(full.decision_id);
 
-    navigateTo("decision-edit");
+    navigateTo("decision-edit", { decision_id: full.decision_id });
   };
 
   // ==========================================
@@ -752,7 +1090,24 @@ const [assignedUsers, setAssignedUsers] = useState([]);
       const token = getToken();
       const collected = [];
 
-      for (const decision of decisions) {
+      let decisionList = decisions;
+
+      if (!decisionList || decisionList.length === 0) {
+        const resp = await fetch(
+          `${API_BASE_URL}/decisions/`,
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          }
+        );
+
+        if (resp.ok) {
+          decisionList = await resp.json();
+        }
+      }
+
+      for (const decision of (decisionList || [])) {
         const response = await fetch(
           `${API_BASE_URL}/decisions/${decision.decision_id}/documents`,
           {
@@ -926,7 +1281,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
             decision_date: decisionDate
               ? `${decisionDate}:00`
               : null,
-            status: decisionStatus,
             alternatives
           })
         }
@@ -986,13 +1340,10 @@ const [assignedUsers, setAssignedUsers] = useState([]);
           status: statusFilter,
           team: teamFilter
         });
-
-        setTimeout(() => {
-          navigateTo("decisions");
-          setDecisionMessage("");
-          setDecisionMessageType("");
-        }, 1000);
       }
+
+      setCreatedConfirmTarget(data);
+      createdConfirmRef.current = data;
 
     } catch (error) {
       console.error(error);
@@ -1064,6 +1415,8 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         status: statusFilter,
         team: teamFilter
       });
+
+      if (createdConfirmRef.current) return;
 
       setTimeout(() => {
         navigateTo("decisions");
@@ -1161,7 +1514,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
             decision_date: decisionDate
               ? `${decisionDate}:00`
               : null,
-            status: decisionStatus,
             alternatives
           })
         }
@@ -1225,7 +1577,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         decisionOutcome.trim() !== (original.final_outcome || ""),
         decisionImplementationStatus !== (original.implementation_status || "Not Started"),
         decisionPriority !== (original.priority || "Medium"),
-        decisionStatus !== (original.status || "Active"),
         normalizeDate(decisionDate) !== normalizeDate(original.decision_date),
       ].filter(Boolean).length;
 
@@ -1320,7 +1671,9 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
       setDecisionMessage(
         data.message ||
-          (decision.status === "Under Review" ||
+          (decision.status === "Draft" ||
+          decision.status === "Under Review" ||
+          decision.status === "Reviewer Approved" ||
           decision.status === "Rejected"
             ? "Decision deleted successfully."
             : "Decision archived successfully.")
@@ -1350,40 +1703,43 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   };
 
   // ==========================================
-  // UPDATE STATUS
+  // APPROVAL WORKFLOW ACTIONS
   // ==========================================
 
-  const handleUpdateStatus = async (decision, newStatus) => {
+  const applyDecisionUpdate = (decision, data) => {
+    setDecisions((prev) =>
+      prev.map((d) =>
+        d.decision_id === decision.decision_id ? data : d
+      )
+    );
+
+    if (
+      selectedDecision &&
+      selectedDecision.decision_id === decision.decision_id
+    ) {
+      setSelectedDecision(data);
+    }
+  };
+
+  const performWorkflowAction = async (
+    decision,
+    endpoint,
+    body,
+    successMessage
+  ) => {
     setOverviewMessage("");
     setOverviewMessageType("");
 
-    if (
-      (newStatus === "Approved" || newStatus === "Rejected") &&
-      user?.role_id !== 2 &&
-      user?.role_id !== 3
-    ) {
-      setOverviewMessage(
-        "Only Managers and Reviewers can approve or reject decisions."
-      );
-
-      setOverviewMessageType("error");
-      return;
-    }
-
     try {
-      setDecisionsLoading(true);
-
       const response = await fetch(
-        `${API_BASE_URL}/decisions/${decision.decision_id}/status`,
+        `${API_BASE_URL}/decisions/${decision.decision_id}${endpoint}`,
         {
-          method: "PATCH",
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${getToken()}`
           },
-          body: JSON.stringify({
-            status: newStatus
-          })
+          ...(body ? { body: JSON.stringify(body) } : {})
         }
       );
 
@@ -1398,62 +1754,163 @@ const [assignedUsers, setAssignedUsers] = useState([]);
           setOverviewMessageType("error");
 
           handleLogout();
-          return;
+          return null;
         }
 
-        if (response.status === 404) {
-          setOverviewMessage(
-            "Decision not found."
-          );
+        const detail = data.detail || "Action failed.";
 
-          setOverviewMessageType("error");
-          return;
-        }
-
-        setOverviewMessage(
-          data.detail || "Failed to update status."
-        );
-
+        setOverviewMessage(detail);
         setOverviewMessageType("error");
-        return;
+        setDecisionMessage(detail);
+        setDecisionMessageType("error");
+        return null;
       }
 
-      setOverviewMessage(
-        `Status updated to "${newStatus}".`
-      );
-
+      setOverviewMessage(successMessage);
       setOverviewMessageType("success");
+      setDecisionMessage(successMessage);
+      setDecisionMessageType("success");
 
-      const updatedList = decisions.map((d) =>
-        d.decision_id === decision.decision_id ? data : d
-      );
+      applyDecisionUpdate(decision, data);
 
-      setDecisions(updatedList);
-
-      if (
-        selectedDecision &&
-        selectedDecision.decision_id === decision.decision_id
-      ) {
-        setSelectedDecision(data);
-      }
+      return data;
 
     } catch (error) {
       console.error(error);
 
-      setOverviewMessage(
-        "Unable to connect to server."
-      );
+      const detail = "Unable to connect to server.";
 
+      setOverviewMessage(detail);
       setOverviewMessageType("error");
-
-    } finally {
-      setDecisionsLoading(false);
+      setDecisionMessage(detail);
+      setDecisionMessageType("error");
+      return null;
     }
   };
 
-  // ==========================================
-  // REFRESH SELECTED DECISION
-  // ==========================================
+  const handleSubmitForReview = async (decision) => {
+    if (!decision) return;
+
+    setIsSubmitting(true);
+
+    const result = await performWorkflowAction(
+      decision,
+      "/submit",
+      null,
+      "Decision submitted for review successfully."
+    );
+
+    if (result) {
+      setSubmitTarget(null);
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const handleReviewDecision = async (decision, action, reason) => {
+    if (!decision) return;
+
+    setIsReviewing(true);
+
+    const result = await performWorkflowAction(
+      decision,
+      "/review",
+      { action, reason: reason || null },
+      action === "approve"
+        ? "Decision approved by reviewer."
+        : "Decision rejected by reviewer."
+    );
+
+    if (result) {
+      setReviewTarget(null);
+      setRejectReason("");
+    }
+
+    setIsReviewing(false);
+  };
+
+  const handleManagerReviewDecision = async (
+    decision,
+    action,
+    reason
+  ) => {
+    if (!decision) return;
+
+    setIsReviewing(true);
+
+    const result = await performWorkflowAction(
+      decision,
+      "/manager-review",
+      { action, reason: reason || null },
+      action === "approve"
+        ? "Decision finally approved."
+        : "Decision rejected by manager."
+    );
+
+    if (result) {
+      setReviewTarget(null);
+      setRejectReason("");
+    }
+
+    setIsReviewing(false);
+  };
+
+  const handleArchiveDecision = async (decision) => {
+    if (!decision) return;
+
+    setIsArchiving(true);
+
+    const result = await performWorkflowAction(
+      decision,
+      "/archive",
+      null,
+      "Decision archived successfully."
+    );
+
+    if (result) {
+      setArchiveTarget(null);
+    }
+
+    setIsArchiving(false);
+  };
+
+  const handleCreatedReviewSkip = () => {
+    setCreatedConfirmTarget(null);
+    createdConfirmRef.current = null;
+
+    setTimeout(() => {
+      navigateTo("decisions");
+      setDecisionMessage("");
+      setDecisionMessageType("");
+    }, 1000);
+  };
+
+  const handleCreatedReviewSubmit = async () => {
+    const created =
+      createdConfirmTarget || createdConfirmRef.current;
+
+    if (!created) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await performWorkflowAction(
+        created,
+        "/submit",
+        null,
+        "Decision submitted for review successfully."
+      );
+
+      if (!result) return;
+
+      setCreatedConfirmTarget(null);
+      createdConfirmRef.current = null;
+
+      navigateTo("decisions");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const refreshSelectedDecision = async (decisionId) => {
     const full = await loadSingleDecision(decisionId);
@@ -1546,9 +2003,7 @@ const [assignedUsers, setAssignedUsers] = useState([]);
     setAltModalMode("view");
   };
 
-  // ==========================================
-  // CLOSE ALTERNATIVE MODAL
-  // ==========================================
+// ==========================================
 
   const closeAltModal = () => {
     setAltModalMode(null);
@@ -2582,8 +3037,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
 
       setUser(data.user);
 
-      loadAssignedUsers();
-
       setLoginPassword("");
 
       setMessage("");
@@ -2656,6 +3109,10 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         setDeleteTarget={setDeleteTarget}
         cancelDelete={cancelDelete}
         handleDeleteDecision={handleDeleteDecision}
+        handleSubmitForReview={handleSubmitForReview}
+        submitTarget={submitTarget}
+        setSubmitTarget={setSubmitTarget}
+        isSubmitting={isSubmitting}
         handleLogout={handleLogout}
         formatDate={formatDate}
       />
@@ -2686,7 +3143,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         decisionImplementationStatus={decisionImplementationStatus}
         decisionPriority={decisionPriority}
         decisionDate={decisionDate}
-        decisionStatus={decisionStatus}
         decisionAlternatives={decisionAlternatives}
         decisionMessage={decisionMessage}
         decisionMessageType={decisionMessageType}
@@ -2704,7 +3160,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         setDecisionImplementationStatus={setDecisionImplementationStatus}
         setDecisionPriority={setDecisionPriority}
         setDecisionDate={setDecisionDate}
-        setDecisionStatus={setDecisionStatus}
         setDecisionAlternatives={setDecisionAlternatives}
         handleCreateDecision={handleCreateDecision}
         handleLogout={handleLogout}
@@ -2716,6 +3171,10 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         lastCreatedDecisionId={lastCreatedDecisionId}
         setLastCreatedDecisionId={setLastCreatedDecisionId}
         handleCreateFileUpload={handleCreateFileUpload}
+        createdConfirmTarget={createdConfirmTarget}
+        handleCreatedReviewSubmit={handleCreatedReviewSubmit}
+        handleCreatedReviewSkip={handleCreatedReviewSkip}
+        isSubmitting={isSubmitting}
       />
     );
   }
@@ -2723,6 +3182,25 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   // ==========================================
   // VIEW DECISION
   // ==========================================
+
+  if (page === "decision-view" && !selectedDecision) {
+    return (
+      <div className="dash-layout">
+        <AppSidebar
+          activePage="decisions"
+          navigateTo={navigateTo}
+          handleLogout={handleLogout}
+        />
+        <main className="dash-main">
+          <div className="empty-state" style={{ marginTop: "48px" }}>
+            {pendingDecisionId
+              ? `Loading decision #${pendingDecisionId}...`
+              : "No decision selected."}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (page === "decision-view") {
     return (
@@ -2736,7 +3214,24 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         overviewMessageType={overviewMessageType}
         altSectionMessage={altSectionMessage}
         altSectionMessageType={altSectionMessageType}
-        handleUpdateStatus={handleUpdateStatus}
+        handleSubmitForReview={handleSubmitForReview}
+        handleReviewDecision={handleReviewDecision}
+        handleManagerReviewDecision={handleManagerReviewDecision}
+        handleArchiveDecision={handleArchiveDecision}
+        
+        submitTarget={submitTarget}
+        setSubmitTarget={setSubmitTarget}
+        isSubmitting={isSubmitting}
+        reviewTarget={reviewTarget}
+        setReviewTarget={setReviewTarget}
+        rejectReason={rejectReason}
+        setRejectReason={setRejectReason}
+        reviewStep={reviewStep}
+        setReviewStep={setReviewStep}
+        isReviewing={isReviewing}
+        archiveTarget={archiveTarget}
+        setArchiveTarget={setArchiveTarget}
+        isArchiving={isArchiving}
         handleLogout={handleLogout}
         openEditDecision={openEditDecision}
         deleteTarget={deleteTarget}
@@ -2799,6 +3294,25 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   // EDIT DECISION
   // ==========================================
 
+  if (page === "decision-edit" && !selectedDecision) {
+    return (
+      <div className="dash-layout">
+        <AppSidebar
+          activePage="decisions"
+          navigateTo={navigateTo}
+          handleLogout={handleLogout}
+        />
+        <main className="dash-main">
+          <div className="empty-state" style={{ marginTop: "48px" }}>
+            {pendingDecisionId
+              ? `Loading decision #${pendingDecisionId}...`
+              : "No decision selected."}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (page === "decision-edit") {
     return (
       <EditDecisionPage
@@ -2820,7 +3334,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         decisionImplementationStatus={decisionImplementationStatus}
         decisionPriority={decisionPriority}
         decisionDate={decisionDate}
-        decisionStatus={decisionStatus}
         decisionAlternatives={decisionAlternatives}
         decisionMessage={decisionMessage}
         decisionMessageType={decisionMessageType}
@@ -2838,7 +3351,6 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         setDecisionImplementationStatus={setDecisionImplementationStatus}
         setDecisionPriority={setDecisionPriority}
         setDecisionDate={setDecisionDate}
-        setDecisionStatus={setDecisionStatus}
         setDecisionAlternatives={setDecisionAlternatives}
         handleUpdateDecision={handleUpdateDecision}
         handleLogout={handleLogout}
@@ -2881,6 +3393,37 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   }
 
   // ==========================================
+  // NOTIFICATIONS PAGE
+  // ==========================================
+
+  if (page === "notifications") {
+    return (
+      <NotificationsPage
+        user={user}
+        getRoleName={getRoleName}
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // AUDIT LOGS PAGE
+  // ==========================================
+
+  if (page === "audit-logs") {
+    return (
+      <AuditLogsPage
+        user={user}
+        getRoleName={getRoleName}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
   // TEAMS PAGE
   // ==========================================
 
@@ -2892,6 +3435,85 @@ const [assignedUsers, setAssignedUsers] = useState([]);
         navigateTo={navigateTo}
         teams={teams}
         allUsers={allUsers}
+        loadTeams={loadTeams}
+        loadAllUsers={loadAllUsers}
+        openViewTeam={openViewTeam}
+        openViewDecision={openViewDecision}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // TEAM VIEW PAGE
+  // ==========================================
+
+  if (page === "team-view") {
+    if (teamLoadFailed && !selectedTeam) {
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            backgroundColor: "#f5f7fb"
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e3e8f0",
+              borderRadius: "12px",
+              padding: "32px 40px",
+              textAlign: "center"
+            }}
+          >
+            <div style={{ fontSize: "36px", marginBottom: "12px" }}>
+              &#128680;
+            </div>
+            <h3 style={{ margin: "0 0 6px", color: "#0f172a" }}>
+              Team not found
+            </h3>
+            <p style={{ margin: "0 0 18px", color: "#64748b", fontSize: "14px" }}>
+              This team may have been removed or is unavailable.
+            </p>
+            <button
+              className="primary-button"
+              onClick={() => navigateTo("teams")}
+            >
+              Back to Teams
+            </button>
+          </div>
+        </div>
+      );
+    }
+    if (!selectedTeam && pendingTeamId) {
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            backgroundColor: "#f5f7fb"
+          }}
+        >
+          <div className="spin-loader" />
+        </div>
+      );
+    }
+    return (
+      <TeamDetailsPage
+        user={user}
+        getRoleName={getRoleName}
+        getTeamName={getTeamName}
+        team={selectedTeam}
+        allUsers={allUsers}
+        navigateTo={navigateTo}
+        openViewDecision={openViewDecision}
+        loadTeamDetail={loadTeamDetail}
+        setSelectedTeam={setSelectedTeam}
         handleLogout={handleLogout}
       />
     );
@@ -2929,566 +3551,176 @@ const [assignedUsers, setAssignedUsers] = useState([]);
   }
 
   // ==========================================
+  // MY TEAMS PAGE
+  // ==========================================
+
+  if (page === "my-teams") {
+    return (
+      <MyTeamsPage
+        user={user}
+        getRoleName={getRoleName}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        openViewDecision={openViewDecision}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // MY DECISIONS PAGE
+  // ==========================================
+
+  if (page === "my-decisions") {
+    return (
+      <MyDecisionsPage
+        user={user}
+        getRoleName={getRoleName}
+        getToken={getToken}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // TEAM DECISIONS PAGE
+  // ==========================================
+
+  if (page === "team-decisions") {
+    return (
+      <TeamDecisionsPage
+        user={user}
+        getRoleName={getRoleName}
+        getToken={getToken}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // KNOWLEDGE REPOSITORY PAGE
+  // ==========================================
+
+  if (page === "knowledge") {
+    return (
+      <KnowledgeRepositoryPage
+        user={user}
+        getRoleName={getRoleName}
+        getTeamName={getTeamName}
+        getToken={getToken}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        formatFileSize={formatFileSize}
+        allDocuments={allDocuments}
+        allDocumentsLoading={allDocumentsLoading}
+        handleDownloadDocument={handleDownloadDocument}
+        decisions={decisions}
+        decisionsLoading={decisionsLoading}
+        teams={teams}
+        allUsers={allUsers}
+        discussionList={discussionList}
+        knowledgeArticles={knowledgeArticles}
+        insights={insightsData}
+        insightsLoading={insightsLoading}
+        openViewDecision={openViewDecision}
+        openViewTeam={openViewTeam}
+        loadAllDocuments={loadAllDocuments}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // DISCUSSIONS PAGE
+  // ==========================================
+
+  if (page === "discussions") {
+    return (
+      <DiscussionsPage
+        user={user}
+        getRoleName={getRoleName}
+        getToken={getToken}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // SEARCH PAGE
+  // ==========================================
+
+  if (page === "search") {
+    return (
+      <SearchPage
+        user={user}
+        getRoleName={getRoleName}
+        getToken={getToken}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        results={globalSearchResults}
+        loading={globalSearchLoading}
+        onSearch={runGlobalSearch}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
+  // REPORTS PAGE
+  // ==========================================
+
+  if (page === "reports") {
+    return (
+      <ReportsPage
+        user={user}
+        getRoleName={getRoleName}
+        navigateTo={navigateTo}
+        formatDate={formatDate}
+        handleLogout={handleLogout}
+      />
+    );
+  }
+
+  // ==========================================
   // HOME / DASHBOARD
   // ==========================================
 
+  // ==========================================
+  // HOME / EMPLOYER HOME PAGE
+  // ==========================================
+
   if (page === "home") {
-    const totalDecisions = decisions.length;
-    const activeCount = decisions.filter(
-      (d) => d.status === "Active"
-    ).length;
-    const underReviewCount = decisions.filter(
-      (d) => d.status === "Under Review"
-    ).length;
-    const approvedCount = decisions.filter(
-      (d) => d.status === "Approved"
-    ).length;
-    const rejectedCount = decisions.filter(
-      (d) => d.status === "Rejected"
-    ).length;
-
-    const recentDecisions = [...decisions]
-      .sort(
-        (a, b) =>
-          (b.decision_id || 0) - (a.decision_id || 0)
-      )
-      .slice(0, 6);
-
-    const dashDate = new Date().toLocaleDateString(
-      "en-US",
-      {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      }
-    );
-
     return (
-      <>
-      <div className="dash-layout">
-
-        {/* ---- SIDEBAR ---- */}
-
-        <AppSidebar
-          activePage="home"
-          navigateTo={navigateTo}
-          handleLogout={handleLogout}
-        />
-
-        {/* ---- MAIN ---- */}
-
-        <main className="dash-main">
-
-          {/* HEADER */}
-
-          <header className="dash-header">
-
-            <div>
-              <h2 className="dash-header-title">
-                Dashboard
-              </h2>
-              <p className="dash-header-sub">
-                Welcome back, {user?.name || "User"}
-              </p>
-            </div>
-
-            <div className="dash-header-right">
-              <span className="dash-header-date">
-                {dashDate}
-              </span>
-              <div className="dash-header-user">
-                <div className="dash-avatar">
-                  {(user?.name || "U")
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-                <div className="dash-user-info">
-                  <div className="dash-user-name">
-                    {user?.name}
-                  </div>
-                  <div className="dash-user-role">
-                    {getRoleName(user?.role_id)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </header>
-
-          {/* WELCOME */}
-
-          <section className="dash-welcome">
-            <h3>
-              Welcome!
-            </h3>
-            <p>
-              You are successfully logged in.
-            </p>
-            <strong>{user?.email}</strong>
-          </section>
-
-          {/* STAT CARDS */}
-
-          <section className="dash-stats">
-
-            <div className="dash-stat-card">
-              <div
-                className="dash-stat-icon"
-                style={{
-                  background: "#dbeafe",
-                  color: "#2563eb"
-                }}
-              >
-                &#9733;
-              </div>
-              <div className="dash-stat-body">
-                <span className="dash-stat-value">
-                  {totalDecisions}
-                </span>
-                <span className="dash-stat-label">
-                  Total Decisions
-                </span>
-              </div>
-            </div>
-
-            <div className="dash-stat-card">
-              <div
-                className="dash-stat-icon"
-                style={{
-                  background: "#d1fae5",
-                  color: "#059669"
-                }}
-              >
-                &#9998;
-              </div>
-              <div className="dash-stat-body">
-                <span className="dash-stat-value">
-                  {activeCount}
-                </span>
-                <span className="dash-stat-label">
-                  Active
-                </span>
-              </div>
-            </div>
-
-            <div className="dash-stat-card">
-              <div
-                className="dash-stat-icon"
-                style={{
-                  background: "#fef3c7",
-                  color: "#d97706"
-                }}
-              >
-                &#9202;
-              </div>
-              <div className="dash-stat-body">
-                <span className="dash-stat-value">
-                  {underReviewCount}
-                </span>
-                <span className="dash-stat-label">
-                  Under Review
-                </span>
-              </div>
-            </div>
-
-            <div className="dash-stat-card">
-              <div
-                className="dash-stat-icon"
-                style={{
-                  background: "#ede9fe",
-                  color: "#7c3aed"
-                }}
-              >
-                &#10003;
-              </div>
-              <div className="dash-stat-body">
-                <span className="dash-stat-value">
-                  {approvedCount}
-                </span>
-                <span className="dash-stat-label">
-                  Approved
-                </span>
-              </div>
-            </div>
-
-            <div className="dash-stat-card">
-              <div
-                className="dash-stat-icon"
-                style={{
-                  background: "#fee2e2",
-                  color: "#dc2626"
-                }}
-              >
-                &#10005;
-              </div>
-              <div className="dash-stat-body">
-                <span className="dash-stat-value">
-                  {rejectedCount}
-                </span>
-                <span className="dash-stat-label">
-                  Rejected
-                </span>
-              </div>
-            </div>
-
-          </section>
-
-          {/* CONTENT ROW: Table + Sidebar cards */}
-
-          <section className="dash-content-grid">
-
-            {/* RECENT DECISIONS TABLE */}
-
-            <div className="dash-card">
-
-              <div className="dash-card-header">
-                <h4>Recent Decisions</h4>
-                <button
-                  className="dash-link-btn"
-                  onClick={openDecisions}
-                >
-                  View All
-                </button>
-              </div>
-
-              <div className="dash-table-wrap">
-                <table className="dash-table">
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Expert</th>
-                      <th>Created</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentDecisions.map((d) => (
-                      <tr key={d.decision_id}>
-                        <td className="dash-td-title">
-                          {d.title}
-                        </td>
-                        <td>
-                          <span
-                            className={
-                              "dash-badge dash-badge-" +
-                              (d.status || "")
-                                .toLowerCase()
-                                .replace(/\s+/g, "-")
-                            }
-                          >
-                            {d.status}
-                          </span>
-                        </td>
-                        <td>
-                          {d.expert_name || "\u2014"}
-                        </td>
-                        <td>
-                          {formatDate(d.created_at)}
-                        </td>
-                        <td>
-                          <button
-                            className="action-button view-button"
-                            onClick={() =>
-                              openViewDecision(d)
-                            }
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-
-                    {recentDecisions.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan="5"
-                          className="dash-empty-row"
-                        >
-                          No recent decisions yet.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-            </div>
-
-            {/* RIGHT COLUMN */}
-
-            <div className="dash-right-col">
-
-              {/* TEAM ACTIVITY */}
-
-              <div className="dash-card">
-                <h4 className="dash-side-title">
-                  Team Activity
-                </h4>
-                <div className="dash-activity-list">
-                  {roles.map((r) => (
-                    <div
-                      className="dash-activity-item"
-                      key={r.role_id}
-                    >
-                      <div className="dash-act-avatar">
-                        {r.role_name.charAt(0)}
-                      </div>
-                      <div className="dash-act-info">
-                        <div className="dash-act-name">
-                          {r.role_name}
-                        </div>
-                        <div className="dash-act-desc">
-                          System Role
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {roles.length === 0 && (
-                    <div className="dash-empty-row">
-                      No roles loaded.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* MY TEAMS */}
-
-              <div className="dash-card">
-                <h4 className="dash-side-title">
-                  My Teams
-                </h4>
-                <div className="dash-teams-list">
-                  {teams.map((t) => (
-                    <div
-                      className="dash-team-item"
-                      key={t.team_id}
-                    >
-                      <div className="dash-team-dot"></div>
-                      <div className="dash-team-name">
-                        {t.team_name}
-                      </div>
-                    </div>
-                  ))}
-                  {teams.length === 0 && (
-                    <div className="dash-empty-row">
-                      No teams loaded.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* BOTTOM ROW: Chart + Discussions */}
-
-          <section className="dash-bottom-grid">
-
-            {/* DONUT CHART */}
-
-            <div className="dash-card">
-              <h4 className="dash-side-title">
-                Decisions by Status
-              </h4>
-              <div className="dash-donut-wrap">
-
-                <div className="dash-donut">
-                  <svg
-                    viewBox="0 0 36 36"
-                    className="dash-donut-svg"
-                  >
-                    {(() => {
-                      const total =
-                        totalDecisions || 1;
-                      let offset = 25;
-                      const items = [
-                        {
-                          count: activeCount,
-                          color: "#3b82f6"
-                        },
-                        {
-                          count: underReviewCount,
-                          color: "#f59e0b"
-                        },
-                        {
-                          count: approvedCount,
-                          color: "#10b981"
-                        },
-                        {
-                          count: rejectedCount,
-                          color: "#ef4444"
-                        }
-                      ];
-                      return items.map(
-                        (item, idx) => {
-                          const pct =
-                            (item.count / total) *
-                            100;
-                          const dash =
-                            pct > 0 ? pct : 0.01;
-                          const el = (
-                            <circle
-                              key={idx}
-                              cx="18"
-                              cy="18"
-                              r="15.9155"
-                              fill="none"
-                              stroke={item.color}
-                              strokeWidth="3.5"
-                              strokeDasharray={
-                                dash +
-                                " " +
-                                (100 - dash)
-                              }
-                              strokeDashoffset={
-                                offset
-                              }
-                            />
-                          );
-                          offset -= pct;
-                          return el;
-                        }
-                      );
-                    })()}
-                    <text
-                      x="18"
-                      y="18"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      className="dash-donut-text"
-                    >
-                      {totalDecisions}
-                    </text>
-                    <text
-                      x="18"
-                      y="21"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      className="dash-donut-subtext"
-                    >
-                      Total
-                    </text>
-                  </svg>
-                </div>
-
-                <div className="dash-legend">
-                  <div className="dash-legend-item">
-                    <span
-                      className="dash-legend-dot"
-                      style={{
-                        background: "#3b82f6"
-                      }}
-                    ></span>
-                    Active ({activeCount})
-                  </div>
-                  <div className="dash-legend-item">
-                    <span
-                      className="dash-legend-dot"
-                      style={{
-                        background: "#f59e0b"
-                      }}
-                    ></span>
-                    Under Review ({underReviewCount})
-                  </div>
-                  <div className="dash-legend-item">
-                    <span
-                      className="dash-legend-dot"
-                      style={{
-                        background: "#10b981"
-                      }}
-                    ></span>
-                    Approved ({approvedCount})
-                  </div>
-                  <div className="dash-legend-item">
-                    <span
-                      className="dash-legend-dot"
-                      style={{
-                        background: "#ef4444"
-                      }}
-                    ></span>
-                    Rejected ({rejectedCount})
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* RECENT DISCUSSIONS */}
-
-            <div className="dash-card">
-              <h4 className="dash-side-title">
-                Recent Discussions
-              </h4>
-              <div className="dash-disc-list">
-                {recentDecisions.slice(0, 4).map(
-                  (d) => (
-                    <div
-                      className="dash-disc-item"
-                      key={d.decision_id}
-                    >
-                      <div className="dash-disc-avatar">
-                        {(d.expert_name || "S")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
-                      <div className="dash-disc-info">
-                        <div className="dash-disc-title">
-                          {d.title}
-                        </div>
-                        <div className="dash-disc-meta">
-                          {d.expert_name || "System"}
-                          {" \u00B7 "}
-                          {d.status}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                )}
-                {recentDecisions.length === 0 && (
-                  <div className="dash-empty-row">
-                    No recent activity.
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </section>
+      <DashboardPage
+        user={user}
+        getRoleName={getRoleName}
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+        formatDate={formatDate}
+      />
+    );
+  }
 
 
-        </main>
+  // ==========================================
+  // MEETINGS PAGE
+  // ==========================================
 
-      </div>
-
-      {deleteTarget && (
-        <ConfirmDialog
-          title={
-            deleteTarget.status === "Under Review" ||
-            deleteTarget.status === "Rejected"
-              ? "Delete Decision"
-              : "Archive Decision"
-          }
-          message={
-            deleteTarget.status === "Under Review" ||
-            deleteTarget.status === "Rejected"
-              ? `Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`
-              : `Are you sure you want to archive "${deleteTarget.title}"? The decision will be kept in history but no longer appear as an active decision.`
-          }
-          confirmLabel={
-            deleteTarget.status === "Under Review" ||
-            deleteTarget.status === "Rejected"
-              ? "Delete"
-              : "Archive"
-          }
-          cancelLabel="Cancel"
-          isBusy={isDeleting}
-          onConfirm={() => handleDeleteDecision(deleteTarget)}
-          onCancel={cancelDelete}
-        />
-      )}
-      </>
+  if (page === "meetings") {
+    return (
+      <MeetingsPage
+        user={user}
+        getRoleName={getRoleName}
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+        formatDate={formatDate}
+      />
     );
   }
 
@@ -3844,595 +4076,12 @@ const statusBadgeClass = (status) => {
   return `status-badge status-${normalized}`;
 };
 
-// ==========================================
-// SHARED SIDEBAR
-// ==========================================
-
-const AppSidebar = ({ activePage, navigateTo, handleLogout }) => {
-  const goHome = () => navigateTo("home");
-  const goDecisions = () => navigateTo("decisions");
-  const goCreate = () => navigateTo("decision-create");
-  const goDocuments = () => navigateTo("documents");
-  const goTeams = () => navigateTo("teams");
-  const goProfile = () => navigateTo("profile");
-  const goSettings = () => navigateTo("settings");
-
-  const navClass = (page) =>
-    `dash-nav-item${activePage === page ? " active" : ""}`;
-
-  return (
-    <aside className="dash-sidebar">
-      <div className="dash-sidebar-brand">
-        <div className="dash-sidebar-logo">ED</div>
-        <div className="dash-sidebar-text">
-          <div className="dash-sidebar-title">
-            Expert Decision Replay
-          </div>
-          <div className="dash-sidebar-subtitle">
-            Decision Intelligence Platform
-          </div>
-        </div>
-      </div>
-
-      <nav className="dash-sidebar-nav">
-
-        <button
-          className={navClass("home")}
-          onClick={goHome}
-        >
-          <span className="dash-nav-icon">&#128202;</span>
-          Dashboard
-        </button>
-
-        <button
-          className={navClass("decisions")}
-          onClick={goDecisions}
-        >
-          <span className="dash-nav-icon">&#128203;</span>
-          All Decisions
-        </button>
-
-        <button
-          className={navClass("create")}
-          onClick={goCreate}
-        >
-          <span className="dash-nav-icon">&#10133;</span>
-          Create Decision
-        </button>
-
-        <button
-          className={navClass("documents")}
-          onClick={goDocuments}
-        >
-          <span className="dash-nav-icon">&#128196;</span>
-          Documents
-        </button>
-
-        <button
-          className={navClass("teams")}
-          onClick={goTeams}
-        >
-          <span className="dash-nav-icon">&#128101;</span>
-          Teams
-        </button>
-
-        <button
-          className={navClass("profile")}
-          onClick={goProfile}
-        >
-          <span className="dash-nav-icon">&#128100;</span>
-          Profile
-        </button>
-
-        <button
-          className={navClass("settings")}
-          onClick={goSettings}
-        >
-          <span className="dash-nav-icon">&#9881;&#65039;</span>
-          Settings
-        </button>
-
-      </nav>
-
-      <div className="dash-sidebar-footer">
-        <button
-          className="dash-nav-item"
-          onClick={handleLogout}
-        >
-          <span className="dash-nav-icon">&#128682;</span>
-          Logout
-        </button>
-      </div>
-    </aside>
-  );
-};
-
-// ==========================================
-// DOCUMENTS PAGE
-// ==========================================
-
-const DocumentsPage = (props) => {
-  const {
-    user,
-    getRoleName,
-    navigateTo,
-    allDocuments,
-    allDocumentsLoading,
-    formatFileSize,
-    formatDate,
-    handleDownloadDocument,
-    handleLogout
-  } = props;
-
-  const sortedDocs = [...allDocuments].sort(
-    (a, b) =>
-      (b.document_id || 0) - (a.document_id || 0)
-  );
-
-  return (
-    <div className="dash-layout">
-
-      <AppSidebar
-        activePage="documents"
-        navigateTo={navigateTo}
-        handleLogout={handleLogout}
-      />
-
-      <main className="dash-main">
-
-        <header className="dash-header">
-
-          <div>
-            <h2 className="dash-header-title">
-              Documents
-            </h2>
-            <p className="dash-header-sub">
-              Project &amp; Decision Documents
-            </p>
-          </div>
-
-          <div className="dash-header-right">
-            <button
-              className="nav-button"
-              onClick={() => navigateTo("home")}
-            >
-              &#8962; Back to Dashboard
-            </button>
-            <button
-              className="nav-button"
-              onClick={() => navigateTo("decision-create")}
-            >
-              + Create Decision
-            </button>
-            <div className="dash-header-user">
-              <div className="dash-avatar">
-                {(user?.name || "U").charAt(0).toUpperCase()}
-              </div>
-              <div className="dash-user-info">
-                <div className="dash-user-name">
-                  {user?.name}
-                </div>
-                <div className="dash-user-role">
-                  {getRoleName(user?.role_id)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </header>
-
-        <section className="dash-card">
-          <div className="dash-card-header" style={{ marginBottom: "0" }}>
-            <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
-              All Documents
-              <span style={{ marginLeft: "10px", fontSize: "13px", fontWeight: 500, color: "#64748b" }}>
-                {allDocuments.length} file(s)
-              </span>
-            </h4>
-          </div>
-
-          <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
-
-          {allDocumentsLoading ? (
-            <div className="empty-state">Loading documents...</div>
-          ) : sortedDocs.length === 0 ? (
-            <div className="empty-state">
-              No documents found. Attach documents to a decision to see them here.
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table className="decisions-table">
-                <thead>
-                  <tr>
-                    <th>Document</th>
-                    <th>Type</th>
-                    <th>Size</th>
-                    <th>Decision</th>
-                    <th>Uploaded By</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedDocs.map((doc) => (
-                    <tr key={doc.document_id}>
-                      <td>
-                        <div className="title-cell">
-                          <strong>{doc.original_file_name}</strong>
-                        </div>
-                      </td>
-                      <td>{doc.file_type || "File"}</td>
-                      <td>{formatFileSize(doc.file_size)}</td>
-                      <td>{doc.decision_title || `Decision #${doc.decision_id}`}</td>
-                      <td>{doc.uploaded_by_name || `User #${doc.uploaded_by}`}</td>
-                      <td>{formatDate(doc.uploaded_at)}</td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            className="action-button view-button"
-                            onClick={() => handleDownloadDocument(doc, true)}
-                          >
-                            Open
-                          </button>
-                          <button
-                            className="action-button edit-button"
-                            onClick={() => handleDownloadDocument(doc, false)}
-                          >
-                            Download
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-      </main>
-
-    </div>
-  );
-};
-
-// ==========================================
-// TEAMS PAGE
-// ==========================================
-
-const TeamsPage = (props) => {
-  const {
-    user,
-    getRoleName,
-    navigateTo,
-    teams,
-    allUsers,
-    handleLogout
-  } = props;
-
-  const membersByTeam = (teamId) =>
-    allUsers.filter(
-      (u) => Number(u.team_id) === Number(teamId)
-    );
-
-  return (
-    <div className="dash-layout">
-
-      <AppSidebar
-        activePage="teams"
-        navigateTo={navigateTo}
-        handleLogout={handleLogout}
-      />
-
-      <main className="dash-main">
-
-        <header className="dash-header">
-
-          <div>
-            <h2 className="dash-header-title">
-              Teams
-            </h2>
-            <p className="dash-header-sub">
-              Available teams and their members
-            </p>
-          </div>
-
-          <div className="dash-header-right">
-            <button
-              className="nav-button"
-              onClick={() => navigateTo("home")}
-            >
-              &#8962; Back to Dashboard
-            </button>
-            <div className="dash-header-user">
-              <div className="dash-avatar">
-                {(user?.name || "U").charAt(0).toUpperCase()}
-              </div>
-              <div className="dash-user-info">
-                <div className="dash-user-name">
-                  {user?.name}
-                </div>
-                <div className="dash-user-role">
-                  {getRoleName(user?.role_id)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </header>
-
-        {teams.length === 0 ? (
-          <div className="empty-state">No teams available.</div>
-        ) : (
-          <section className="dash-content-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-            {teams.map((team) => {
-              const members = membersByTeam(team.team_id);
-              return (
-                <div className="dash-card" key={team.team_id}>
-                  <div className="dash-card-header">
-                    <h4>{team.team_name}</h4>
-                    <span style={{ fontSize: "13px", color: "#64748b", fontWeight: 600 }}>
-                      {members.length} member(s)
-                    </span>
-                  </div>
-                  <div className="dash-teams-list" style={{ flexDirection: "column" }}>
-                    {members.length === 0 && (
-                      <div className="dash-empty-row">No members in this team.</div>
-                    )}
-                    {members.map((m) => (
-                      <div className="dash-activity-item" key={m.user_id}>
-                        <div className="dash-act-avatar">
-                          {(m.name || "U").charAt(0).toUpperCase()}
-                        </div>
-                        <div className="dash-act-info">
-                          <div className="dash-act-name">{m.name}</div>
-                          <div className="dash-act-desc">
-                            {getRoleName(m.role_id)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-        )}
-
-      </main>
-
-    </div>
-  );
-};
-
-// ==========================================
-// PROFILE PAGE
-// ==========================================
-
-const ProfilePage = (props) => {
-  const {
-    user,
-    getRoleName,
-    getTeamName,
-    navigateTo,
-    handleLogout
-  } = props;
-
-  const infoRows = [
-    { label: "Full Name", value: user?.name || "—" },
-    { label: "Email Address", value: user?.email || "—" },
-    { label: "User ID", value: user?.user_id || "—" },
-    { label: "Role", value: getRoleName(user?.role_id) },
-    { label: "Team", value: getTeamName(user?.team_id) }
-  ];
-
-  return (
-    <div className="dash-layout">
-
-      <AppSidebar
-        activePage="profile"
-        navigateTo={navigateTo}
-        handleLogout={handleLogout}
-      />
-
-      <main className="dash-main">
-
-        <header className="dash-header">
-
-          <div>
-            <h2 className="dash-header-title">
-              Profile
-            </h2>
-            <p className="dash-header-sub">
-              Your account information
-            </p>
-          </div>
-
-          <div className="dash-header-right">
-            <button
-              className="nav-button"
-              onClick={() => navigateTo("home")}
-            >
-              &#8962; Back to Dashboard
-            </button>
-            <div className="dash-header-user">
-              <div className="dash-avatar">
-                {(user?.name || "U").charAt(0).toUpperCase()}
-              </div>
-              <div className="dash-user-info">
-                <div className="dash-user-name">
-                  {user?.name}
-                </div>
-                <div className="dash-user-role">
-                  {getRoleName(user?.role_id)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </header>
-
-        <section className="dash-card">
-          <div className="dash-card-header" style={{ marginBottom: "0" }}>
-            <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
-              Basic Information
-            </h4>
-          </div>
-
-          <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
-
-          <div className="dash-activity-list">
-            {infoRows.map((row) => (
-              <div className="dash-activity-item" key={row.label}>
-                <div className="dash-act-info">
-                  <div className="dash-act-desc" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                    {row.label}
-                  </div>
-                  <div className="dash-act-name">{row.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-      </main>
-
-    </div>
-  );
-};
-
-// ==========================================
-// SETTINGS PAGE
-// ==========================================
-
-const SettingsPage = (props) => {
-  const {
-    user,
-    getRoleName,
-    navigateTo,
-    handleLogout
-  } = props;
-
-  return (
-    <div className="dash-layout">
-
-      <AppSidebar
-        activePage="settings"
-        navigateTo={navigateTo}
-        handleLogout={handleLogout}
-      />
-
-      <main className="dash-main">
-
-        <header className="dash-header">
-
-          <div>
-            <h2 className="dash-header-title">
-              Settings
-            </h2>
-            <p className="dash-header-sub">
-              Account &amp; application preferences
-            </p>
-          </div>
-
-          <div className="dash-header-right">
-            <button
-              className="nav-button"
-              onClick={() => navigateTo("home")}
-            >
-              &#8962; Back to Dashboard
-            </button>
-            <div className="dash-header-user">
-              <div className="dash-avatar">
-                {(user?.name || "U").charAt(0).toUpperCase()}
-              </div>
-              <div className="dash-user-info">
-                <div className="dash-user-name">
-                  {user?.name}
-                </div>
-                <div className="dash-user-role">
-                  {getRoleName(user?.role_id)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </header>
-
-        <div className="dash-content-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-
-          <div className="dash-card">
-            <div className="dash-card-header" style={{ marginBottom: "0" }}>
-              <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
-                Account Settings
-              </h4>
-            </div>
-            <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
-
-            <div className="dash-activity-list">
-              <div className="dash-activity-item">
-                <div className="dash-act-info">
-                  <div className="dash-act-desc" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                    Signed in as
-                  </div>
-                  <div className="dash-act-name">{user?.email || "—"}</div>
-                </div>
-              </div>
-              <div className="dash-activity-item">
-                <div className="dash-act-info">
-                  <div className="dash-act-desc" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                    Account status
-                  </div>
-                  <div className="dash-act-name">
-                    <span className="dash-badge dash-badge-active">Active</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="dash-card">
-            <div className="dash-card-header" style={{ marginBottom: "0" }}>
-              <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
-                Application Settings
-              </h4>
-            </div>
-            <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
-
-            <div className="dash-activity-list">
-              <div className="dash-activity-item">
-                <div className="dash-act-info">
-                  <div className="dash-act-desc" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                    Language
-                  </div>
-                  <div className="dash-act-name">English</div>
-                </div>
-              </div>
-              <div className="dash-activity-item">
-                <div className="dash-act-info">
-                  <div className="dash-act-desc" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                    Notifications
-                  </div>
-                  <div className="dash-act-name">Enabled</div>
-                </div>
-              </div>
-              <div className="dash-activity-item">
-                <div className="dash-act-info">
-                  <div className="dash-act-desc" style={{ fontWeight: 600, color: "#94a3b8" }}>
-                    Platform
-                  </div>
-                  <div className="dash-act-name">Expert Decision Replay</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </main>
-
-    </div>
-  );
+const workflowStatusLabel = (status) => {
+  if (status === "Reviewer Approved") {
+    return "Manager Review";
+  }
+
+  return status;
 };
 
 // ==========================================
@@ -4452,19 +4101,10 @@ const ConfirmDialog = (props) => {
 
   return (
     <div className="modal-overlay">
-
       <div className="modal-box">
-
-        <h3>
-          {title}
-        </h3>
-
-        <p>
-          {message}
-        </p>
-
+        <h3>{title}</h3>
+        <p>{message}</p>
         <div className="modal-actions">
-
           <button
             className="secondary-button action-limited"
             onClick={onCancel}
@@ -4472,21 +4112,15 @@ const ConfirmDialog = (props) => {
           >
             {cancelLabel || "Cancel"}
           </button>
-
           <button
             className="danger-button action-limited"
             onClick={onConfirm}
             disabled={isBusy}
           >
-            {isBusy
-              ? "Working..."
-              : (confirmLabel || "Confirm")}
+            {isBusy ? "Working..." : confirmLabel || "Confirm"}
           </button>
-
         </div>
-
       </div>
-
     </div>
   );
 };
@@ -4508,191 +4142,181 @@ const AlternativeModal = (props) => {
     formatCost
   } = props;
 
-  if (!mode) return null;
+  if (!mode || !form) {
+    return null;
+  }
 
   const isView = mode === "view";
 
-  const FIELD_LEVELS = ["Low", "Medium", "High"];
-
-  const viewRow = (label, value, extra = null) => (
-    <div className="alt-view-row">
-      <div className="alt-view-label">{label}</div>
-      <div className={extra ? `alt-view-value ${extra}` : "alt-view-value"}>
-        {value}
-      </div>
-    </div>
-  );
-
-  const badge = (value) => {
-    const normalized = (value || "").toLowerCase();
-
-    return (
-      <span className={value ? `level-badge level-${normalized}` : ""}>
-        {value || "Not specified"}
-      </span>
-    );
-  };
+  const levelOptions = ["Low", "Medium", "High"];
 
   return (
     <div className="modal-overlay">
-
       <div className="modal-box alt-modal">
-
         <h3>
-          {isView
-            ? "View Alternative"
-            : (mode === "edit"
-                ? "Edit Alternative"
-                : "Add Alternative")}
+          {mode === "create"
+            ? "Add Alternative"
+            : mode === "edit"
+            ? "Edit Alternative"
+            : "Alternative Details"}
         </h3>
 
-        {message && messageType ? (
-          <div className={messageType === "error"
-            ? "form-error"
-            : "form-success"}
+        {message && (
+          <div
+            className={`message ${
+              messageType || "error"
+            }`}
+            style={{ marginBottom: "16px" }}
           >
             {message}
           </div>
-        ) : null}
+        )}
 
         {isView ? (
-
           <div className="alt-view-details">
-
-            {viewRow(
-              "Alternative Title",
-              form.title || "—"
-            )}
-
-            {viewRow(
-              "Description",
-              form.description || "Not specified"
-            )}
-
-            {viewRow(
-              "Pros",
-              form.pros || "Not specified"
-            )}
-
-            {viewRow(
-              "Cons",
-              form.cons || "Not specified"
-            )}
-
-            {viewRow(
-              "Estimated Cost",
-              formatCost(form.estimated_cost)
-            )}
-
-            {viewRow(
-              "Feasibility",
-              badge(form.feasibility)
-            )}
-
-            {viewRow(
-              "Risk Assessment",
-              badge(form.risk_level)
-            )}
-
-            {viewRow(
-              "Risk Explanation",
-              form.risk_explanation || "Not specified"
-            )}
-
-            <div className="modal-actions">
-
-              <button
-                className="secondary-button action-limited"
-                onClick={onClose}
-              >
-                Close
-              </button>
-
+            <div className="alt-view-row">
+              <span className="alt-view-label">Title</span>
+              <span className="alt-view-value">
+                {form.title || "—"}
+              </span>
             </div>
-
+            <div className="alt-view-row">
+              <span className="alt-view-label">Description</span>
+              <span className="alt-view-value">
+                {form.description || "—"}
+              </span>
+            </div>
+            <div className="alt-view-row">
+              <span className="alt-view-label">Pros</span>
+              <span className="alt-view-value">
+                {form.pros || "—"}
+              </span>
+            </div>
+            <div className="alt-view-row">
+              <span className="alt-view-label">Cons</span>
+              <span className="alt-view-value">
+                {form.cons || "—"}
+              </span>
+            </div>
+            <div className="alt-view-row">
+              <span className="alt-view-label">Estimated Cost</span>
+              <span className="alt-view-value">
+                {form.estimated_cost !== "" &&
+                form.estimated_cost !== null &&
+                form.estimated_cost !== undefined
+                  ? formatCost(Number(form.estimated_cost))
+                  : "—"}
+              </span>
+            </div>
+            <div className="alt-view-row">
+              <span className="alt-view-label">Feasibility</span>
+              <span className="alt-view-value">
+                {form.feasibility || "—"}
+              </span>
+            </div>
+            <div className="alt-view-row">
+              <span className="alt-view-label">Risk Level</span>
+              <span className="alt-view-value">
+                {form.risk_level || "—"}
+              </span>
+            </div>
+            <div className="alt-view-row">
+              <span className="alt-view-label">
+                Risk Explanation
+              </span>
+              <span className="alt-view-value">
+                {form.risk_explanation || "—"}
+              </span>
+            </div>
           </div>
-
         ) : (
-
-          <form
-            className="alt-form"
-            onSubmit={onSave}
-          >
-
+          <form className="alt-form" onSubmit={onSave}>
             <div className="form-group">
-              <label>
+              <label className="form-label">
                 Alternative Title *
               </label>
               <input
+                className="form-input"
                 type="text"
-                value={form.title}
+                value={form.title || ""}
                 onChange={(e) =>
                   setField("title", e.target.value)
                 }
-                placeholder="e.g. Option A: Cloud Migration"
+                placeholder="Enter alternative title"
               />
             </div>
 
             <div className="form-group">
-              <label>Description</label>
+              <label className="form-label">Description</label>
               <textarea
-                value={form.description}
+                className="form-input"
+                rows="2"
+                value={form.description || ""}
                 onChange={(e) =>
                   setField("description", e.target.value)
                 }
-                placeholder="Describe this alternative..."
-                rows="3"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Pros</label>
-              <textarea
-                value={form.pros}
-                onChange={(e) =>
-                  setField("pros", e.target.value)
-                }
-                placeholder="List advantages..."
-                rows="3"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Cons</label>
-              <textarea
-                value={form.cons}
-                onChange={(e) =>
-                  setField("cons", e.target.value)
-                }
-                placeholder="List disadvantages..."
-                rows="3"
-              />
+                placeholder="Describe the alternative"
+              ></textarea>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>Estimated Cost</label>
+                <label className="form-label">Pros</label>
+                <textarea
+                  className="form-input"
+                  rows="2"
+                  value={form.pros || ""}
+                  onChange={(e) =>
+                    setField("pros", e.target.value)
+                  }
+                  placeholder="Strengths"
+                ></textarea>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Cons</label>
+                <textarea
+                  className="form-input"
+                  rows="2"
+                  value={form.cons || ""}
+                  onChange={(e) =>
+                    setField("cons", e.target.value)
+                  }
+                  placeholder="Drawbacks"
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">
+                  Estimated Cost
+                </label>
                 <input
+                  className="form-input"
                   type="number"
-                  step="0.01"
                   min="0"
-                  value={form.estimated_cost}
+                  step="0.01"
+                  value={form.estimated_cost || ""}
                   onChange={(e) =>
                     setField("estimated_cost", e.target.value)
                   }
-                  placeholder="e.g. 25000"
+                  placeholder="0.00"
                 />
               </div>
 
               <div className="form-group">
-                <label>Feasibility</label>
+                <label className="form-label">
+                  Feasibility
+                </label>
                 <select
-                  value={form.feasibility}
+                  className="form-input"
+                  value={form.feasibility || "Medium"}
                   onChange={(e) =>
                     setField("feasibility", e.target.value)
                   }
                 >
-                  {FIELD_LEVELS.map((level) => (
+                  {levelOptions.map((level) => (
                     <option key={level} value={level}>
                       {level}
                     </option>
@@ -4701,14 +4325,17 @@ const AlternativeModal = (props) => {
               </div>
 
               <div className="form-group">
-                <label>Risk Assessment</label>
+                <label className="form-label">
+                  Risk Level
+                </label>
                 <select
-                  value={form.risk_level}
+                  className="form-input"
+                  value={form.risk_level || "Medium"}
                   onChange={(e) =>
                     setField("risk_level", e.target.value)
                   }
                 >
-                  {FIELD_LEVELS.map((level) => (
+                  {levelOptions.map((level) => (
                     <option key={level} value={level}>
                       {level}
                     </option>
@@ -4718,19 +4345,21 @@ const AlternativeModal = (props) => {
             </div>
 
             <div className="form-group">
-              <label>Risk Explanation</label>
+              <label className="form-label">
+                Risk Explanation
+              </label>
               <textarea
-                value={form.risk_explanation}
+                className="form-input"
+                rows="2"
+                value={form.risk_explanation || ""}
                 onChange={(e) =>
                   setField("risk_explanation", e.target.value)
                 }
-                placeholder="Explain the identified risks..."
-                rows="2"
-              />
+                placeholder="Explain the risk assessment"
+              ></textarea>
             </div>
 
             <div className="modal-actions">
-
               <button
                 type="button"
                 className="secondary-button action-limited"
@@ -4739,7 +4368,6 @@ const AlternativeModal = (props) => {
               >
                 Cancel
               </button>
-
               <button
                 type="submit"
                 className="primary-button action-limited"
@@ -4747,18 +4375,2574 @@ const AlternativeModal = (props) => {
               >
                 {saving
                   ? "Saving..."
-                  : (mode === "edit"
-                      ? "Update Alternative"
-                      : "Save Alternative")}
+                  : mode === "create"
+                  ? "Create Alternative"
+                  : "Save Changes"}
               </button>
-
             </div>
-
           </form>
-
         )}
 
+        {isView && (
+          <div className="modal-actions">
+            <button
+              className="primary-button action-limited"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
+    </div>
+  );
+};
+
+// ==========================================
+// NOTIFICATIONS PAGE
+// ==========================================
+
+const NotificationsPage = (props) => {
+  const {
+    user,
+    getRoleName,
+    navigateTo,
+    handleLogout
+  } = props;
+
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+
+  const loadNotifications = useCallback(async () => {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/notifications/`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        setError(
+          response.status === 401
+            ? "Session expired. Please login again."
+            : "Failed to load notifications."
+        );
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      setNotifications(data || []);
+    } catch (error) {
+      console.error("Notifications error:", error);
+      setError("Unable to connect to server.");
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const markAsRead = async (notification) => {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) return;
+
+    if (!notification.is_read) {
+      try {
+        await fetch(
+          `${API_BASE_URL}/notifications/${notification.notification_id}/read`,
+          {
+            method: "PATCH",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          }
+        );
+
+        setNotifications((prev) =>
+          prev.map((n) =>
+            Number(n.notification_id) ===
+            Number(notification.notification_id)
+              ? { ...n, is_read: true }
+              : n
+          )
+        );
+      } catch (error) {
+        console.error("Mark read error:", error);
+      }
+    }
+
+    if (notification.decision_id) {
+      navigateTo("decision-view", {
+        decision_id: notification.decision_id
+      });
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) return;
+
+    setActionMessage("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/notifications/mark-all-read`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        setActionMessage("Failed to mark all notifications as read.");
+        return;
+      }
+
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, is_read: true }))
+      );
+
+      setActionMessage("All notifications marked as read.");
+    } catch (error) {
+      console.error("Mark all read error:", error);
+      setActionMessage("Unable to connect to server.");
+    }
+  };
+
+  const timeAgoLabel = (value) => {
+    if (!value) return "";
+
+    const created = new Date(value);
+
+    if (isNaN(created.getTime())) return "";
+
+    const seconds = Math.floor(
+      (Date.now() - created.getTime()) / 1000
+    );
+
+    if (seconds < 60) return "Just now";
+
+    const minutes = Math.floor(seconds / 60);
+
+    if (minutes < 60) {
+      return minutes === 1
+        ? "1 minute ago"
+        : `${minutes} minutes ago`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+
+    if (hours < 24) {
+      return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    }
+
+    const days = Math.floor(hours / 24);
+
+    if (days === 1) return "1 day ago";
+
+    if (days < 30) return `${days} days ago`;
+
+    return created.toLocaleDateString();
+  };
+
+  const unreadCount = notifications.filter(
+    (n) => !n.is_read
+  ).length;
+
+  return (
+    <div className="dash-layout">
+
+      <AppSidebar
+        activePage="notifications"
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+      />
+
+      <main className="dash-main">
+
+        <header className="dash-header">
+
+          <div>
+            <h2 className="dash-header-title">
+              &#128276; Notifications
+            </h2>
+            <p className="dash-header-sub">
+              Updates on your decisions and approvals
+            </p>
+          </div>
+
+          <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
+            <button
+              className="nav-button"
+              onClick={() => navigateTo("home")}
+            >
+              &#8962; Back to Dashboard
+            </button>
+            <div className="dash-header-user">
+              <div className="dash-avatar">
+                {(user?.name || "U").charAt(0).toUpperCase()}
+              </div>
+              <div className="dash-user-info">
+                <div className="dash-user-name">
+                  {user?.name}
+                </div>
+                <div className="dash-user-role">
+                  {getRoleName(user?.role_id)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </header>
+
+        <section className="dash-card">
+
+          <div className="dash-card-header">
+            <h4>Notifications</h4>
+            <span className="team-count-pill">
+              {unreadCount > 0
+                ? `${unreadCount} unread`
+                : "All read"}
+            </span>
+          </div>
+
+          <div
+            style={{
+              height: "1px",
+              background: "#e5e7eb",
+              margin: "12px 0 16px"
+            }}
+          ></div>
+
+          {actionMessage && (
+            <div
+              className="message"
+              style={{ marginBottom: "16px" }}
+            >
+              {actionMessage}
+            </div>
+          )}
+
+          {error && (
+            <div
+              className="message"
+              style={{ marginBottom: "16px" }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: "12px"
+            }}
+          >
+            <button
+              className="secondary-button"
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+            >
+              Mark all as read
+            </button>
+          </div>
+
+          {loading ? (
+
+            <div className="empty-state">
+              Loading notifications...
+            </div>
+
+          ) : notifications.length === 0 ? (
+
+            <div className="empty-state">
+              <div
+                style={{
+                  fontSize: "28px",
+                  marginBottom: "10px"
+                }}
+              >
+                &#128276;
+              </div>
+              <h3
+                style={{
+                  margin: "0 0 6px",
+                  color: "#0f172a"
+                }}
+              >
+                No Notifications
+              </h3>
+              <p
+                style={{
+                  margin: "0",
+                  color: "#64748b",
+                  fontSize: "14px"
+                }}
+              >
+                You have no notifications yet.
+              </p>
+            </div>
+
+          ) : (
+
+            <div className="notification-list">
+              {notifications.map((n) => (
+                <button
+                  key={n.notification_id}
+                  className={
+                    "notification-item" +
+                    (n.is_read
+                      ? " notification-item-read"
+                      : " notification-item-unread")
+                  }
+                  onClick={() => markAsRead(n)}
+                >
+                  <div className="notification-item-dot">
+                    {n.is_read ? "&#10003;" : "&#128309;"}
+                  </div>
+                  <div className="notification-item-body">
+                    <div className="notification-item-title">
+                      {n.title}
+                    </div>
+                    <div className="notification-item-message">
+                      {n.message}
+                    </div>
+                    <div className="notification-item-time">
+                      {timeAgoLabel(n.created_at)}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+        </section>
+
+      </main>
+
+    </div>
+  );
+};
+
+// ==========================================
+// DOCUMENTS PAGE
+// ==========================================
+
+const DocumentsPage = (props) => {
+  const {
+    user,
+    getRoleName,
+    navigateTo,
+    allDocuments,
+    allDocumentsLoading,
+    formatFileSize,
+    formatDate,
+    handleDownloadDocument,
+    handleLogout
+  } = props;
+
+  const docs = allDocuments || [];
+
+  const fileTypeLabel = (doc) => {
+    const name = doc.original_file_name || "";
+    const ext = name.split(".").pop().toUpperCase();
+
+    if (ext && ext.length <= 5) {
+      return ext;
+    }
+
+    const type = (doc.file_type || "");
+
+    if (type) {
+      const parts = type.split("/");
+
+      return parts.length === 2
+        ? parts[1].toUpperCase()
+        : type.toUpperCase();
+    }
+
+    return "File";
+  };
+
+  const fileIcon = (doc) => {
+    const ext = (doc.original_file_name || "")
+      .split(".")
+      .pop()
+      .toLowerCase();
+
+    if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
+      return "🖼️";
+    }
+
+    if (ext === "pdf") {
+      return "📄";
+    }
+
+    return "📎";
+  };
+
+  return (
+    <div className="dash-layout">
+
+      <AppSidebar
+        activePage="documents"
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+      />
+
+      <main className="dash-main">
+
+        <header className="dash-header">
+
+          <div>
+            <h2 className="dash-header-title">
+              📎 Documents / Knowledge Repository
+            </h2>
+            <p className="dash-header-sub">
+              All supporting documents uploaded for decisions
+            </p>
+          </div>
+
+          <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
+            <button
+              className="nav-button"
+              onClick={() => navigateTo("home")}
+            >
+              &#8962; Back to Dashboard
+            </button>
+            <div className="dash-header-user">
+              <div className="dash-avatar">
+                {(user?.name || "U").charAt(0).toUpperCase()}
+              </div>
+              <div className="dash-user-info">
+                <div className="dash-user-name">
+                  {user?.name}
+                </div>
+                <div className="dash-user-role">
+                  {getRoleName(user?.role_id)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </header>
+
+        <section className="dash-card">
+
+          <div className="dash-card-header">
+            <h4>All Documents</h4>
+            <span className="team-count-pill">
+              {docs.length} document(s)
+            </span>
+          </div>
+
+          <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+          {allDocumentsLoading ? (
+
+            <div className="empty-state">
+              Loading documents...
+            </div>
+
+          ) : docs.length === 0 ? (
+
+            <div className="empty-state">
+              <div style={{ fontSize: "28px", marginBottom: "10px" }}>
+                📎
+              </div>
+              <h3 style={{ margin: "0 0 6px", color: "#0f172a" }}>
+                No Documents Found
+              </h3>
+              <p style={{ margin: "0", color: "#64748b", fontSize: "14px" }}>
+                No supporting documents have been uploaded yet.
+              </p>
+            </div>
+
+          ) : (
+
+            <div className="table-wrap">
+              <table className="decisions-table">
+                <thead>
+                  <tr>
+                    <th>Document</th>
+                    <th>Decision</th>
+                    <th>File Type</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map((doc) => (
+                    <tr key={doc.document_id}>
+                      <td>
+                        <div className="doc-info" style={{ maxWidth: "260px" }}>
+                          <div className="doc-name">
+                            {fileIcon(doc)} {doc.original_file_name || "Untitled file"}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        {doc.decision_title || (
+                          doc.decision_id ? `Decision #${doc.decision_id}` : "—"
+                        )}
+                      </td>
+                      <td>{fileTypeLabel(doc)}</td>
+                      <td>{formatFileSize(doc.file_size)}</td>
+                      <td>
+                        {doc.uploaded_at
+                          ? formatDate(doc.uploaded_at)
+                          : "—"}
+                      </td>
+                      <td>
+                        <div className="doc-actions">
+                          <button
+                            className="doc-action-btn"
+                            onClick={() =>
+                              handleDownloadDocument(doc, true)
+                            }
+                          >
+                            View
+                          </button>
+                          <button
+                            className="doc-action-btn"
+                            onClick={() =>
+                              handleDownloadDocument(doc, false)
+                            }
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+        </section>
+
+      </main>
+
+    </div>
+  );
+};
+
+// ==========================================
+// AUDIT LOGS PAGE
+// ==========================================
+
+const AuditLogsPage = (props) => {
+  const {
+    user,
+    getRoleName,
+    navigateTo,
+    formatDate,
+    handleLogout
+  } = props;
+
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState("");
+  const [meta, setMeta] = useState({
+    users: [],
+    actions: [],
+    entity_types: []
+  });
+  const [decisions, setDecisions] = useState([]);
+
+  const [filterUser, setFilterUser] = useState("");
+  const [filterAction, setFilterAction] = useState("");
+  const [filterDecision, setFilterDecision] = useState("");
+  const [filterEntity, setFilterEntity] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
+
+  const buildQuery = () => {
+    const params = new URLSearchParams();
+    if (filterUser) params.set("user_id", filterUser);
+    if (filterAction) params.set("action", filterAction);
+    if (filterDecision) params.set("decision_id", filterDecision);
+    if (filterEntity) params.set("entity_type", filterEntity);
+    if (filterDateFrom) params.set("date_from", filterDateFrom + "T00:00:00");
+    if (filterDateTo) params.set("date_to", filterDateTo + "T23:59:59");
+    if (filterSearch.trim()) params.set("search", filterSearch.trim());
+    return params.toString();
+  };
+
+  const loadLogs = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    setLogsLoading(true);
+    setLogsError("");
+    try {
+      const query = buildQuery();
+      const url = `${API_BASE_URL}/audit-logs/?${query}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data.detail || "Failed to load audit logs."
+        );
+      }
+      const data = await res.json();
+      setLogs(data || []);
+    } catch (error) {
+      setLogsError(error.message || "Failed to load audit logs.");
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadMeta = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/audit-logs/meta`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMeta(data || {
+          users: [],
+          actions: [],
+          entity_types: []
+        });
+      }
+    } catch (error) {
+      // meta is optional; page still works
+    }
+  };
+
+  const loadDecisions = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/decisions/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDecisions(
+          Array.isArray(data)
+            ? data
+            : (data.decisions || data.items || [])
+        );
+      }
+    } catch (error) {
+      // decisions list is optional for filtering
+    }
+  };
+
+  const applyFilters = () => loadLogs();
+
+  const resetFilters = () => {
+    setFilterUser("");
+    setFilterAction("");
+    setFilterDecision("");
+    setFilterEntity("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setFilterSearch("");
+    setTimeout(loadLogs, 0);
+  };
+
+  useEffect(() => {
+    loadMeta();
+    loadDecisions();
+    loadLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const entityLabel = (log) => {
+    const entity = log.entity_type || "Decision";
+    if (entity === "Authentication") return "Auth";
+    return entity;
+  };
+
+  const detailsText = (log) => {
+    let text = log.description || "";
+    if (
+      log.action === "DECISION_UPDATED" &&
+      log.old_value &&
+      log.new_value
+    ) {
+      const olds = String(log.old_value).split("\n");
+      const news = String(log.new_value).split("\n");
+      const pairs = olds.map((o, i) => {
+        const n = news[i] || "";
+        const oldPart = o.includes(":") ? o.split(":").slice(1).join(":").trim() : o;
+        const newPart = n.includes(":") ? n.split(":").slice(1).join(":").trim() : n;
+        return `${o.split(":")[0].trim() || "Field"}: ${oldPart} -> ${newPart}`;
+      });
+      return `${text}${pairs.length ? ` (${pairs.join("; ")})` : ""}`;
+    }
+    return text;
+  };
+
+  const actionBadgeClass = (action) => {
+    if (action.startsWith("LOGIN_FAILED")) return "audit-badge-danger";
+    if (action.includes("REJECTED")) return "audit-badge-danger";
+    if (action.includes("APPROVED") || action.includes("CREATED"))
+      return "audit-badge-success";
+    return "audit-badge-info";
+  };
+
+  return (
+    <div className="dash-layout">
+
+      <AppSidebar
+        activePage="audit-logs"
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+      />
+
+      <main className="dash-main">
+
+        <header className="dash-header">
+
+          <div>
+            <h2 className="dash-header-title">
+              🔍 Audit Logs
+            </h2>
+            <p className="dash-header-sub">
+              Complete record of important platform actions
+            </p>
+          </div>
+
+          <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
+            <button
+              className="nav-button"
+              onClick={() => navigateTo("home")}
+            >
+              &#8962; Back to Dashboard
+            </button>
+            <div className="dash-header-user">
+              <div className="dash-avatar">
+                {(user?.name || "U").charAt(0).toUpperCase()}
+              </div>
+              <div className="dash-user-info">
+                <div className="dash-user-name">
+                  {user?.name}
+                </div>
+                <div className="dash-user-role">
+                  {getRoleName(user?.role_id)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </header>
+
+        <section className="dash-card">
+
+          <div className="dash-card-header">
+            <h4>Audit Logs</h4>
+            <span className="team-count-pill">
+              {logs.length} record(s)
+            </span>
+          </div>
+
+          <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+          <div className="audit-filter-grid">
+
+            <div className="audit-filter-field">
+              <label>User</label>
+              <select
+                value={filterUser}
+                onChange={(e) => setFilterUser(e.target.value)}
+              >
+                <option value="">All Users</option>
+                {(meta.users || []).map((u) => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.name || u.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="audit-filter-field">
+              <label>Action</label>
+              <select
+                value={filterAction}
+                onChange={(e) => setFilterAction(e.target.value)}
+              >
+                <option value="">All Actions</option>
+                {(meta.actions || []).map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="audit-filter-field">
+              <label>Decision</label>
+              <select
+                value={filterDecision}
+                onChange={(e) => setFilterDecision(e.target.value)}
+              >
+                <option value="">All Decisions</option>
+                {decisions.map((d) => (
+                  <option
+                    key={d.decision_id}
+                    value={d.decision_id}
+                  >
+                    {d.title} (#{d.decision_id})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="audit-filter-field">
+              <label>Entity Type</label>
+              <select
+                value={filterEntity}
+                onChange={(e) => setFilterEntity(e.target.value)}
+              >
+                <option value="">All Entities</option>
+                {(meta.entity_types || []).map((e) => (
+                  <option key={e} value={e}>{e}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="audit-filter-field">
+              <label>From Date</label>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+              />
+            </div>
+
+            <div className="audit-filter-field">
+              <label>To Date</label>
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+              />
+            </div>
+
+            <div className="audit-filter-field audit-filter-search">
+              <label>Search</label>
+              <input
+                type="text"
+                placeholder="Search description, action, old/new value..."
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") applyFilters();
+                }}
+              />
+            </div>
+
+            <div className="audit-filter-actions">
+              <button
+                className="audit-filter-btn"
+                onClick={applyFilters}
+                disabled={logsLoading}
+              >
+                Apply Filters
+              </button>
+              <button
+                className="audit-filter-btn audit-filter-reset"
+                onClick={resetFilters}
+                disabled={logsLoading}
+              >
+                Reset
+              </button>
+            </div>
+
+          </div>
+
+          {logsError ? (
+            <div className="empty-state" style={{ marginTop: "16px" }}>
+              <p style={{ color: "#b91c1c" }}>{logsError}</p>
+              <button
+                className="audit-filter-btn"
+                onClick={loadLogs}
+              >
+                Retry
+              </button>
+            </div>
+          ) : logsLoading ? (
+            <div className="empty-state">
+              Loading audit logs...
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="empty-state">
+              <div style={{ fontSize: "28px", marginBottom: "10px" }}>
+                🔍
+              </div>
+              <h3 style={{ margin: "0 0 6px", color: "#0f172a" }}>
+                No Audit Records Found
+              </h3>
+              <p style={{ margin: "0", color: "#64748b", fontSize: "14px" }}>
+                No records match the current filters.
+              </p>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="decisions-table">
+                <thead>
+                  <tr>
+                    <th>Date/Time</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Decision</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr key={log.log_id}>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        {log.created_at
+                          ? formatDate(log.created_at)
+                          : "—"}
+                      </td>
+                      <td>
+                        {log.user_name || log.user_email || (
+                          `User #${log.user_id}`
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={`audit-action-badge ${actionBadgeClass(log.action)}`}
+                        >
+                          {log.action}
+                        </span>
+                      </td>
+                      <td>{entityLabel(log)}</td>
+                      <td>
+                        {log.decision_title || (
+                          log.decision_id
+                            ? `Decision #${log.decision_id}`
+                            : "—"
+                        )}
+                      </td>
+                      <td>
+                        <div className="audit-details">
+                          {detailsText(log)}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+        </section>
+
+      </main>
+
+    </div>
+  );
+};
+
+// ==========================================
+// TEAMS PAGE
+// ==========================================
+
+const TeamsPage = (props) => {
+  const {
+    user,
+    getRoleName,
+    navigateTo,
+    teams,
+    allUsers,
+    loadTeams,
+    loadAllUsers,
+    openViewTeam,
+    openViewDecision,
+    handleLogout
+  } = props;
+
+  const isManager =
+    [3, 4].includes(Number(user?.role_id));
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [activeTab, setActiveTab] = useState("active");
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Create team modal
+  const [showCreate, setShowCreate] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createManagerId, setCreateManagerId] = useState("");
+  const [createError, setCreateError] = useState("");
+
+  // Join team modal
+  const [showJoin, setShowJoin] = useState(false);
+  const [joinBusyId, setJoinBusyId] = useState(null);
+  const [joinMessage, setJoinMessage] = useState("");
+  const [joinMessageType, setJoinMessageType] = useState("");
+  const [requestedTeams, setRequestedTeams] = useState([]);
+
+  // Edit / Archive modals
+  const [showEdit, setShowEdit] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editManagerId, setEditManagerId] = useState("");
+  const [editError, setEditError] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+
+  // Three dot menu
+  const [menuOpenFor, setMenuOpenFor] = useState(null);
+
+  const showMsg = (text, type) => {
+    setMessage(text);
+    setMessageType(type || "");
+  };
+
+  const filteredTeams = () => {
+    let list = teams.filter((t) =>
+      activeTab === "active" ? !t.is_archived : t.is_archived
+    );
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (t) =>
+          (t.team_name || "").toLowerCase().includes(q) ||
+          (t.description || "").toLowerCase().includes(q)
+      );
+    }
+
+    const copy = [...list];
+
+    if (sortBy === "members") {
+      copy.sort((a, b) => (b.member_count || 0) - (a.member_count || 0));
+    } else if (sortBy === "activity") {
+      copy.sort((a, b) => {
+        const aDate = a.recent_decisions?.[0]?.decision_date || a.created_at || "";
+        const bDate = b.recent_decisions?.[0]?.decision_date || b.created_at || "";
+        return String(bDate).localeCompare(String(aDate));
+      });
+    } else {
+      copy.sort((a, b) =>
+        (a.team_name || "").localeCompare(b.team_name || "")
+      );
+    }
+
+    return copy;
+  };
+
+  const managerOptions = allUsers.filter(
+    (u) => [3, 4].includes(Number(u.role_id))
+  );
+
+  const handleCreate = async () => {
+    setCreateError("");
+    if (!createName.trim()) {
+      setCreateError("Team name is required");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            team_name: createName.trim(),
+            description: createDescription.trim() || null,
+            manager_user_id: createManagerId
+              ? Number(createManagerId)
+              : null
+          })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setCreateError(
+          data.detail || "Unable to create team"
+        );
+        return;
+      }
+
+      setShowCreate(false);
+      setCreateName("");
+      setCreateDescription("");
+      setCreateManagerId("");
+      showMsg("Team created successfully", "success");
+      loadTeams(true);
+      loadAllUsers();
+    } catch (error) {
+      console.error("Create team error:", error);
+      setCreateError("Unable to create team");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openEditModal = (team) => {
+    setEditTarget(team);
+    setEditName(team.team_name || "");
+    setEditDescription(team.description || "");
+    setEditManagerId(
+      team.manager_user_id ? String(team.manager_user_id) : ""
+    );
+    setEditError("");
+    setMenuOpenFor(null);
+    setShowEdit(true);
+  };
+
+  const handleEdit = async () => {
+    setEditError("");
+    if (!editName.trim()) {
+      setEditError("Team name cannot be empty");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${editTarget.team_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            team_name: editName.trim(),
+            description: editDescription.trim() || null,
+            manager_user_id: editManagerId
+              ? Number(editManagerId)
+              : null
+          })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setEditError(
+          data.detail || "Unable to update team"
+        );
+        return;
+      }
+
+      setShowEdit(false);
+      showMsg("Team updated successfully", "success");
+      loadTeams(true);
+    } catch (error) {
+      console.error("Edit team error:", error);
+      setEditError("Unable to update team");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleArchiveToggle = async (team) => {
+    setArchiveBusy(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const action = team.is_archived ? "unarchive" : "archive";
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${team.team_id}/${action}`,
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        showMsg(data.detail || "Unable to update team", "error");
+      } else {
+        showMsg(
+          team.is_archived
+            ? "Team restored successfully"
+            : "Team archived successfully",
+          "success"
+        );
+      }
+      loadTeams(true);
+    } catch (error) {
+      console.error("Archive error:", error);
+      showMsg("Unable to update team", "error");
+    } finally {
+      setArchiveBusy(false);
+      setArchiveTarget(null);
+      setMenuOpenFor(null);
+    }
+  };
+
+  const openJoinModal = () => {
+    setJoinMessage("");
+    setJoinMessageType("");
+    setRequestedTeams([]);
+    fetchRequests();
+    setShowJoin(true);
+  };
+
+  const fetchRequests = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const teamsList = teams.filter(
+        (t) => !t.is_archived
+      );
+
+      const requested = [];
+
+      for (const team of teamsList) {
+        const response = await fetch(
+          `${API_BASE_URL}/teams/${team.team_id}/join-requests`,
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          }
+        );
+        if (response.ok) {
+          const requests = await response.json();
+          requested.push(
+            ...requests
+              .filter(
+                (r) =>
+                  Number(r.user_id) === Number(user?.user_id)
+              )
+              .map((r) => r.team_id)
+          );
+        }
+      }
+
+      setRequestedTeams([...new Set(requested)]);
+    } catch (error) {
+      console.error("Join requests error:", error);
+    }
+  };
+
+  const alreadyMember = (team) =>
+    Number(user?.team_id) === Number(team.team_id);
+
+  const handleJoinRequest = async (team) => {
+    setJoinBusyId(team.team_id);
+    setJoinMessage("");
+    setJoinMessageType("");
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${team.team_id}/join-request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            team_id: team.team_id
+          })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setJoinMessage(
+          data.detail || "Unable to submit request"
+        );
+        setJoinMessageType("error");
+      } else {
+        setJoinMessage("Join request submitted");
+        setJoinMessageType("success");
+        setRequestedTeams((prev) => [
+          ...new Set([...prev, team.team_id])
+        ]);
+      }
+    } catch (error) {
+      console.error("Join request error:", error);
+      setJoinMessage("Unable to submit request");
+      setJoinMessageType("error");
+    } finally {
+      setJoinBusyId(null);
+    }
+  };
+
+  const visibleTeams = filteredTeams();
+
+  const memberCountFor = (team) => team.member_count || 0;
+
+  return (
+    <div className="dash-layout">
+
+      <AppSidebar
+        activePage="teams"
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+      />
+
+      <main className="dash-main">
+
+        <header className="dash-header">
+
+          <div>
+            <h2 className="dash-header-title">
+              My Teams
+            </h2>
+            <p className="dash-header-sub">
+              Collaborate with teams, manage decisions, and share organizational knowledge.
+            </p>
+          </div>
+
+          <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
+            {isManager && (
+              <button
+                className="primary-button"
+                onClick={() => setShowCreate(true)}
+                style={{ marginRight: "10px" }}
+              >
+                + Create Team
+              </button>
+            )}
+            <button
+              className="secondary-button"
+              onClick={openJoinModal}
+            >
+              + Join Team
+            </button>
+            <div className="dash-header-user">
+              <div className="dash-avatar">
+                {(user?.name || "U").charAt(0).toUpperCase()}
+              </div>
+              <div className="dash-user-info">
+                <div className="dash-user-name">
+                  {user?.name}
+                </div>
+                <div className="dash-user-role">
+                  {getRoleName(user?.role_id)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </header>
+
+        {message && (
+          <div
+            className={`message ${messageType === "error" ? "error" : ""} ${messageType === "success" ? "success" : ""}`}
+            style={{ marginBottom: "16px" }}
+          >
+            {message}
+          </div>
+        )}
+
+        <section className="teams-toolbar">
+          <input
+            type="text"
+            className="teams-search-input"
+            placeholder="Search teams..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <select
+            className="teams-sort-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="name">Sort: Name</option>
+            <option value="members">Sort: Members</option>
+            <option value="activity">Sort: Recent Activity</option>
+          </select>
+        </section>
+
+        <div className="teams-tabs">
+          <button
+            className={`teams-tab ${activeTab === "active" ? "active" : ""}`}
+            onClick={() => setActiveTab("active")}
+          >
+            Active Teams
+          </button>
+          <button
+            className={`teams-tab ${activeTab === "archived" ? "active" : ""}`}
+            onClick={() => setActiveTab("archived")}
+          >
+            Archived Teams
+          </button>
+        </div>
+
+        {visibleTeams.length === 0 ? (
+          <div className="dash-card" style={{ marginTop: "16px" }}>
+            <div className="message" style={{ margin: "12px 0" }}>
+              {searchQuery.trim()
+                ? "No teams match your search."
+                : "No teams found in this tab."}
+            </div>
+          </div>
+        ) : (
+          <div className="teams-grid">
+            {visibleTeams.map((team) => {
+              const members = memberCountFor(team);
+              const recent = team.recent_decisions || [];
+              const menuOpen = menuOpenFor === team.team_id;
+
+              return (
+                <div
+                  key={team.team_id}
+                  className="team-card"
+                >
+                  <div className="team-card-top">
+                    <div className="team-avatar">
+                      {(team.team_name || "T").charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="team-card-name">
+                        {team.team_name}
+                      </div>
+                      <div className="team-card-meta">
+                        {members} member(s) &middot;{" "}
+                        {team.manager_name
+                          ? `Lead: ${team.manager_name}`
+                          : "No lead assigned"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="team-card-body">
+                    <p className="team-card-desc">
+                      {team.description || "No description provided."}
+                    </p>
+
+                    <div className="team-card-badges">
+                      <span
+                        className={`status-badge ${team.is_archived ? "status-archived" : "status-active"}`}
+                      >
+                        {team.is_archived ? "Archived" : "Active"}
+                      </span>
+                    </div>
+
+                    {recent.length > 0 && (
+                      <div className="team-recent-decisions">
+                        <div className="team-recent-label">
+                          Recent Decisions
+                        </div>
+                        {recent.slice(0, 3).map((d) => (
+                          <button
+                            key={d.decision_id}
+                            className="team-recent-item"
+                            onClick={() => openViewDecision(d)}
+                            title={`Open ${d.title}`}
+                          >
+                            <span className="team-recent-dot"></span>
+                            <span className="team-recent-title">
+                              {d.title}
+                            </span>
+                            <span
+                              className={`status-badge status-${(d.status || "").toLowerCase().replace(/\s+/g, "-")}`}
+                            >
+                              {d.status}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {recent.length === 0 && (
+                      <div className="team-recent-empty">
+                        No decisions made by this team yet.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="team-card-footer">
+                    <button
+                      className="secondary-button team-view-btn"
+                      onClick={() => openViewTeam(team)}
+                    >
+                      View Team
+                    </button>
+                    <div className="team-dot-menu">
+                      <button
+                        className="team-dot-btn"
+                        onClick={() =>
+                          setMenuOpenFor(menuOpen ? null : team.team_id)
+                        }
+                        title="More options"
+                      >
+                        &#8942;
+                      </button>
+                      {menuOpen && (
+                        <div className="team-dot-dropdown">
+                          <button
+                            onClick={() => openViewTeam(team)}
+                            className="team-dot-item"
+                          >
+                            View Team
+                          </button>
+                          {isManager && (
+                            <button
+                              onClick={() => openEditModal(team)}
+                              className="team-dot-item"
+                            >
+                              Edit Team
+                            </button>
+                          )}
+                          {isManager && (
+                            <button
+                              onClick={() =>
+                                setArchiveTarget(team)
+                              }
+                              className="team-dot-item"
+                            >
+                              {team.is_archived
+                                ? "Unarchive Team"
+                                : "Archive Team"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {showCreate && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Create Team</h3>
+              <div>
+                <label className="form-label">Team Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="e.g. Data Science"
+                />
+              </div>
+              <div>
+                <label className="form-label">Description</label>
+                <textarea
+                  className="form-input"
+                  rows="3"
+                  value={createDescription}
+                  onChange={(e) => setCreateDescription(e.target.value)}
+                  placeholder="What does this team do?"
+                />
+              </div>
+              <div>
+                <label className="form-label">Manager / Lead</label>
+                <select
+                  className="form-input"
+                  value={createManagerId}
+                  onChange={(e) => setCreateManagerId(e.target.value)}
+                >
+                  <option value="">-- No lead --</option>
+                  {managerOptions.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.name} ({m.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {createError && (
+                <div className="message error" style={{ margin: "10px 0" }}>
+                  {createError}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => setShowCreate(false)}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={handleCreate}
+                  disabled={busy}
+                >
+                  {busy ? "Creating..." : "Create Team"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showJoin && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Join a Team</h3>
+              <p style={{ color: "#64748b", fontSize: "13px" }}>
+                Select a team to submit a join request. A team lead will
+                review and approve it.
+              </p>
+              {joinMessage && (
+                <div
+                  className={`message ${joinMessageType === "error" ? "error" : ""} ${joinMessageType === "success" ? "success" : ""}`}
+                  style={{ margin: "10px 0" }}
+                >
+                  {joinMessage}
+                </div>
+              )}
+              <div className="join-team-list">
+                {teams
+                  .filter((t) => !t.is_archived)
+                  .map((team) => {
+                    const isMember = alreadyMember(team);
+                    const requested = requestedTeams.includes(
+                      team.team_id
+                    );
+                    return (
+                      <div key={team.team_id} className="join-team-row">
+                        <div>
+                          <div className="join-team-name">
+                            {team.team_name}
+                          </div>
+                          <div className="join-team-meta">
+                            {team.member_count || 0} member(s)
+                          </div>
+                        </div>
+                        {isMember ? (
+                          <span className="status-badge status-active">
+                            Member
+                          </span>
+                        ) : requested ? (
+                          <span className="status-badge status-under-review">
+                            Pending
+                          </span>
+                        ) : (
+                          <button
+                            className="secondary-button"
+                            onClick={() => handleJoinRequest(team)}
+                            disabled={joinBusyId === team.team_id}
+                          >
+                            {joinBusyId === team.team_id
+                              ? "Requesting..."
+                              : "Request to Join"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => setShowJoin(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showEdit && editTarget && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Edit Team</h3>
+              <div>
+                <label className="form-label">Team Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="form-label">Description</label>
+                <textarea
+                  className="form-input"
+                  rows="3"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="form-label">Manager / Lead</label>
+                <select
+                  className="form-input"
+                  value={editManagerId}
+                  onChange={(e) => setEditManagerId(e.target.value)}
+                >
+                  <option value="">-- No lead --</option>
+                  {managerOptions.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.name} ({m.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {editError && (
+                <div className="message error" style={{ margin: "10px 0" }}>
+                  {editError}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => setShowEdit(false)}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={handleEdit}
+                  disabled={busy}
+                >
+                  {busy ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {archiveTarget && (
+          <ConfirmDialog
+            title={archiveTarget.is_archived ? "Restore Team" : "Archive Team"}
+            message={
+              archiveTarget.is_archived
+                ? `Restore "${archiveTarget.team_name}" so members can use it again?`
+                : `Archive "${archiveTarget.team_name}"? Archived teams are hidden from the active list.`
+            }
+            confirmLabel={
+              archiveBusy
+                ? "Working..."
+                : archiveTarget.is_archived
+                  ? "Restore"
+                  : "Archive"
+            }
+            isBusy={archiveBusy}
+            onCancel={() => {
+              if (!archiveBusy) {
+                setArchiveTarget(null);
+                setMenuOpenFor(null);
+              }
+            }}
+            onConfirm={() => handleArchiveToggle(archiveTarget)}
+          />
+        )}
+
+      </main>
+
+    </div>
+  );
+};
+
+// ==========================================
+// TEAM DETAILS PAGE
+// ==========================================
+
+const TeamDetailsPage = (props) => {
+  const {
+    user,
+    getRoleName,
+    getTeamName,
+    team,
+    allUsers,
+    navigateTo,
+    openViewDecision,
+    loadTeamDetail,
+    setSelectedTeam,
+    handleLogout
+  } = props;
+
+  const isManager =
+    [3, 4].includes(Number(user?.role_id));
+  const isAdmin = Number(user?.role_id) === 4;
+
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [addUserId, setAddUserId] = useState("");
+  const [addError, setAddError] = useState("");
+
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
+
+  const [roleTarget, setRoleTarget] = useState(null);
+  const [roleValue, setRoleValue] = useState("");
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [roleError, setRoleError] = useState("");
+
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(false);
+  const [requestActionId, setRequestActionId] = useState(null);
+
+  const [teamDecisions, setTeamDecisions] = useState([]);
+  const [teamDecisionsLoading, setTeamDecisionsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isManager && team) {
+      loadJoinRequests(team.team_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [team?.team_id]);
+
+  useEffect(() => {
+    if (team) {
+      loadTeamDecisions(team.team_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [team?.team_id]);
+
+  const members = team?.members || [];
+  const teamActivity = team?.recent_activity || [];
+
+  const refreshTeam = async () => {
+    if (!team) return;
+    const full = await loadTeamDetail(team.team_id);
+    if (full) setSelectedTeam(full);
+    await loadTeamDecisions(team.team_id);
+  };
+
+  const loadJoinRequests = async (teamId) => {
+    setJoinRequestsLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${teamId}/join-requests`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setJoinRequests(data);
+      }
+    } catch (error) {
+      console.error("Join requests error:", error);
+    } finally {
+      setJoinRequestsLoading(false);
+    }
+  };
+
+  const loadTeamDecisions = async (teamId) => {
+    setTeamDecisionsLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${teamId}/decisions`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setTeamDecisions(data);
+      }
+    } catch (error) {
+      console.error("Team decisions error:", error);
+    } finally {
+      setTeamDecisionsLoading(false);
+    }
+  };
+
+  const showMsg = (text, type) => {
+    setMessage(text);
+    setMessageType(type || "");
+  };
+
+  const handleAddMember = async () => {
+    setAddError("");
+    if (!addUserId) {
+      setAddError("Select a user to add");
+      return;
+    }
+    setBusy(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${team.team_id}/members`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ user_id: Number(addUserId) })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAddError(data.detail || "Unable to add member");
+        return;
+      }
+
+      setShowAddMember(false);
+      setAddUserId("");
+      showMsg("Member added successfully", "success");
+      await refreshTeam();
+    } catch (error) {
+      console.error("Add member error:", error);
+      setAddError("Unable to add member");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemoveMember = async (member) => {
+    setRemoveBusy(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${team.team_id}/members/${member.user_id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        showMsg(data.detail || "Unable to remove member", "error");
+      } else {
+        showMsg("Member removed successfully", "success");
+        await refreshTeam();
+      }
+    } catch (error) {
+      console.error("Remove member error:", error);
+      showMsg("Unable to remove member", "error");
+    } finally {
+      setRemoveBusy(false);
+      setRemoveTarget(null);
+    }
+  };
+
+  const openRoleModal = (member) => {
+    setRoleTarget(member);
+    setRoleValue(String(member.role_id));
+    setRoleError("");
+  };
+
+  const handleAssignRole = async () => {
+    setRoleError("");
+    setRoleBusy(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/users/${roleTarget.user_id}?role_id=${Number(roleValue)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setRoleError(data.detail || "Unable to assign role");
+        return;
+      }
+
+      setRoleTarget(null);
+      showMsg("Role updated successfully", "success");
+      await refreshTeam();
+    } catch (error) {
+      console.error("Assign role error:", error);
+      setRoleError("Unable to assign role");
+    } finally {
+      setRoleBusy(false);
+    }
+  };
+
+  const handleJoinRequestDecision = async (request, action) => {
+    setRequestActionId(request.request_id);
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${API_BASE_URL}/teams/${team.team_id}/join-requests/${request.request_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ decision: action })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        showMsg(data.detail || "Unable to process request", "error");
+      } else {
+        showMsg(
+          action === "approve"
+            ? "Join request approved"
+            : "Join request rejected",
+          "success"
+        );
+        await loadJoinRequests(team.team_id);
+        await refreshTeam();
+      }
+    } catch (error) {
+      console.error("Join request decision error:", error);
+      showMsg("Unable to process request", "error");
+    } finally {
+      setRequestActionId(null);
+    }
+  };
+
+  const pendingRequests = (joinRequests || []).filter(
+    (r) => r.status === "Pending"
+  );
+
+  const processedRequests = (joinRequests || []).filter(
+    (r) => r.status !== "Pending"
+  );
+
+  return (
+    <div className="dash-layout">
+
+      <AppSidebar
+        activePage="teams"
+        navigateTo={navigateTo}
+        handleLogout={handleLogout}
+      />
+
+      <main className="dash-main">
+
+        <header className="dash-header">
+
+          <div>
+            <button
+              className="nav-button"
+              onClick={() => navigateTo("teams")}
+              style={{ marginBottom: "8px" }}
+            >
+              &larr; Back to Teams
+            </button>
+            <h2 className="dash-header-title">
+              {team?.team_name || "Team Details"}
+            </h2>
+            <p className="dash-header-sub">
+              {team?.description || "Team collaboration workspace."}
+            </p>
+          </div>
+
+          <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
+            <div className="dash-avatar">
+              {(user?.name || "U").charAt(0).toUpperCase()}
+            </div>
+            <div className="dash-user-info">
+              <div className="dash-user-name">
+                {user?.name}
+              </div>
+              <div className="dash-user-role">
+                {getRoleName(user?.role_id)}
+              </div>
+            </div>
+          </div>
+
+        </header>
+
+        {message && (
+          <div
+            className={`message ${messageType === "error" ? "error" : ""} ${messageType === "success" ? "success" : ""}`}
+            style={{ marginBottom: "16px" }}
+          >
+            {message}
+          </div>
+        )}
+
+        {!team ? (
+          <div className="dash-card">
+            <div className="message" style={{ margin: "12px 0" }}>
+              Team not found.
+            </div>
+          </div>
+        ) : (
+          <>
+            <section className="team-detail-card">
+              <div className="team-detail-hero">
+                <div className="team-avatar team-avatar-lg">
+                  {(team.team_name || "T").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="team-detail-name">
+                    {team.team_name}
+                  </div>
+                  <div className="team-detail-meta">
+                    {team.member_count || 0} member(s) &middot;{" "}
+                    {team.decision_count || 0} decision(s) &middot; Lead:{" "}
+                    {team.manager_name || "No lead assigned"}
+                  </div>
+                  <div style={{ marginTop: "10px" }}>
+                    <span
+                      className={`status-badge ${team.is_archived ? "status-archived" : "status-active"}`}
+                    >
+                      {team.is_archived ? "Archived" : "Active"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="team-detail-desc">
+                {team.description || "No description provided."}
+              </p>
+            </section>
+
+            {isManager && (
+              <div className="team-manager-actions">
+                <button
+                  className="primary-button"
+                  onClick={() => setShowAddMember(true)}
+                  disabled={team.is_archived}
+                >
+                  + Add Member
+                </button>
+              </div>
+            )}
+
+            <section className="dash-card team-section-card">
+              <div className="dash-card-header">
+                <h4>Team Members</h4>
+                <span className="team-count-pill">
+                  {team.member_count || 0} member(s)
+                </span>
+              </div>
+              <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+              {members.length === 0 ? (
+                <div className="message" style={{ margin: "12px 0" }}>
+                  No members assigned to this team yet.
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="decisions-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Team</th>
+                        {isManager && <th>Actions</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {members.map((member) => (
+                        <tr key={member.user_id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              <div
+                                className="dash-avatar"
+                                style={{ width: "30px", height: "30px", fontSize: "13px" }}
+                              >
+                                {(member.name || "U").charAt(0).toUpperCase()}
+                              </div>
+                              <span style={{ fontWeight: 600, color: "#1e293b" }}>
+                                {member.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td>{member.email}</td>
+                          <td>
+                            <span className={`status-badge status-${(member.role_name || "").toLowerCase()}`}>
+                              {member.role_name || "Member"}
+                            </span>
+                          </td>
+                          <td>{member.team_name || "Not assigned"}</td>
+                          {isManager && (
+                            <td>
+                              <button
+                                className="secondary-button action-limited"
+                                onClick={() => openRoleModal(member)}
+                                disabled={team.is_archived}
+                              >
+                                Assign Role
+                              </button>
+                              <button
+                                className="danger-button action-limited"
+                                onClick={() => setRemoveTarget(member)}
+                                disabled={team.is_archived}
+                                style={{ marginLeft: "6px" }}
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
+            {isManager && (
+              <section className="dash-card team-section-card">
+                <div className="dash-card-header">
+                  <h4>Join Requests</h4>
+                  <span className="team-count-pill">
+                    {(joinRequests || []).length} request(s)
+                  </span>
+                </div>
+                <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+                {joinRequestsLoading ? (
+                  <div className="spin-loader" style={{ margin: "12px auto" }} />
+                ) : (joinRequests || []).length === 0 ? (
+                  <div className="message" style={{ margin: "12px 0" }}>
+                    No join requests.
+                  </div>
+                ) : (
+                  <div className="table-wrap">
+                    <table className="decisions-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Status</th>
+                          <th>Requested</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingRequests.map((request) => (
+                          <tr key={request.request_id}>
+                            <td>{request.user_name}</td>
+                            <td>{request.user_email}</td>
+                            <td>
+                              <span className="status-badge status-under-review">
+                                {request.status}
+                              </span>
+                            </td>
+                            <td>
+                              {request.created_at
+                                ? new Date(request.created_at).toLocaleDateString()
+                                : "—"}
+                            </td>
+                            <td>
+                              <button
+                                className="primary-button action-limited"
+                                onClick={() =>
+                                  handleJoinRequestDecision(request, "approve")
+                                }
+                                disabled={requestActionId === request.request_id}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                className="danger-button action-limited"
+                                onClick={() =>
+                                  handleJoinRequestDecision(request, "reject")
+                                }
+                                disabled={requestActionId === request.request_id}
+                                style={{ marginLeft: "6px" }}
+                              >
+                                Reject
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {processedRequests.map((request) => (
+                          <tr key={request.request_id}>
+                            <td>{request.user_name}</td>
+                            <td>{request.user_email}</td>
+                            <td>
+                              <span
+                                className={`status-badge ${
+                                  request.status === "Approved"
+                                    ? "status-active"
+                                    : "status-archived"
+                                }`}
+                              >
+                                {request.status}
+                              </span>
+                            </td>
+                            <td>
+                              {request.created_at
+                                ? new Date(request.created_at).toLocaleDateString()
+                                : "—"}
+                            </td>
+                            <td>—</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section className="dash-card team-section-card">
+              <div className="dash-card-header">
+                <h4>Team Decisions</h4>
+                <span className="team-count-pill">
+                  {teamDecisions.length} decision(s)
+                </span>
+              </div>
+              <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+              {teamDecisionsLoading ? (
+                <div className="message" style={{ margin: "12px 0" }}>
+                  Loading decisions...
+                </div>
+              ) : teamDecisions.length === 0 ? (
+                <div className="message" style={{ margin: "12px 0" }}>
+                  No decisions recorded for this team yet.
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="decisions-table">
+                    <thead>
+                      <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Owner</th>
+                        <th>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamDecisions.map((decision) => (
+                        <tr key={decision.decision_id}>
+                          <td>
+                            <button
+                              className="link-button"
+                              onClick={() => openViewDecision(decision)}
+                            >
+                              {decision.title}
+                            </button>
+                          </td>
+                          <td>{decision.category_name || "—"}</td>
+                          <td>
+                            <span
+                              className={`status-badge status-${(decision.status || "").toLowerCase().replace(/\s+/g, "-")}`}
+                            >
+                              {decision.status}
+                            </span>
+                          </td>
+                          <td>{decision.expert_name || "—"}</td>
+                          <td>
+                            {decision.created_at
+                              ? new Date(decision.created_at).toLocaleDateString()
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
+            <section className="dash-card team-section-card">
+              <div className="dash-card-header">
+                <h4>Recent Team Activity</h4>
+                <span className="team-count-pill">
+                  {teamActivity.length} event(s)
+                </span>
+              </div>
+              <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+              {teamActivity.length === 0 ? (
+                <div className="message" style={{ margin: "12px 0" }}>
+                  No recent activity for this team yet.
+                </div>
+              ) : (
+                <ul className="team-activity-list">
+                  {teamActivity.map((item, index) => (
+                    <li
+                      key={`${item.decision_id}-${index}`}
+                      className="team-activity-item"
+                    >
+                      <div>
+                        <span className="team-activity-action">
+                          {item.action}
+                        </span>{" "}
+                        {item.user_name ? `by ${item.user_name}` : ""}
+                      </div>
+                      <div className="team-activity-decision">
+                        {item.decision_title}
+                      </div>
+                      <div className="team-activity-date">
+                        {item.created_at
+                          ? new Date(item.created_at).toLocaleString()
+                          : "—"}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+
+        {showAddMember && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Add Member</h3>
+              <div>
+                <label className="form-label">User</label>
+                <select
+                  className="form-input"
+                  value={addUserId}
+                  onChange={(e) => setAddUserId(e.target.value)}
+                >
+                  <option value="">-- Select a user --</option>
+                  {(allUsers || [])
+                    .filter(
+                      (u) =>
+                        Number(u.team_id) !== Number(team.team_id)
+                    )
+                    .map((u) => (
+                      <option key={u.user_id} value={u.user_id}>
+                        {u.name} ({u.email}) — {u.role_name || "Member"}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {addError && (
+                <div className="message error" style={{ margin: "10px 0" }}>
+                  {addError}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => setShowAddMember(false)}
+                  disabled={busy}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={handleAddMember}
+                  disabled={busy}
+                >
+                  {busy ? "Adding..." : "Add Member"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {removeTarget && (
+          <ConfirmDialog
+            title="Remove Member"
+            message={`Remove ${removeTarget.name} from this team?`}
+            confirmLabel={removeBusy ? "Removing..." : "Remove"}
+            isBusy={removeBusy}
+            onCancel={() => {
+              if (!removeBusy) setRemoveTarget(null);
+            }}
+            onConfirm={() => handleRemoveMember(removeTarget)}
+          />
+        )}
+
+        {roleTarget && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Assign Team Role</h3>
+              <p style={{ color: "#64748b", fontSize: "13px" }}>
+                Change the role of {roleTarget.name}.
+              </p>
+              <div>
+                <label className="form-label">Role</label>
+                <select
+                  className="form-input"
+                  value={roleValue}
+                  onChange={(e) => setRoleValue(e.target.value)}
+                >
+                  <option value="1">Employee</option>
+                  <option value="2">Reviewer</option>
+                  <option value="3">Manager</option>
+                  {isAdmin && <option value="4">Administrator</option>}
+                </select>
+              </div>
+              {roleError && (
+                <div className="message error" style={{ margin: "10px 0" }}>
+                  {roleError}
+                </div>
+              )}
+              <div className="modal-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => setRoleTarget(null)}
+                  disabled={roleBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={handleAssignRole}
+                  disabled={roleBusy}
+                >
+                  {roleBusy ? "Assigning..." : "Assign Role"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
 
     </div>
   );
@@ -4794,6 +6978,10 @@ const DecisionsPage = (props) => {
     setDeleteTarget,
     cancelDelete,
     handleDeleteDecision,
+    handleSubmitForReview,
+    submitTarget,
+    setSubmitTarget,
+    isSubmitting,
     handleLogout,
     formatDate
   } = props;
@@ -4802,6 +6990,10 @@ const DecisionsPage = (props) => {
     if (e.key === "Enter") {
       applyFilters();
     }
+  };
+
+  const openSubmitConfirm = (decision) => {
+    setSubmitTarget(decision);
   };
 
   return (
@@ -4827,6 +7019,7 @@ const DecisionsPage = (props) => {
           </div>
 
           <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
             <button
               className="nav-button"
               onClick={navigateBack}
@@ -4899,11 +7092,14 @@ const DecisionsPage = (props) => {
                 <option value="">
                   All Statuses
                 </option>
-                <option value="Active">
-                  Active
+                <option value="Draft">
+                  Draft
                 </option>
                 <option value="Under Review">
                   Under Review
+                </option>
+                <option value="Reviewer Approved">
+                  Reviewer Approved
                 </option>
                 <option value="Approved">
                   Approved
@@ -5054,6 +7250,19 @@ const DecisionsPage = (props) => {
                             Edit
                           </button>
 
+                          {decision.status === "Draft" &&
+                          (user?.user_id === decision.expert_id ||
+                          [3, 4].includes(user?.role_id)) && (
+                          <button
+                            className="action-button submit-button"
+                            onClick={() =>
+                              openSubmitConfirm(decision)
+                            }
+                          >
+                            Submit for Review
+                          </button>
+                          )}
+
                           {decision.status !== "Archived" && (
                           <button
                             className="action-button delete-button"
@@ -5061,7 +7270,9 @@ const DecisionsPage = (props) => {
                               setDeleteTarget(decision)
                             }
                           >
-                            {decision.status === "Under Review" ||
+                            {decision.status === "Draft" ||
+                            decision.status === "Under Review" ||
+                            decision.status === "Reviewer Approved" ||
                             decision.status === "Rejected"
                               ? "Delete"
                               : "Archive"}
@@ -5086,19 +7297,25 @@ const DecisionsPage = (props) => {
       {deleteTarget && (
         <ConfirmDialog
           title={
+            deleteTarget.status === "Draft" ||
             deleteTarget.status === "Under Review" ||
+            deleteTarget.status === "Reviewer Approved" ||
             deleteTarget.status === "Rejected"
               ? "Delete Decision"
               : "Archive Decision"
           }
           message={
+            deleteTarget.status === "Draft" ||
             deleteTarget.status === "Under Review" ||
+            deleteTarget.status === "Reviewer Approved" ||
             deleteTarget.status === "Rejected"
               ? `Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`
               : `Are you sure you want to archive "${deleteTarget.title}"? The decision will be kept in history but no longer appear as an active decision.`
           }
           confirmLabel={
+            deleteTarget.status === "Draft" ||
             deleteTarget.status === "Under Review" ||
+            deleteTarget.status === "Reviewer Approved" ||
             deleteTarget.status === "Rejected"
               ? "Delete"
               : "Archive"
@@ -5109,6 +7326,20 @@ const DecisionsPage = (props) => {
             handleDeleteDecision(deleteTarget)
           }
           onCancel={cancelDelete}
+        />
+      )}
+
+      {submitTarget && (
+        <ConfirmDialog
+          title="Submit for Review"
+          message={`Are you sure you want to submit "${submitTarget.title}" for review?`}
+          confirmLabel="Submit"
+          cancelLabel="Cancel"
+          isBusy={isSubmitting}
+          onConfirm={() =>
+            handleSubmitForReview(submitTarget)
+          }
+          onCancel={() => setSubmitTarget(null)}
         />
       )}
 
@@ -5139,7 +7370,6 @@ const CreateDecisionPage = (props) => {
     decisionImplementationStatus,
     decisionPriority,
     decisionDate,
-    decisionStatus,
     decisionAlternatives,
     decisionMessage,
     decisionMessageType,
@@ -5157,7 +7387,6 @@ const CreateDecisionPage = (props) => {
     setDecisionImplementationStatus,
     setDecisionPriority,
     setDecisionDate,
-    setDecisionStatus,
     setDecisionAlternatives,
     handleCreateDecision,
     handleLogout,
@@ -5167,7 +7396,11 @@ const CreateDecisionPage = (props) => {
     setCreateFileUploading,
     lastCreatedDecisionId,
     setLastCreatedDecisionId,
-    handleCreateFileUpload
+    handleCreateFileUpload,
+    createdConfirmTarget,
+    handleCreatedReviewSubmit,
+    handleCreatedReviewSkip,
+    isSubmitting: isSubmittingProp
   } = props;
 
   const updateAlternative = (index, field, value) => {
@@ -5235,6 +7468,7 @@ const CreateDecisionPage = (props) => {
           </div>
 
           <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
             <button
               className="nav-button"
               onClick={navigateBack}
@@ -5648,35 +7882,6 @@ const CreateDecisionPage = (props) => {
 
                 </div>
 
-                <div className="form-group">
-
-                  {label("Status")}
-
-                  <select
-                    value={decisionStatus}
-                    onChange={(e) =>
-                      setDecisionStatus(e.target.value)
-                    }
-                  >
-                    <option value="Active">
-                      Active
-                    </option>
-                    <option value="Under Review">
-                      Under Review
-                    </option>
-                    <option value="Approved">
-                      Approved
-                    </option>
-                    <option value="Rejected">
-                      Rejected
-                    </option>
-                    <option value="Archived">
-                      Archived
-                    </option>
-                  </select>
-
-                </div>
-
               </div>
 
               <div className="form-row">
@@ -5904,6 +8109,18 @@ const CreateDecisionPage = (props) => {
 
       </main>
 
+      {createdConfirmTarget && (
+        <ConfirmDialog
+          title="Decision Created"
+          message="Do you want to submit this decision for review?"
+          confirmLabel="Submit for Review"
+          cancelLabel="Not Now"
+          isBusy={isSubmittingProp}
+          onConfirm={handleCreatedReviewSubmit}
+          onCancel={handleCreatedReviewSkip}
+        />
+      )}
+
     </div>
   );
 };
@@ -5923,7 +8140,23 @@ const ViewDecisionPage = (props) => {
     overviewMessageType,
     altSectionMessage,
     altSectionMessageType,
-    handleUpdateStatus,
+    handleSubmitForReview,
+    handleReviewDecision,
+    handleManagerReviewDecision,
+    handleArchiveDecision,
+    submitTarget,
+    setSubmitTarget,
+    isSubmitting,
+    reviewTarget,
+    setReviewTarget,
+    rejectReason,
+    setRejectReason,
+    reviewStep,
+    setReviewStep,
+    isReviewing,
+    archiveTarget,
+    setArchiveTarget,
+    isArchiving,
     handleLogout,
     openEditDecision,
     deleteTarget,
@@ -5982,6 +8215,36 @@ const ViewDecisionPage = (props) => {
 
   const [activeModule, setActiveModule] = useState("overview");
 
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogsLoading, setAuditLogsLoading] = useState(false);
+
+  const decisionIdForAudit =
+    selectedDecision?.decision_id || null;
+
+  useEffect(() => {
+    if (!decisionIdForAudit) return;
+    let cancelled = false;
+    const token = localStorage.getItem("access_token");
+    if (!token) return undefined;
+    setAuditLogsLoading(true);
+    fetch(`${API_BASE_URL}/audit-logs/decision/${decisionIdForAudit}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancelled) setAuditLogs(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAuditLogs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAuditLogsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [decisionIdForAudit]);
+
   if (!selectedDecision) {
     return null;
   }
@@ -5991,12 +8254,46 @@ const ViewDecisionPage = (props) => {
     { key: "alternatives", label: "Alternatives", icon: "⚖️" },
     { key: "documents", label: "Documents", icon: "📎" },
     { key: "discussion", label: "Discussion", icon: "💬" },
-    { key: "history", label: "History", icon: "🕓" }
+    { key: "history", label: "History", icon: "🕓" },
+    { key: "audit", label: "Audit History", icon: "🧾" }
   ];
 
   const d = selectedDecision;
 
   const history = d.history || [];
+
+  const approvals = d.approvals || [];
+
+  const workflowSteps = [
+    { key: "draft", label: "Draft" },
+    { key: "submit", label: "Submit for Review" },
+    { key: "under-review", label: "Under Review" },
+    { key: "reviewer", label: "Reviewer Approval" },
+    { key: "manager", label: "Manager Approval" },
+    { key: "decision", label: "Approved / Rejected" },
+    { key: "archived", label: "Archived" }
+  ];
+
+  const statusIndex = {
+    "Draft": 0,
+    "Under Review": 2,
+    "Reviewer Approved": 3,
+    "Approved": 5,
+    "Rejected": 5,
+    "Archived": 6
+  };
+
+  const currentStep = typeof statusIndex[d.status] === "number"
+    ? statusIndex[d.status]
+    : 0;
+
+  const latestRejection =
+    approvals.find((a) =>
+      (a.action || "").toLowerCase().includes("reject")
+    ) || {};
+
+  const rejectionReason =
+    latestRejection.reason || null;
 
   const alternatives = d.alternatives || [];
 
@@ -6031,6 +8328,7 @@ const ViewDecisionPage = (props) => {
           </div>
 
           <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
             <button
               className="nav-button"
               onClick={() => navigateTo("home")}
@@ -6071,12 +8369,344 @@ const ViewDecisionPage = (props) => {
                 Decision #{d.decision_id}
               </p>
             </div>
-            <span className={statusBadgeClass(d.status)}>
-              {d.status}
-            </span>
           </div>
 
           <div style={{ height: "1px", background: "#e5e7eb", margin: "12px 0 16px" }}></div>
+
+          <section className="detail-card approval-workflow-card">
+
+            <div className="detail-card-title">
+              Approval Workflow
+            </div>
+
+            {d.status === "Rejected" && rejectionReason && (
+              <div className="wf-reject-reason">
+                <strong>Rejection Reason:</strong>{" "}
+                {rejectionReason}
+              </div>
+            )}
+
+            <div className="workflow-steps">
+              {workflowSteps.map((s, i) => (
+                <>
+                  <div
+                    className={
+                      "wf-step" +
+                      (i < currentStep ? " done" : "") +
+                      (i === currentStep ? " active" : "") +
+                      (i === currentStep && d.status === "Rejected"
+                        ? " rejected"
+                        : "") +
+                      (i > currentStep ? " wait" : "")
+                    }
+                  >
+                    <div className="wf-dot">
+                      {i < currentStep ? "✓" : i + 1}
+                    </div>
+                    <div className="wf-step-label">
+                      {s.label}
+                    </div>
+                  </div>
+                  {i < workflowSteps.length - 1 && (
+                    <div
+                      className={
+                        "wf-arrow" +
+                        (i < currentStep ? " done" : "")
+                      }
+                    >
+                      →
+                    </div>
+                  )}
+                </>
+              ))}
+            </div>
+
+            <div className="detail-actions">
+
+              {d.status === "Draft" && (
+              (user?.user_id === d.expert_id ||
+              [3, 4].includes(user?.role_id)) ? (
+              <button
+                className="primary-button action-limited submit-for-review-btn"
+                onClick={() => setSubmitTarget(d)}
+              >
+                Submit for Review
+              </button>
+              ) : (
+              <span className="workflow-hint">
+                Draft — awaiting submission
+              </span>
+              )
+              )}
+
+              {d.status === "Under Review" && (
+              <>
+                {user?.role_id === 2 ? (
+                  <>
+                    <button
+                      className="primary-button action-limited approve-btn"
+                      onClick={() =>
+                        handleReviewDecision(d, "approve")
+                      }
+                    >
+                      Approve
+                    </button>
+
+                    <button
+                      className="danger-button action-limited"
+                      onClick={() => {
+                        setReviewTarget(d);
+                        setReviewStep("reviewer");
+                        setRejectReason("");
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : (
+                  <span className="workflow-hint">
+                    Waiting for Reviewer Review
+                  </span>
+                )}
+              </>
+              )}
+
+              {d.status === "Reviewer Approved" && (
+              <>
+                {user?.role_id === 3 ? (
+                  <>
+                    <button
+                      className="primary-button action-limited approve-btn"
+                      onClick={() =>
+                        handleManagerReviewDecision(d, "approve")
+                      }
+                    >
+                      Approve
+                    </button>
+
+                    <button
+                      className="danger-button action-limited"
+                      onClick={() => {
+                        setReviewTarget(d);
+                        setReviewStep("manager");
+                        setRejectReason("");
+                      }}
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : (
+                  <span className="workflow-hint">
+                    Waiting for Manager Approval
+                  </span>
+                )}
+              </>
+              )}
+
+              {d.status === "Approved" && (
+              <button
+                className="primary-button action-limited archive-btn"
+                onClick={() => setArchiveTarget(d)}
+              >
+                Archive Decision
+              </button>
+              )}
+
+              <button
+                className="primary-button action-limited"
+                onClick={() => openEditDecision(d)}
+              >
+                Edit Decision
+              </button>
+
+              {d.status !== "Archived" && (
+              <button
+                className="danger-button action-limited"
+                onClick={() => setDeleteTarget(d)}
+              >
+                {d.status === "Draft" ||
+                d.status === "Under Review" ||
+                d.status === "Reviewer Approved" ||
+                d.status === "Rejected"
+                  ? "Delete Decision"
+                  : "Archive Decision"}
+              </button>
+              )}
+
+            </div>
+
+            <div className="detail-card-title workflow-history-title">
+              Approval History
+            </div>
+
+            {approvals.length === 0 ? (
+              <div className="detail-card-body">
+                No approval activity recorded.
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="decisions-table">
+                  <thead>
+                    <tr>
+                      <th>Action</th>
+                      <th>Role</th>
+                      <th>User</th>
+                      <th>Date / Time</th>
+                      <th>Rejection Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {approvals.map((entry) => (
+                      <tr key={entry.approval_id}>
+                        <td>
+                          <span
+                            className={statusBadgeClass(
+                              entry.action
+                            )}
+                          >
+                            {entry.action}
+                          </span>
+                        </td>
+                        <td>
+                          {entry.role_name || "—"}
+                        </td>
+                        <td>
+                          {entry.user_name ||
+                            `User #${entry.user_id}`}
+                        </td>
+                        <td>
+                          {formatDate(entry.created_at)}
+                        </td>
+                        <td>
+                          {entry.reason || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </section>
+
+          {/* SUPPORTING DOCUMENTS (always visible on view page) */}
+
+          <section className="detail-card documents-card">
+
+            <div className="detail-card-title">
+              📎 Supporting Documents
+            </div>
+
+            <p className="alt-section-sub">
+              Supporting documents / papers uploaded for this decision
+            </p>
+
+            {docMessage && (
+              <div
+                className={`message ${docMessageType}`}
+              >
+                {docMessage}
+              </div>
+            )}
+
+            {documentsLoading ? (
+
+              <div className="detail-card-body">
+                Loading documents...
+              </div>
+
+            ) : documents2.length === 0 ? (
+
+              <div className="detail-card-body">
+                No supporting documents attached to this decision.
+              </div>
+
+            ) : (
+
+              <div className="doc-list">
+
+                {documents2.map((doc) => {
+
+                  const fileType = (doc.file_type || "")
+                    .toLowerCase();
+
+                  const isImage = fileType.startsWith(
+                    "image/"
+                  );
+
+                  const isPdf = fileType === "application/pdf";
+
+                  const isText = fileType.startsWith("text/");
+
+                  const fileLabel = (doc.original_file_name || "")
+                    .split(".")
+                    .pop()
+                    .toUpperCase();
+
+                  return (
+                    <div
+                      className="doc-item"
+                      key={doc.document_id}
+                    >
+
+                      <div className="doc-icon">
+                        {isImage ? "🖼️" : isPdf ? "📄" : "📎"}
+                      </div>
+
+                      <div className="doc-info">
+
+                        <div className="doc-name">
+                          {doc.original_file_name}
+                        </div>
+
+                        <div className="doc-meta">
+                          <span>
+                            {fileLabel || doc.file_type || "File"}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            {formatFileSize(doc.file_size)}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            {formatDate(doc.uploaded_at)}
+                          </span>
+                        </div>
+
+                      </div>
+
+                      <div className="doc-actions">
+
+                        <button
+                          className="doc-action-btn"
+                          onClick={() =>
+                            handleDownloadDocument(doc, true)
+                          }
+                        >
+                          {isImage || isPdf || isText
+                            ? "View"
+                            : "Open"}
+                        </button>
+
+                        <button
+                          className="doc-action-btn"
+                          onClick={() =>
+                            handleDownloadDocument(doc, false)
+                          }
+                        >
+                          Download
+                        </button>
+
+                      </div>
+
+                    </div>
+                  );
+                })}
+
+              </div>
+            )}
+
+          </section>
 
           <nav className="module-nav">
 
@@ -6134,12 +8764,26 @@ const ViewDecisionPage = (props) => {
               <div className="info-card">
 
                 <span>
-                  Decision Owner
+                  Owner
                 </span>
 
                 <strong>
                   {d.expert_name ||
                     `User #${d.expert_id}`}
+                </strong>
+
+              </div>
+
+              <div className="info-card">
+
+                <span>
+                  Expert
+                </span>
+
+                <strong>
+                  {d.assigned_name ||
+                    d.expert_name ||
+                    "Not assigned"}
                 </strong>
 
               </div>
@@ -6189,18 +8833,6 @@ const ViewDecisionPage = (props) => {
                 <strong>
                   {d.implementation_status ||
                     "Not Started"}
-                </strong>
-
-              </div>
-
-              <div className="info-card">
-
-                <span>
-                  Status
-                </span>
-
-                <strong>
-                  {d.status}
                 </strong>
 
               </div>
@@ -6264,6 +8896,86 @@ const ViewDecisionPage = (props) => {
 
               <div className="detail-card-body">
                 {d.objective}
+              </div>
+
+            </div>
+          )}
+
+          {/* ANALYSIS / EVALUATION CRITERIA */}
+
+          {d.evaluation_criteria && (
+            <div className="detail-card">
+
+              <div className="detail-card-title">
+                Analysis
+              </div>
+
+              <div className="detail-card-body">
+                {d.evaluation_criteria}
+              </div>
+
+            </div>
+          )}
+
+          {/* RISKS */}
+
+          {d.risks && (
+            <div className="detail-card">
+
+              <div className="detail-card-title">
+                Risk
+              </div>
+
+              <div className="detail-card-body">
+                {d.risks}
+              </div>
+
+            </div>
+          )}
+
+          {/* STAKEHOLDERS */}
+
+          {d.stakeholders && (
+            <div className="detail-card">
+
+              <div className="detail-card-title">
+                Stakeholders
+              </div>
+
+              <div className="detail-card-body">
+                {d.stakeholders}
+              </div>
+
+            </div>
+          )}
+
+          {/* RATIONALE */}
+
+          {d.rationale && (
+            <div className="detail-card">
+
+              <div className="detail-card-title">
+                Rationale
+              </div>
+
+              <div className="detail-card-body">
+                {d.rationale}
+              </div>
+
+            </div>
+          )}
+
+          {/* OUTCOME */}
+
+          {d.final_outcome && (
+            <div className="detail-card">
+
+              <div className="detail-card-title">
+                Outcome
+              </div>
+
+              <div className="detail-card-body">
+                {d.final_outcome}
               </div>
 
             </div>
@@ -7023,60 +9735,79 @@ const ViewDecisionPage = (props) => {
           </div>
           )}
 
-          {/* ACTIONS */}
+          {/* APPROVAL HISTORY (now shown in the Approval Workflow card) */}
 
-          <div className="detail-actions">
+          {/* AUDIT HISTORY */}
 
-            <select
-              className="status-select"
-              value={d.status}
-              onChange={(e) =>
-                handleUpdateStatus(d, e.target.value)
-              }
-            >
-              <option value="Active">
-                Active
-              </option>
-              <option value="Under Review">
-                Under Review
-              </option>
+          {activeModule === "audit" && (
+          <div className="detail-card">
 
-              {(user?.role_id === 2 || user?.role_id === 3) && (
-                <>
-                  <option value="Approved">
-                    Approved
-                  </option>
-                  <option value="Rejected">
-                    Rejected
-                  </option>
-                </>
-              )}
+            <div className="detail-card-title">
+              Audit History
+            </div>
 
-              <option value="Archived">
-                Archived
-              </option>
-            </select>
+            {auditLogsLoading ? (
+              <div className="detail-card-body">
+                Loading audit history...
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="detail-card-body">
+                No audit records recorded for this decision yet.
+              </div>
+            ) : (
+              <div className="audit-history-list">
 
-            <button
-              className="primary-button action-limited"
-              onClick={() => openEditDecision(d)}
-            >
-              Edit Decision
-            </button>
+                {auditLogs.map((log) => {
+                  const labelMap = {
+                    "DECISION_CREATED": "Decision Created",
+                    "DECISION_SUBMITTED_FOR_REVIEW": "Submitted for Review",
+                    "REVIEWER_APPROVED": "Reviewer Approved",
+                    "REVIEWER_REJECTED": "Reviewer Rejected",
+                    "MANAGER_APPROVED": "Manager Approved",
+                    "MANAGER_REJECTED": "Manager Rejected",
+                    "DECISION_ARCHIVED": "Decision Archived",
+                    "DECISION_UPDATED": "Decision Updated",
+                    "DOCUMENT_UPLOADED": "Document Uploaded",
+                    "DOCUMENT_DELETED": "Document Deleted"
+                  };
 
-            {d.status !== "Archived" && (
-            <button
-              className="danger-button action-limited"
-              onClick={() => setDeleteTarget(d)}
-            >
-              {d.status === "Under Review" ||
-              d.status === "Rejected"
-                ? "Delete Decision"
-                : "Archive Decision"}
-            </button>
+                  return (
+                    <div
+                      className="audit-history-item"
+                      key={log.log_id}
+                    >
+                      <div className="audit-history-marker">
+                        &#10003;
+                      </div>
+                      <div className="audit-history-line"></div>
+                      <div className="audit-history-body">
+                        <div className="audit-history-action">
+                          {labelMap[log.action] || log.action}
+                        </div>
+                        <div className="audit-history-user">
+                          {log.user_name || log.user_email ||
+                            `User #${log.user_id}`}
+                        </div>
+                        <div className="audit-history-meta">
+                          {log.created_at
+                            ? formatDate(log.created_at)
+                            : ""}
+                        </div>
+                        {log.description && (
+                          <div className="audit-history-details">
+                            {log.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+              </div>
             )}
 
           </div>
+          )}
 
         </section>
 
@@ -7085,19 +9816,25 @@ const ViewDecisionPage = (props) => {
       {deleteTarget && (
         <ConfirmDialog
           title={
+            deleteTarget.status === "Draft" ||
             deleteTarget.status === "Under Review" ||
+            deleteTarget.status === "Reviewer Approved" ||
             deleteTarget.status === "Rejected"
               ? "Delete Decision"
               : "Archive Decision"
           }
           message={
+            deleteTarget.status === "Draft" ||
             deleteTarget.status === "Under Review" ||
+            deleteTarget.status === "Reviewer Approved" ||
             deleteTarget.status === "Rejected"
               ? `Are you sure you want to delete "${deleteTarget.title}"? This action cannot be undone.`
               : `Are you sure you want to archive "${deleteTarget.title}"? The decision will be kept in history but no longer appear as an active decision.`
           }
           confirmLabel={
+            deleteTarget.status === "Draft" ||
             deleteTarget.status === "Under Review" ||
+            deleteTarget.status === "Reviewer Approved" ||
             deleteTarget.status === "Rejected"
               ? "Delete"
               : "Archive"
@@ -7109,6 +9846,88 @@ const ViewDecisionPage = (props) => {
           }
           onCancel={cancelDelete}
         />
+      )}
+
+      {submitTarget && (
+        <ConfirmDialog
+          title="Submit for Review"
+          message={`Are you sure you want to submit "${submitTarget.title}" for review?`}
+          confirmLabel="Submit"
+          cancelLabel="Cancel"
+          isBusy={isSubmitting}
+          onConfirm={() =>
+            handleSubmitForReview(submitTarget)
+          }
+          onCancel={() => setSubmitTarget(null)}
+        />
+      )}
+
+      {archiveTarget && (
+        <ConfirmDialog
+          title="Archive Decision"
+          message={`Are you sure you want to archive "${archiveTarget.title}"? The decision will be kept in history but will no longer appear as an active decision.`}
+          confirmLabel="Archive"
+          cancelLabel="Cancel"
+          isBusy={isArchiving}
+          onConfirm={() =>
+            handleArchiveDecision(archiveTarget)
+          }
+          onCancel={() => setArchiveTarget(null)}
+        />
+      )}
+
+      {reviewTarget && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h3>Reject Decision</h3>
+            <p>
+              Provide a rejection reason for
+              &ldquo;{reviewTarget.title}&rdquo;.
+            </p>
+            <textarea
+              className="reason-input"
+              rows="3"
+              placeholder="Rejection reason (required)"
+              value={rejectReason}
+              onChange={(e) =>
+                setRejectReason(e.target.value)
+              }
+            ></textarea>
+            <div className="modal-actions">
+              <button
+                className="secondary-button action-limited"
+                onClick={() => {
+                  setReviewTarget(null);
+                  setRejectReason("");
+                }}
+                disabled={isReviewing}
+              >
+                Cancel
+              </button>
+              <button
+                className="danger-button action-limited"
+                onClick={() =>
+                  reviewStep === "manager"
+                    ? handleManagerReviewDecision(
+                        reviewTarget,
+                        "reject",
+                        rejectReason
+                      )
+                    : handleReviewDecision(
+                        reviewTarget,
+                        "reject",
+                        rejectReason
+                      )
+                }
+                disabled={
+                  isReviewing || !rejectReason.trim()
+                }
+              >
+                {isReviewing ? "Rejecting..." : "Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {altDeleteTarget && (
@@ -7187,7 +10006,6 @@ const EditDecisionPage = (props) => {
     decisionImplementationStatus,
     decisionPriority,
     decisionDate,
-    decisionStatus,
     decisionAlternatives,
     decisionMessage,
     decisionMessageType,
@@ -7205,7 +10023,6 @@ const EditDecisionPage = (props) => {
     setDecisionImplementationStatus,
     setDecisionPriority,
     setDecisionDate,
-    setDecisionStatus,
     setDecisionAlternatives,
     handleUpdateDecision,
     handleLogout,
@@ -7294,6 +10111,7 @@ const EditDecisionPage = (props) => {
           </div>
 
           <div className="dash-header-right">
+            <NotificationBell navigateTo={navigateTo} />
             <button
               className="nav-button"
               onClick={navigateBack}
@@ -7709,39 +10527,6 @@ const EditDecisionPage = (props) => {
 
                 <div className="form-group">
 
-                  {label("Status")}
-
-                  <select
-                    value={decisionStatus}
-                    onChange={(e) =>
-                      setDecisionStatus(e.target.value)
-                    }
-                  >
-                    <option value="Active">
-                      Active
-                    </option>
-                    <option value="Under Review">
-                      Under Review
-                    </option>
-                    <option value="Approved">
-                      Approved
-                    </option>
-                    <option value="Rejected">
-                      Rejected
-                    </option>
-                    <option value="Archived">
-                      Archived
-                    </option>
-                  </select>
-
-                </div>
-
-              </div>
-
-              <div className="form-row">
-
-                <div className="form-group">
-
                   {label("Priority")}
 
                   <select
@@ -7762,6 +10547,10 @@ const EditDecisionPage = (props) => {
                   </select>
 
                 </div>
+
+              </div>
+
+              <div className="form-row">
 
                 <div className="form-group">
 

@@ -58,9 +58,94 @@ class Team(Base):
         nullable=False
     )
 
+    description = Column(
+        Text,
+        nullable=True
+    )
+
+    is_archived = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    manager_user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    manager = relationship(
+        "User",
+        foreign_keys=[manager_user_id],
+        post_update=True
+    )
+
     users = relationship(
         "User",
-        back_populates="team"
+        back_populates="team",
+        foreign_keys="User.team_id"
+    )
+
+    requests = relationship(
+        "TeamRequest",
+        back_populates="team",
+        cascade="all, delete-orphan"
+    )
+
+
+# ==========================================
+# TEAM JOIN REQUEST
+# ==========================================
+
+class TeamRequest(Base):
+
+    __tablename__ = "team_requests"
+
+    request_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    team_id = Column(
+        Integer,
+        ForeignKey("teams.team_id"),
+        nullable=False
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    status = Column(
+        String(50),
+        nullable=False,
+        default="Pending"
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    team = relationship(
+        "Team",
+        back_populates="requests"
+    )
+
+    user = relationship(
+        "User",
+        foreign_keys=[user_id]
     )
 
 
@@ -114,7 +199,14 @@ class User(Base):
 
     team = relationship(
         "Team",
-        back_populates="users"
+        back_populates="users",
+        foreign_keys="User.team_id"
+    )
+
+    decisions = relationship(
+        "Decision",
+        foreign_keys="Decision.expert_id",
+        back_populates="expert"
     )
 
 
@@ -160,7 +252,7 @@ class Decision(Base):
     status = Column(
         String(50),
         nullable=False,
-        default="Active"
+        default="Draft"
     )
 
     problem_statement = Column(
@@ -228,7 +320,8 @@ class Decision(Base):
 
     expert = relationship(
         "User",
-        foreign_keys=[expert_id]
+        foreign_keys=[expert_id],
+        back_populates="decisions"
     )
 
     assigned = relationship(
@@ -256,6 +349,24 @@ class Decision(Base):
 
     comments = relationship(
         "DecisionComment",
+        back_populates="decision",
+        cascade="all, delete-orphan"
+    )
+
+    approvals = relationship(
+        "DecisionApproval",
+        back_populates="decision",
+        cascade="all, delete-orphan"
+    )
+
+    notifications = relationship(
+        "Notification",
+        back_populates="decision",
+        cascade="all, delete-orphan"
+    )
+
+    audit_logs = relationship(
+        "AuditLog",
         back_populates="decision",
         cascade="all, delete-orphan"
     )
@@ -550,6 +661,67 @@ class DecisionDocument(Base):
 
 
 # ==========================================
+# DECISION APPROVAL (APPROVAL WORKFLOW)
+# ==========================================
+
+class DecisionApproval(Base):
+
+    __tablename__ = "decision_approvals"
+
+    approval_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    decision_id = Column(
+        Integer,
+        ForeignKey("decisions.decision_id"),
+        nullable=False
+    )
+
+    action = Column(
+        String(100),
+        nullable=False
+    )
+
+    role_id = Column(
+        Integer,
+        ForeignKey("roles.role_id")
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id")
+    )
+
+    reason = Column(
+        Text
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    decision = relationship(
+        "Decision",
+        back_populates="approvals"
+    )
+
+    user = relationship(
+        "User",
+        foreign_keys=[user_id]
+    )
+
+    role = relationship(
+        "Role",
+        foreign_keys=[role_id]
+    )
+
+
+# ==========================================
 # DECISION COMMENT (DISCUSSION)
 # ==========================================
 
@@ -601,4 +773,279 @@ class DecisionComment(Base):
     author = relationship(
         "User",
         foreign_keys=[user_id]
+    )
+
+
+# ==========================================
+# NOTIFICATION
+# ==========================================
+
+class Notification(Base):
+
+    __tablename__ = "notifications"
+
+    notification_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    title = Column(
+        String(255),
+        nullable=False
+    )
+
+    message = Column(
+        Text,
+        nullable=False
+    )
+
+    type = Column(
+        String(100),
+        nullable=False
+    )
+
+    decision_id = Column(
+        Integer,
+        ForeignKey("decisions.decision_id"),
+        nullable=True
+    )
+
+    is_read = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    user = relationship(
+        "User",
+        foreign_keys=[user_id]
+    )
+
+    decision = relationship(
+        "Decision",
+        foreign_keys=[decision_id],
+        back_populates="notifications"
+    )
+
+
+# ==========================================
+# AUDIT LOG
+# ==========================================
+
+class AuditLog(Base):
+
+    __tablename__ = "audit_logs"
+
+    log_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    action = Column(
+        String(255),
+        nullable=False
+    )
+
+    decision_id = Column(
+        Integer,
+        ForeignKey("decisions.decision_id"),
+        nullable=True
+    )
+
+    old_value = Column(
+        Text
+    )
+
+    new_value = Column(
+        Text
+    )
+
+    description = Column(
+        Text
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    entity_type = Column(
+        String(100)
+    )
+
+    entity_id = Column(
+        Integer
+    )
+
+    user = relationship(
+        "User",
+        foreign_keys=[user_id]
+    )
+
+    decision = relationship(
+        "Decision",
+        foreign_keys=[decision_id],
+        back_populates="audit_logs"
+    )
+
+
+# ==========================================
+# KNOWLEDGE ARTICLE
+# ==========================================
+
+class KnowledgeArticle(Base):
+
+    __tablename__ = "knowledge_articles"
+
+    article_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    title = Column(
+        String(200),
+        nullable=False
+    )
+
+    content = Column(
+        Text,
+        nullable=False
+    )
+
+    category = Column(
+        String(100),
+        nullable=False,
+        default="General"
+    )
+
+    author_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    author = relationship(
+        "User",
+        foreign_keys=[author_id]
+    )
+
+
+# ==========================================
+# TEAM MEETING
+# ==========================================
+
+class Meeting(Base):
+
+    __tablename__ = "meetings"
+
+    meeting_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    title = Column(
+        String(200),
+        nullable=False
+    )
+
+    team_id = Column(
+        Integer,
+        ForeignKey("teams.team_id"),
+        nullable=True
+    )
+
+    organizer_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=True
+    )
+
+    decision_id = Column(
+        Integer,
+        ForeignKey("decisions.decision_id"),
+        nullable=True
+    )
+
+    scheduled_at = Column(
+        DateTime,
+        nullable=False
+    )
+
+    duration_minutes = Column(
+        Integer,
+        nullable=True,
+        default=30
+    )
+
+    location = Column(
+        String(200),
+        nullable=True
+    )
+
+    agenda = Column(
+        Text,
+        nullable=True
+    )
+
+    status = Column(
+        String(50),
+        nullable=False,
+        default="Scheduled"
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    team = relationship(
+        "Team",
+        foreign_keys=[team_id]
+    )
+
+    organizer = relationship(
+        "User",
+        foreign_keys=[organizer_id]
+    )
+
+    decision = relationship(
+        "Decision",
+        foreign_keys=[decision_id]
     )

@@ -13,6 +13,9 @@ from jose import jwt
 
 from app.database import get_db
 from app.models import User
+from app.audit import record_audit
+from app.audit import ACTION_LOGIN_SUCCESS
+from app.audit import ACTION_LOGIN_FAILED
 
 
 router = APIRouter(
@@ -210,6 +213,20 @@ def login(
 
     if not password_correct:
 
+        record_audit(
+            db,
+            user_id=user.user_id,
+            action=ACTION_LOGIN_FAILED,
+            description=(
+                f"Failed login attempt for {user.email}"
+            ),
+            entity_type="Authentication",
+            entity_id=user.user_id,
+            decision_id=None
+        )
+
+        db.commit()
+
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
@@ -223,6 +240,22 @@ def login(
         user.user_id,
         user.email
     )
+
+    # --------------------------------------
+    # AUDIT LOG
+    # --------------------------------------
+
+    record_audit(
+        db,
+        user_id=user.user_id,
+        action=ACTION_LOGIN_SUCCESS,
+        description=f"Login successful for {user.email}",
+        entity_type="Authentication",
+        entity_id=user.user_id,
+        decision_id=None
+    )
+
+    db.commit()
 
     # --------------------------------------
     # SUCCESS

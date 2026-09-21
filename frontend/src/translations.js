@@ -175,7 +175,6 @@ const translations = {
     "form.stakeholdersPlaceholder": "People or groups affected by this decision",
     "form.decisionDetails": "Decision Details",
     "form.decisionDate": "Decision Date",
-    "form.status": "Status",
     "form.priority": "Priority",
     "form.implementationStatus": "Implementation Status",
     "form.decisionOwner": "Decision Owner / Expert",
