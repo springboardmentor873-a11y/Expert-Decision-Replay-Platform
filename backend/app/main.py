@@ -14,6 +14,7 @@ from app.security.jwt import get_current_user
 from app.security.dependencies import require_roles
 from app.routers import notifications
 from app.routers import audit_logs
+from app.routers import reports
 
 Base.metadata.create_all(bind=engine)
 
@@ -48,6 +49,7 @@ app.include_router(versions.router)
 app.include_router(approvals.router)
 app.include_router(notifications.router)
 app.include_router(audit_logs.router)
+app.include_router(reports.router)
 @app.get("/")
 def root():
     return {

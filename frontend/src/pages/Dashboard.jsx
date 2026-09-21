@@ -412,6 +412,85 @@ function Dashboard() {
 
 </section>
 
+{/* Decision Status Graph */}
+<section className="dashboard-section dashboard-chart-section">
+
+  <div className="section-heading">
+    <div>
+      <span className="eyebrow">ANALYTICS</span>
+      <h2>Decision Status Analytics</h2>
+      <p>Visual distribution of decisions by their current status.</p>
+    </div>
+  </div>
+
+  <div className="decision-chart-card">
+
+    <div className="chart-row">
+      <div className="chart-label">
+        <span className="chart-dot draft-chart-dot"></span>
+        <span>Draft</span>
+      </div>
+
+      <div className="chart-bar-container">
+        <div
+          className="chart-bar draft-chart-bar"
+          style={{
+            width: totalDecisions
+              ? `${(draftCount / totalDecisions) * 100}%`
+              : "0%",
+          }}
+        ></div>
+      </div>
+
+      <strong>{draftCount}</strong>
+    </div>
+
+
+    <div className="chart-row">
+      <div className="chart-label">
+        <span className="chart-dot progress-chart-dot"></span>
+        <span>In Progress</span>
+      </div>
+
+      <div className="chart-bar-container">
+        <div
+          className="chart-bar progress-chart-bar"
+          style={{
+            width: totalDecisions
+              ? `${(inProgressCount / totalDecisions) * 100}%`
+              : "0%",
+          }}
+        ></div>
+      </div>
+
+      <strong>{inProgressCount}</strong>
+    </div>
+
+
+    <div className="chart-row">
+      <div className="chart-label">
+        <span className="chart-dot completed-chart-dot"></span>
+        <span>Completed</span>
+      </div>
+
+      <div className="chart-bar-container">
+        <div
+          className="chart-bar completed-chart-bar"
+          style={{
+            width: totalDecisions
+              ? `${(completedCount / totalDecisions) * 100}%`
+              : "0%",
+          }}
+        ></div>
+      </div>
+
+      <strong>{completedCount}</strong>
+    </div>
+
+  </div>
+
+</section>
+
 {/* Recent Decisions */}
 <section className="dashboard-section">
 

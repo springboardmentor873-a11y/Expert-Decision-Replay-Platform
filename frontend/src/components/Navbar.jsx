@@ -176,6 +176,17 @@ function Navbar() {
     </span>
   )}
 </button>
+<button
+  className={
+    isActive("/reports")
+      ? "sidebar-link active"
+      : "sidebar-link"
+  }
+  onClick={() => navigate("/reports")}
+>
+  <span className="nav-icon">📊</span>
+  <span>Reports</span>
+</button>
         <button
           className="sidebar-link"
           onClick={() => navigate("/decisions/create")}

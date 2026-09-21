@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import Replay from "./pages/Replay";
 import Approvals from "./pages/Approvals";
 import Notifications from "./pages/Notifications";
+import Reports from "./pages/Reports";
 
 function AppLayout({ children }) {
   return (
@@ -135,6 +136,16 @@ function App() {
   element={
     <ProtectedRoute>
       <Notifications />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/reports"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <Reports />
+      </AppLayout>
     </ProtectedRoute>
   }
 />
