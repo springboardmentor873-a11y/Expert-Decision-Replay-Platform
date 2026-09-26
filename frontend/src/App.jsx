@@ -12,6 +12,12 @@ import Replay from "./pages/Replay";
 import Approvals from "./pages/Approvals";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
+import Teams from "./pages/Teams";
+import KnowledgeRepository from "./pages/KnowledgeRepository";
+import Discussions from "./pages/Discussions";
+import Documents from "./pages/Documents";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 
 function AppLayout({ children }) {
   return (
@@ -114,6 +120,18 @@ function App() {
           }
         />
 
+                {/* Settings */}
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Settings />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* Unknown URL */}
         <Route
@@ -135,7 +153,9 @@ function App() {
   path="/notifications"
   element={
     <ProtectedRoute>
-      <Notifications />
+      <AppLayout>
+        <Notifications />
+      </AppLayout>
     </ProtectedRoute>
   }
 />
@@ -145,6 +165,57 @@ function App() {
     <ProtectedRoute>
       <AppLayout>
         <Reports />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/teams"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <Teams />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/knowledge"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <KnowledgeRepository />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/discussions"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <Discussions />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/documents"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <Documents />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/analytics"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <Analytics />
       </AppLayout>
     </ProtectedRoute>
   }

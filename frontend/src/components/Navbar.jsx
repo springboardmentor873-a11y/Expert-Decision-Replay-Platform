@@ -195,25 +195,65 @@ function Navbar() {
           <span>Create Decision</span>
         </button>
 
-        <button className="sidebar-link">
-          <span className="nav-icon">♧</span>
-          <span>Teams</span>
-        </button>
+        <button
+  className={
+    isActive("/knowledge")
+      ? "sidebar-link active"
+      : "sidebar-link"
+  }
+  onClick={() => navigate("/knowledge")}
+>
+  <span className="nav-icon">🧠</span>
+  <span>Knowledge</span>
+</button>
 
-        <button className="sidebar-link">
-          <span className="nav-icon">◌</span>
-          <span>Discussions</span>
-        </button>
+<button
+  className={
+    isActive("/teams")
+      ? "sidebar-link active"
+      : "sidebar-link"
+  }
+  onClick={() => navigate("/teams")}
+>
+  <span className="nav-icon">♧</span>
+  <span>Teams</span>
+</button>
 
-        <button className="sidebar-link">
-          <span className="nav-icon">▣</span>
-          <span>Documents</span>
-        </button>
+<button
+  className={
+    isActive("/discussions")
+      ? "sidebar-link active"
+      : "sidebar-link"
+  }
+  onClick={() => navigate("/discussions")}
+>
+  <span className="nav-icon">💬</span>
+  <span>Discussions</span>
+</button>
 
-        <button className="sidebar-link">
-          <span className="nav-icon">▥</span>
-          <span>Analytics</span>
-        </button>
+<button
+  className={
+    isActive("/documents")
+      ? "sidebar-link active"
+      : "sidebar-link"
+  }
+  onClick={() => navigate("/documents")}
+>
+  <span className="nav-icon">📄</span>
+  <span>Documents</span>
+</button>
+
+<button
+  className={
+    isActive("/analytics")
+      ? "sidebar-link active"
+      : "sidebar-link"
+  }
+  onClick={() => navigate("/analytics")}
+>
+  <span className="nav-icon">📊</span>
+  <span>Analytics</span>
+</button>
 
         <button
           className={
@@ -227,10 +267,13 @@ function Navbar() {
           <span>Profile</span>
         </button>
 
-        <button className="sidebar-link">
-          <span className="nav-icon">⚙</span>
-          <span>Settings</span>
-        </button>
+<button
+  className={isActive("/settings") ? "sidebar-link active" : "sidebar-link"}
+  onClick={() => navigate("/settings")}
+>
+  <span className="nav-icon">⚙</span>
+  <span>Settings</span>
+</button>
 
       </nav>
 

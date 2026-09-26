@@ -35,6 +35,9 @@ class User(Base):
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
 
     role = relationship("Role", back_populates="users")
+    @property
+    def role_name(self):
+        return self.role.name if self.role else None
     team = relationship("Team", back_populates="users")
 
     decisions = relationship(

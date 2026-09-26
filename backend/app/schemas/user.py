@@ -14,6 +14,7 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     role_id: int
+    role_name: str | None = None
     team_id: int | None = None
 
     class Config:

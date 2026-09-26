@@ -87,11 +87,14 @@ function Profile() {
   return (
     <div className="profile-page">
 
+      {/* HEADER */}
       <div className="profile-header">
         <div>
           <span className="eyebrow">ACCOUNT</span>
           <h1>My Profile</h1>
-          <p>View your account information and role details.</p>
+          <p>
+            Manage your identity, role and workspace information.
+          </p>
         </div>
 
         <button
@@ -102,63 +105,207 @@ function Profile() {
         </button>
       </div>
 
-      <section className="profile-card">
 
-        <div className="profile-identity">
+      {/* PROFILE HERO */}
+      <section className="profile-hero">
 
-          <div className="profile-avatar">
+        <div className="profile-hero-main">
+
+          <div className="profile-avatar-large">
             {initials}
           </div>
 
-          <div>
-            <h2>{user.full_name}</h2>
-            <p>{user.email}</p>
-            <span className="profile-role">
-              {roleName}
-            </span>
+          <div className="profile-hero-info">
+            <div className="profile-name-row">
+              <h2>{user.full_name}</h2>
+
+              <span className="profile-status-badge">
+                ● Active
+              </span>
+            </div>
+
+            <p className="profile-email">
+              {user.email}
+            </p>
+
+            <div className="profile-meta">
+              <span className="profile-role-badge">
+                {roleName}
+              </span>
+
+              <span className="profile-user-id">
+                User ID #{user.id}
+              </span>
+            </div>
           </div>
 
         </div>
 
-        <div className="profile-divider" />
+        <div className="profile-hero-side">
+          <span>ACCOUNT STATUS</span>
+          <strong>Active</strong>
+          <small>Your account is currently active.</small>
+        </div>
 
-        <div className="profile-details">
+      </section>
 
-          <div className="profile-detail">
-            <span>Full Name</span>
-            <strong>{user.full_name}</strong>
-          </div>
 
-          <div className="profile-detail">
-            <span>Email Address</span>
-            <strong>{user.email}</strong>
-          </div>
+      {/* OVERVIEW CARDS */}
+      <div className="profile-overview">
 
-          <div className="profile-detail">
-            <span>Role</span>
+        <div className="profile-overview-card">
+          <div className="profile-overview-icon">♙</div>
+
+          <div>
+            <span>ROLE</span>
             <strong>{roleName}</strong>
           </div>
+        </div>
 
-          <div className="profile-detail">
-            <span>User ID</span>
-            <strong>#{user.id}</strong>
-          </div>
+        <div className="profile-overview-card">
+          <div className="profile-overview-icon">♧</div>
 
-          <div className="profile-detail">
-            <span>Team ID</span>
+          <div>
+            <span>TEAM</span>
             <strong>
-              {user.team_id ? `#${user.team_id}` : "Not assigned"}
+              {user.team_id
+                ? `Team #${user.team_id}`
+                : "Not assigned"}
             </strong>
           </div>
+        </div>
 
-          <div className="profile-detail">
-            <span>Account Status</span>
-            <strong className="account-active">
+        <div className="profile-overview-card">
+          <div className="profile-overview-icon">✓</div>
+
+          <div>
+            <span>STATUS</span>
+            <strong className="profile-active-text">
               Active
             </strong>
           </div>
-
         </div>
+
+      </div>
+
+
+      {/* INFORMATION SECTION */}
+      <div className="profile-content-grid">
+
+        {/* PERSONAL INFORMATION */}
+        <section className="profile-section-card">
+
+          <div className="profile-section-heading">
+            <div className="profile-section-icon">
+              ◉
+            </div>
+
+            <div>
+              <h3>Personal Information</h3>
+              <p>
+                Your registered account information.
+              </p>
+            </div>
+          </div>
+
+          <div className="profile-info-grid">
+
+            <div className="profile-info-item">
+              <span>Full Name</span>
+              <strong>{user.full_name}</strong>
+            </div>
+
+            <div className="profile-info-item">
+              <span>Email Address</span>
+              <strong>{user.email}</strong>
+            </div>
+
+            <div className="profile-info-item">
+              <span>User ID</span>
+              <strong>#{user.id}</strong>
+            </div>
+
+            <div className="profile-info-item">
+              <span>Role</span>
+              <strong>{roleName}</strong>
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* WORKSPACE INFORMATION */}
+        <section className="profile-section-card">
+
+          <div className="profile-section-heading">
+            <div className="profile-section-icon workspace-icon">
+              ♧
+            </div>
+
+            <div>
+              <h3>Workspace</h3>
+              <p>
+                Your organizational access details.
+              </p>
+            </div>
+          </div>
+
+          <div className="profile-workspace-card">
+
+            <div className="workspace-row">
+              <span>Team</span>
+
+              <strong>
+                {user.team_id
+                  ? `Team #${user.team_id}`
+                  : "Not assigned"}
+              </strong>
+            </div>
+
+            <div className="workspace-row">
+              <span>Access level</span>
+
+              <strong>{roleName}</strong>
+            </div>
+
+            <div className="workspace-row">
+              <span>Account status</span>
+
+              <strong className="profile-active-text">
+                Active
+              </strong>
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+
+
+      {/* SECURITY SUMMARY */}
+      <section className="profile-security-card">
+
+        <div className="profile-security-icon">
+          ✓
+        </div>
+
+        <div>
+          <h3>Account security</h3>
+
+          <p>
+            Your account is authenticated through the platform's
+            secure JWT-based authentication system.
+          </p>
+        </div>
+
+        <button
+          className="profile-settings-button"
+          onClick={() => navigate("/settings")}
+        >
+          Open Settings →
+        </button>
 
       </section>
 
