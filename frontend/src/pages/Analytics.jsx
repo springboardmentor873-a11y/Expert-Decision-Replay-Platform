@@ -68,26 +68,37 @@ setUsers(usersResponse.data || []);
     }
   };
 
-  const decisionStats = useMemo(() => {
-    return {
-      total: decisions.length,
-      draft: decisions.filter(
-        (d) => d.status === "Draft"
-      ).length,
-      inProgress: decisions.filter(
-        (d) =>
-          d.status === "In Progress" ||
-          d.status === "InProgress"
-      ).length,
-      approved: decisions.filter(
-        (d) => d.status === "Approved" ||
-          d.status === "Completed"
-      ).length,
-      rejected: decisions.filter(
-        (d) => d.status === "Rejected"
-      ).length,
-    };
-  }, [decisions]);
+const decisionStats = useMemo(() => {
+  return {
+    total: decisions.length,
+
+    draft: decisions.filter(
+      (d) => d.status === "Draft"
+    ).length,
+
+    inProgress: decisions.filter(
+      (d) =>
+        d.status === "In Progress" ||
+        d.status === "InProgress"
+    ).length,
+
+    completed: decisions.filter(
+      (d) => d.status === "Completed"
+    ).length,
+
+    approved: decisions.filter(
+      (d) => d.status === "Approved"
+    ).length,
+
+    rejected: decisions.filter(
+      (d) => d.status === "Rejected"
+    ).length,
+
+    inReview: decisions.filter(
+      (d) => d.status === "In Review"
+    ).length,
+  };
+}, [decisions]);
 
   const priorityStats = useMemo(() => {
     return {
@@ -123,13 +134,15 @@ setUsers(usersResponse.data || []);
     return Math.round((value / total) * 100);
   };
 
-  const maxDecisionValue = Math.max(
-    decisionStats.draft,
-    decisionStats.inProgress,
-    decisionStats.approved,
-    decisionStats.rejected,
-    1
-  );
+const maxDecisionValue = Math.max(
+  decisionStats.draft,
+  decisionStats.inProgress,
+  decisionStats.completed,
+  decisionStats.approved,
+  decisionStats.rejected,
+  decisionStats.inReview,
+  1
+);
 
   const maxPriorityValue = Math.max(
     priorityStats.high,
@@ -240,85 +253,128 @@ setUsers(usersResponse.data || []);
             </div>
           </div>
 
-          <div className="analytics-bars">
+<div className="analytics-bars">
 
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>Draft</span>
-                <strong>{decisionStats.draft}</strong>
-              </div>
+  <div className="analytics-bar-row">
+    <div className="analytics-bar-label">
+      <span>Draft</span>
+      <strong>{decisionStats.draft}</strong>
+    </div>
 
-              <div className="analytics-bar-track">
-                <div
-                  className="analytics-bar-fill draft-fill"
-                  style={{
-                    width: `${percentage(
-                      decisionStats.draft,
-                      maxDecisionValue
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
+    <div className="analytics-bar-track">
+      <div
+        className="analytics-bar-fill draft-fill"
+        style={{
+          width: `${percentage(
+            decisionStats.draft,
+            maxDecisionValue
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
 
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>In Progress</span>
-                <strong>{decisionStats.inProgress}</strong>
-              </div>
 
-              <div className="analytics-bar-track">
-                <div
-                  className="analytics-bar-fill progress-fill"
-                  style={{
-                    width: `${percentage(
-                      decisionStats.inProgress,
-                      maxDecisionValue
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
+  <div className="analytics-bar-row">
+    <div className="analytics-bar-label">
+      <span>In Progress</span>
+      <strong>{decisionStats.inProgress}</strong>
+    </div>
 
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>Approved / Completed</span>
-                <strong>{decisionStats.approved}</strong>
-              </div>
+    <div className="analytics-bar-track">
+      <div
+        className="analytics-bar-fill progress-fill"
+        style={{
+          width: `${percentage(
+            decisionStats.inProgress,
+            maxDecisionValue
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
 
-              <div className="analytics-bar-track">
-                <div
-                  className="analytics-bar-fill approved-fill"
-                  style={{
-                    width: `${percentage(
-                      decisionStats.approved,
-                      maxDecisionValue
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
 
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>Rejected</span>
-                <strong>{decisionStats.rejected}</strong>
-              </div>
+  <div className="analytics-bar-row">
+    <div className="analytics-bar-label">
+      <span>Completed</span>
+      <strong>{decisionStats.completed}</strong>
+    </div>
 
-              <div className="analytics-bar-track">
-                <div
-                  className="analytics-bar-fill rejected-fill"
-                  style={{
-                    width: `${percentage(
-                      decisionStats.rejected,
-                      maxDecisionValue
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
+    <div className="analytics-bar-track">
+      <div
+        className="analytics-bar-fill completed-fill"
+        style={{
+          width: `${percentage(
+            decisionStats.completed,
+            maxDecisionValue
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
 
-          </div>
+
+  <div className="analytics-bar-row">
+    <div className="analytics-bar-label">
+      <span>Approved</span>
+      <strong>{decisionStats.approved}</strong>
+    </div>
+
+    <div className="analytics-bar-track">
+      <div
+        className="analytics-bar-fill approved-fill"
+        style={{
+          width: `${percentage(
+            decisionStats.approved,
+            maxDecisionValue
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
+
+
+  <div className="analytics-bar-row">
+    <div className="analytics-bar-label">
+      <span>Rejected</span>
+      <strong>{decisionStats.rejected}</strong>
+    </div>
+
+    <div className="analytics-bar-track">
+      <div
+        className="analytics-bar-fill rejected-fill"
+        style={{
+          width: `${percentage(
+            decisionStats.rejected,
+            maxDecisionValue
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
+
+
+  <div className="analytics-bar-row">
+    <div className="analytics-bar-label">
+      <span>In Review</span>
+      <strong>{decisionStats.inReview}</strong>
+    </div>
+
+    <div className="analytics-bar-track">
+      <div
+        className="analytics-bar-fill review-fill"
+        style={{
+          width: `${percentage(
+            decisionStats.inReview,
+            maxDecisionValue
+          )}%`,
+        }}
+      />
+    </div>
+  </div>
+
+</div>
         </section>
 
         {/* PRIORITY */}

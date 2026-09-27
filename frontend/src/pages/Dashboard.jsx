@@ -67,6 +67,17 @@ function Dashboard() {
   const completedCount = decisions.filter(
     (decision) => decision.status === "Completed"
   ).length;
+  const approvedCount = decisions.filter(
+    (decision) => decision.status === "Approved"
+  ).length;
+
+  const rejectedCount = decisions.filter(
+    (decision) => decision.status === "Rejected"
+  ).length;
+
+  const inReviewCount = decisions.filter(
+    (decision) => decision.status === "In Review"
+  ).length;
 
   function getStatusClass(status) {
     if (status === "Completed") return "status-completed";
@@ -81,512 +92,654 @@ function Dashboard() {
   }
 
   return (
-      <main className="page-container dashboard-container">
+    <main className="page-container dashboard-container">
 
-        {/* Hero */}
-        <section className="dashboard-hero">
+      {/* Hero */}
+      <section className="dashboard-hero">
+        <div>
+          <span className="eyebrow">DECISION MANAGEMENT</span>
+
+          <h2>Welcome back 👋</h2>
+
+          <p>
+            Track, evaluate and replay your organization's important
+            decisions from one place.
+          </p>
+        </div>
+
+        <button
+          className="primary-button"
+          onClick={() => navigate("/decisions")}
+        >
+          + Manage Decisions
+        </button>
+      </section>
+
+      {/* Error */}
+      <ErrorMessage message={error} />
+
+      {/* Statistics */}
+      {!loading && !error && (
+        <section className="stats-grid">
+
+          <div className="stat-card">
+            <div className="stat-icon blue">D</div>
+
+            <div>
+              <span>Total Decisions</span>
+              <strong>{totalDecisions}</strong>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon orange">D</div>
+
+            <div>
+              <span>Draft</span>
+              <strong>{draftCount}</strong>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon purple">P</div>
+
+            <div>
+              <span>In Progress</span>
+              <strong>{inProgressCount}</strong>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon green">✓</div>
+
+            <div>
+              <span>Completed</span>
+              <strong>{completedCount}</strong>
+            </div>
+          </div>
+
+        </section>
+      )}
+
+      {/* Status Overview */}
+      <section className="dashboard-section status-overview">
+
+        <div className="section-heading">
           <div>
-            <span className="eyebrow">DECISION MANAGEMENT</span>
+            <span className="eyebrow">OVERVIEW</span>
+            <h2>Decision Status</h2>
+            <p>Current distribution of your decision records.</p>
+          </div>
+        </div>
 
-            <h2>Welcome back 👋</h2>
+        <div className="status-overview-grid">
 
-            <p>
-              Track, evaluate and replay your organization's important
-              decisions from one place.
-            </p>
+          <div className="status-overview-card">
+            <div className="status-overview-top">
+              <span className="status-dot draft-dot"></span>
+              <span>Draft</span>
+            </div>
+
+            <strong>{draftCount}</strong>
+
+            <div className="status-progress-bar">
+              <div
+                className="status-progress-fill draft-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(draftCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {totalDecisions
+                ? Math.round((draftCount / totalDecisions) * 100)
+                : 0}
+              % of decisions
+            </small>
+          </div>
+
+
+          <div className="status-overview-card">
+            <div className="status-overview-top">
+              <span className="status-dot progress-dot"></span>
+              <span>In Progress</span>
+            </div>
+
+            <strong>{inProgressCount}</strong>
+
+            <div className="status-progress-bar">
+              <div
+                className="status-progress-fill progress-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(inProgressCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {totalDecisions
+                ? Math.round((inProgressCount / totalDecisions) * 100)
+                : 0}
+              % of decisions
+            </small>
+          </div>
+
+
+          <div className="status-overview-card">
+            <div className="status-overview-top">
+              <span className="status-dot completed-dot"></span>
+              <span>Completed</span>
+            </div>
+
+            <strong>{completedCount}</strong>
+
+            <div className="status-progress-bar">
+              <div
+                className="status-progress-fill completed-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(completedCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {totalDecisions
+                ? Math.round((completedCount / totalDecisions) * 100)
+                : 0}
+              % of decisions
+            </small>
+          </div>
+
+          <div className="status-overview-card">
+            <div className="status-overview-top">
+              <span className="status-dot approved-dot"></span>
+              <span>Approved</span>
+            </div>
+
+            <strong>{approvedCount}</strong>
+
+            <div className="status-progress-bar">
+              <div
+                className="status-progress-fill approved-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(approvedCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {totalDecisions
+                ? Math.round((approvedCount / totalDecisions) * 100)
+                : 0}
+              % of decisions
+            </small>
+          </div>
+
+
+          <div className="status-overview-card">
+            <div className="status-overview-top">
+              <span className="status-dot rejected-dot"></span>
+              <span>Rejected</span>
+            </div>
+
+            <strong>{rejectedCount}</strong>
+
+            <div className="status-progress-bar">
+              <div
+                className="status-progress-fill rejected-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(rejectedCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {totalDecisions
+                ? Math.round((rejectedCount / totalDecisions) * 100)
+                : 0}
+              % of decisions
+            </small>
+          </div>
+
+
+          <div className="status-overview-card">
+            <div className="status-overview-top">
+              <span className="status-dot review-dot"></span>
+              <span>In Review</span>
+            </div>
+
+            <strong>{inReviewCount}</strong>
+
+            <div className="status-progress-bar">
+              <div
+                className="status-progress-fill review-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(inReviewCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {totalDecisions
+                ? Math.round((inReviewCount / totalDecisions) * 100)
+                : 0}
+              % of decisions
+            </small>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Priority Overview */}
+      <section className="dashboard-section priority-overview">
+
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">PRIORITY</span>
+            <h2>Decision Priority</h2>
+            <p>Distribution of decisions based on priority level.</p>
+          </div>
+        </div>
+
+        <div className="priority-overview-grid">
+
+          {/* High */}
+          <div className="priority-overview-card">
+            <div className="priority-overview-header">
+              <span className="priority-indicator high-indicator"></span>
+              <span>High Priority</span>
+            </div>
+
+            <strong>
+              {
+                decisions.filter(
+                  (decision) => decision.priority === "High"
+                ).length
+              }
+            </strong>
+
+            <div className="priority-progress-bar">
+              <div
+                className="priority-progress-fill high-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(decisions.filter(
+                      (decision) => decision.priority === "High"
+                    ).length /
+                      totalDecisions) *
+                    100
+                    }%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {
+                totalDecisions
+                  ? Math.round(
+                    (decisions.filter(
+                      (decision) => decision.priority === "High"
+                    ).length /
+                      totalDecisions) *
+                    100
+                  )
+                  : 0
+              }
+              % of decisions
+            </small>
+          </div>
+
+
+          {/* Medium */}
+          <div className="priority-overview-card">
+            <div className="priority-overview-header">
+              <span className="priority-indicator medium-indicator"></span>
+              <span>Medium Priority</span>
+            </div>
+
+            <strong>
+              {
+                decisions.filter(
+                  (decision) => decision.priority === "Medium"
+                ).length
+              }
+            </strong>
+
+            <div className="priority-progress-bar">
+              <div
+                className="priority-progress-fill medium-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(decisions.filter(
+                      (decision) => decision.priority === "Medium"
+                    ).length /
+                      totalDecisions) *
+                    100
+                    }%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {
+                totalDecisions
+                  ? Math.round(
+                    (decisions.filter(
+                      (decision) => decision.priority === "Medium"
+                    ).length /
+                      totalDecisions) *
+                    100
+                  )
+                  : 0
+              }
+              % of decisions
+            </small>
+          </div>
+
+
+          {/* Low */}
+          <div className="priority-overview-card">
+            <div className="priority-overview-header">
+              <span className="priority-indicator low-indicator"></span>
+              <span>Low Priority</span>
+            </div>
+
+            <strong>
+              {
+                decisions.filter(
+                  (decision) => decision.priority === "Low"
+                ).length
+              }
+            </strong>
+
+            <div className="priority-progress-bar">
+              <div
+                className="priority-progress-fill low-fill"
+                style={{
+                  width: totalDecisions
+                    ? `${(decisions.filter(
+                      (decision) => decision.priority === "Low"
+                    ).length /
+                      totalDecisions) *
+                    100
+                    }%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <small>
+              {
+                totalDecisions
+                  ? Math.round(
+                    (decisions.filter(
+                      (decision) => decision.priority === "Low"
+                    ).length /
+                      totalDecisions) *
+                    100
+                  )
+                  : 0
+              }
+              % of decisions
+            </small>
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* Decision Status Graph */}
+      <section className="dashboard-section dashboard-chart-section">
+
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ANALYTICS</span>
+            <h2>Decision Status Analytics</h2>
+            <p>Visual distribution of decisions by their current status.</p>
+          </div>
+        </div>
+
+        <div className="decision-chart-card">
+
+          <div className="chart-row">
+            <div className="chart-label">
+              <span className="chart-dot draft-chart-dot"></span>
+              <span>Draft</span>
+            </div>
+
+            <div className="chart-bar-container">
+              <div
+                className="chart-bar draft-chart-bar"
+                style={{
+                  width: totalDecisions
+                    ? `${(draftCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <strong>{draftCount}</strong>
+          </div>
+
+
+          <div className="chart-row">
+            <div className="chart-label">
+              <span className="chart-dot progress-chart-dot"></span>
+              <span>In Progress</span>
+            </div>
+
+            <div className="chart-bar-container">
+              <div
+                className="chart-bar progress-chart-bar"
+                style={{
+                  width: totalDecisions
+                    ? `${(inProgressCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <strong>{inProgressCount}</strong>
+          </div>
+
+
+          <div className="chart-row">
+            <div className="chart-label">
+              <span className="chart-dot completed-chart-dot"></span>
+              <span>Completed</span>
+            </div>
+
+            <div className="chart-bar-container">
+              <div
+                className="chart-bar completed-chart-bar"
+                style={{
+                  width: totalDecisions
+                    ? `${(completedCount / totalDecisions) * 100}%`
+                    : "0%",
+                }}
+              ></div>
+            </div>
+
+            <strong>{completedCount}</strong>
+      </div>
+
+    <div className="chart-row">
+      <div className="chart-label">
+        <span className="chart-dot approved-chart-dot"></span>
+            <span>Approved</span>
+          </div>
+
+          <div className="chart-bar-container">
+            <div
+              className="chart-bar approved-chart-bar"
+              style={{
+                width: totalDecisions
+                  ? `${(approvedCount / totalDecisions) * 100}%`
+                  : "0%",
+              }}
+            ></div>
+          </div>
+
+          <strong>{approvedCount}</strong>
+        </div>
+
+
+        <div className="chart-row">
+          <div className="chart-label">
+            <span className="chart-dot rejected-chart-dot"></span>
+            <span>Rejected</span>
+          </div>
+
+          <div className="chart-bar-container">
+            <div
+              className="chart-bar rejected-chart-bar"
+              style={{
+                width: totalDecisions
+                  ? `${(rejectedCount / totalDecisions) * 100}%`
+                  : "0%",
+              }}
+            ></div>
+          </div>
+
+          <strong>{rejectedCount}</strong>
+        </div>
+
+
+        <div className="chart-row">
+          <div className="chart-label">
+            <span className="chart-dot review-chart-dot"></span>
+            <span>In Review</span>
+          </div>
+
+          <div className="chart-bar-container">
+            <div
+              className="chart-bar review-chart-bar"
+              style={{
+                width: totalDecisions
+                  ? `${(inReviewCount / totalDecisions) * 100}%`
+                  : "0%",
+              }}
+            ></div>
+          </div>
+
+          <strong>{inReviewCount}</strong>
+        </div>
+
+      </div>
+
+      </section>
+
+      {/* Recent Decisions */}
+      <section className="dashboard-section">
+
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ACTIVITY</span>
+            <h2>Recent Decisions</h2>
+            <p>Your latest decision records.</p>
           </div>
 
           <button
-            className="primary-button"
+            className="secondary-button"
             onClick={() => navigate("/decisions")}
           >
-            + Manage Decisions
+            View All
           </button>
-        </section>
-
-        {/* Error */}
-        <ErrorMessage message={error} />
-
-        {/* Statistics */}
-        {!loading && !error && (
-          <section className="stats-grid">
-
-            <div className="stat-card">
-              <div className="stat-icon blue">D</div>
-
-              <div>
-                <span>Total Decisions</span>
-                <strong>{totalDecisions}</strong>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon orange">D</div>
-
-              <div>
-                <span>Draft</span>
-                <strong>{draftCount}</strong>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon purple">P</div>
-
-              <div>
-                <span>In Progress</span>
-                <strong>{inProgressCount}</strong>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon green">✓</div>
-
-              <div>
-                <span>Completed</span>
-                <strong>{completedCount}</strong>
-              </div>
-            </div>
-
-          </section>
-        )}
-
-        {/* Status Overview */}
-<section className="dashboard-section status-overview">
-
-  <div className="section-heading">
-    <div>
-      <span className="eyebrow">OVERVIEW</span>
-      <h2>Decision Status</h2>
-      <p>Current distribution of your decision records.</p>
-    </div>
-  </div>
-
-  <div className="status-overview-grid">
-
-    <div className="status-overview-card">
-      <div className="status-overview-top">
-        <span className="status-dot draft-dot"></span>
-        <span>Draft</span>
-      </div>
-
-      <strong>{draftCount}</strong>
-
-      <div className="status-progress-bar">
-        <div
-          className="status-progress-fill draft-fill"
-          style={{
-            width: totalDecisions
-              ? `${(draftCount / totalDecisions) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <small>
-        {totalDecisions
-          ? Math.round((draftCount / totalDecisions) * 100)
-          : 0}
-        % of decisions
-      </small>
-    </div>
-
-
-    <div className="status-overview-card">
-      <div className="status-overview-top">
-        <span className="status-dot progress-dot"></span>
-        <span>In Progress</span>
-      </div>
-
-      <strong>{inProgressCount}</strong>
-
-      <div className="status-progress-bar">
-        <div
-          className="status-progress-fill progress-fill"
-          style={{
-            width: totalDecisions
-              ? `${(inProgressCount / totalDecisions) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <small>
-        {totalDecisions
-          ? Math.round((inProgressCount / totalDecisions) * 100)
-          : 0}
-        % of decisions
-      </small>
-    </div>
-
-
-    <div className="status-overview-card">
-      <div className="status-overview-top">
-        <span className="status-dot completed-dot"></span>
-        <span>Completed</span>
-      </div>
-
-      <strong>{completedCount}</strong>
-
-      <div className="status-progress-bar">
-        <div
-          className="status-progress-fill completed-fill"
-          style={{
-            width: totalDecisions
-              ? `${(completedCount / totalDecisions) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <small>
-        {totalDecisions
-          ? Math.round((completedCount / totalDecisions) * 100)
-          : 0}
-        % of decisions
-      </small>
-    </div>
-
-  </div>
-</section>
-
-{/* Priority Overview */}
-<section className="dashboard-section priority-overview">
-
-  <div className="section-heading">
-    <div>
-      <span className="eyebrow">PRIORITY</span>
-      <h2>Decision Priority</h2>
-      <p>Distribution of decisions based on priority level.</p>
-    </div>
-  </div>
-
-  <div className="priority-overview-grid">
-
-    {/* High */}
-    <div className="priority-overview-card">
-      <div className="priority-overview-header">
-        <span className="priority-indicator high-indicator"></span>
-        <span>High Priority</span>
-      </div>
-
-      <strong>
-        {
-          decisions.filter(
-            (decision) => decision.priority === "High"
-          ).length
-        }
-      </strong>
-
-      <div className="priority-progress-bar">
-        <div
-          className="priority-progress-fill high-fill"
-          style={{
-            width: totalDecisions
-              ? `${
-                  (decisions.filter(
-                    (decision) => decision.priority === "High"
-                  ).length /
-                    totalDecisions) *
-                  100
-                }%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <small>
-        {
-          totalDecisions
-            ? Math.round(
-                (decisions.filter(
-                  (decision) => decision.priority === "High"
-                ).length /
-                  totalDecisions) *
-                  100
-              )
-            : 0
-        }
-        % of decisions
-      </small>
-    </div>
-
-
-    {/* Medium */}
-    <div className="priority-overview-card">
-      <div className="priority-overview-header">
-        <span className="priority-indicator medium-indicator"></span>
-        <span>Medium Priority</span>
-      </div>
-
-      <strong>
-        {
-          decisions.filter(
-            (decision) => decision.priority === "Medium"
-          ).length
-        }
-      </strong>
-
-      <div className="priority-progress-bar">
-        <div
-          className="priority-progress-fill medium-fill"
-          style={{
-            width: totalDecisions
-              ? `${
-                  (decisions.filter(
-                    (decision) => decision.priority === "Medium"
-                  ).length /
-                    totalDecisions) *
-                  100
-                }%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <small>
-        {
-          totalDecisions
-            ? Math.round(
-                (decisions.filter(
-                  (decision) => decision.priority === "Medium"
-                ).length /
-                  totalDecisions) *
-                  100
-              )
-            : 0
-        }
-        % of decisions
-      </small>
-    </div>
-
-
-    {/* Low */}
-    <div className="priority-overview-card">
-      <div className="priority-overview-header">
-        <span className="priority-indicator low-indicator"></span>
-        <span>Low Priority</span>
-      </div>
-
-      <strong>
-        {
-          decisions.filter(
-            (decision) => decision.priority === "Low"
-          ).length
-        }
-      </strong>
-
-      <div className="priority-progress-bar">
-        <div
-          className="priority-progress-fill low-fill"
-          style={{
-            width: totalDecisions
-              ? `${
-                  (decisions.filter(
-                    (decision) => decision.priority === "Low"
-                  ).length /
-                    totalDecisions) *
-                  100
-                }%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <small>
-        {
-          totalDecisions
-            ? Math.round(
-                (decisions.filter(
-                  (decision) => decision.priority === "Low"
-                ).length /
-                  totalDecisions) *
-                  100
-              )
-            : 0
-        }
-        % of decisions
-      </small>
-    </div>
-
-  </div>
-
-</section>
-
-{/* Decision Status Graph */}
-<section className="dashboard-section dashboard-chart-section">
-
-  <div className="section-heading">
-    <div>
-      <span className="eyebrow">ANALYTICS</span>
-      <h2>Decision Status Analytics</h2>
-      <p>Visual distribution of decisions by their current status.</p>
-    </div>
-  </div>
-
-  <div className="decision-chart-card">
-
-    <div className="chart-row">
-      <div className="chart-label">
-        <span className="chart-dot draft-chart-dot"></span>
-        <span>Draft</span>
-      </div>
-
-      <div className="chart-bar-container">
-        <div
-          className="chart-bar draft-chart-bar"
-          style={{
-            width: totalDecisions
-              ? `${(draftCount / totalDecisions) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <strong>{draftCount}</strong>
-    </div>
-
-
-    <div className="chart-row">
-      <div className="chart-label">
-        <span className="chart-dot progress-chart-dot"></span>
-        <span>In Progress</span>
-      </div>
-
-      <div className="chart-bar-container">
-        <div
-          className="chart-bar progress-chart-bar"
-          style={{
-            width: totalDecisions
-              ? `${(inProgressCount / totalDecisions) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <strong>{inProgressCount}</strong>
-    </div>
-
-
-    <div className="chart-row">
-      <div className="chart-label">
-        <span className="chart-dot completed-chart-dot"></span>
-        <span>Completed</span>
-      </div>
-
-      <div className="chart-bar-container">
-        <div
-          className="chart-bar completed-chart-bar"
-          style={{
-            width: totalDecisions
-              ? `${(completedCount / totalDecisions) * 100}%`
-              : "0%",
-          }}
-        ></div>
-      </div>
-
-      <strong>{completedCount}</strong>
-    </div>
-
-  </div>
-
-</section>
-
-{/* Recent Decisions */}
-<section className="dashboard-section">
-
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">ACTIVITY</span>
-              <h2>Recent Decisions</h2>
-              <p>Your latest decision records.</p>
-            </div>
+        </div>
+
+        {loading ? (
+          <Loading message="Loading your decisions..." />
+        ) : decisions.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">+</div>
+
+            <h3>No decisions yet</h3>
+
+            <p>
+              Create your first decision to start building a
+              traceable decision history.
+            </p>
 
             <button
-              className="secondary-button"
+              className="primary-button"
               onClick={() => navigate("/decisions")}
             >
-              View All
+              Create Decision
             </button>
           </div>
+        ) : (
+          <div className="recent-decision-list">
 
-          {loading ? (
-            <Loading message="Loading your decisions..." />
-          ) : decisions.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">+</div>
-
-              <h3>No decisions yet</h3>
-
-              <p>
-                Create your first decision to start building a
-                traceable decision history.
-              </p>
-
-              <button
-                className="primary-button"
-                onClick={() => navigate("/decisions")}
+            {decisions.slice(0, 5).map((decision) => (
+              <article
+                className="recent-decision-card"
+                key={decision.id}
+                onClick={() =>
+                  navigate(`/decisions/${decision.id}`)
+                }
               >
-                Create Decision
-              </button>
-            </div>
-          ) : (
-            <div className="recent-decision-list">
+                <div className="decision-main">
 
-              {decisions.slice(0, 5).map((decision) => (
-                <article
-                  className="recent-decision-card"
-                  key={decision.id}
-                  onClick={() =>
-                    navigate(`/decisions/${decision.id}`)
-                  }
-                >
-                  <div className="decision-main">
-
-                    <div className="decision-number">
-                      #{decision.id}
-                    </div>
-
-                    <div>
-                      <h3>{decision.title}</h3>
-
-                      <p>
-                        {decision.description ||
-                          "No description available"}
-                      </p>
-                    </div>
-
+                  <div className="decision-number">
+                    #{decision.id}
                   </div>
 
-                  <div className="decision-tags">
+                  <div>
+                    <h3>{decision.title}</h3>
 
-                    <span
-                      className={`status-badge ${getStatusClass(
-                        decision.status
-                      )}`}
-                    >
-                      {decision.status}
-                    </span>
-
-                    <span
-                      className={`priority-badge ${getPriorityClass(
-                        decision.priority
-                      )}`}
-                    >
-                      {decision.priority}
-                    </span>
-
-                    <span className="arrow">→</span>
-
+                    <p>
+                      {decision.description ||
+                        "No description available"}
+                    </p>
                   </div>
-                </article>
-              ))}
 
-            </div>
-          )}
+                </div>
 
-        </section>
+                <div className="decision-tags">
 
-      </main>
+                  <span
+                    className={`status-badge ${getStatusClass(
+                      decision.status
+                    )}`}
+                  >
+                    {decision.status}
+                  </span>
+
+                  <span
+                    className={`priority-badge ${getPriorityClass(
+                      decision.priority
+                    )}`}
+                  >
+                    {decision.priority}
+                  </span>
+
+                  <span className="arrow">→</span>
+
+                </div>
+              </article>
+            ))}
+
+          </div>
+        )}
+
+      </section>
+
+    </main>
   );
 }
 

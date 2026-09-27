@@ -2513,6 +2513,29 @@ button {
 .completed-dot {
   background: #42a57a;
 }
+.approved-dot {
+  background: #3b82f6;
+}
+
+.rejected-dot {
+  background: #ef4444;
+}
+
+.review-dot {
+  background: #f59e0b;
+}
+
+.approved-fill {
+  background: #3b82f6;
+}
+
+.rejected-fill {
+  background: #ef4444;
+}
+
+.review-fill {
+  background: #f59e0b;
+}
 
 .status-overview-card strong {
   display: block;
@@ -3689,6 +3712,29 @@ button {
 
 .completed-chart-dot {
   background: #22c55e;
+}
+.approved-chart-dot {
+  background: #3b82f6;
+}
+
+.rejected-chart-dot {
+  background: #ef4444;
+}
+
+.review-chart-dot {
+  background: #f59e0b;
+}
+
+.approved-chart-bar {
+  background: #3b82f6;
+}
+
+.rejected-chart-bar {
+  background: #ef4444;
+}
+
+.review-chart-bar {
+  background: #f59e0b;
 }
 
 .chart-bar-container {
