@@ -9,6 +9,11 @@ import Approvals from "../pages/Approvals/Approvals";
 import AuditLogs from "../pages/AuditLogs/AuditLogs";
 import Notifications from "../pages/Notifications/Notifications";
 import Reports from "../pages/Reports/Reports";
+import Teams from "../pages/Teams/Teams";
+import TeamDetails from "../pages/TeamDetails/TeamDetails";
+import JoinRequests from "../pages/JoinRequests/JoinRequests";
+import Knowledge from "../pages/Knowledge/Knowledge";
+import KnowledgeDocumentDetail from "../pages/KnowledgeDocumentDetail/KnowledgeDocumentDetail";
 import RequireAuth from "./RequireAuth";
 import RequireRole from "./RequireRole";
 
@@ -79,6 +84,46 @@ export default function AppRoutes() {
         element={
           <RequireRole roles={["manager", "administrator"]}>
             <Reports />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/teams"
+        element={
+          <RequireAuth>
+            <Teams />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/teams/:teamId"
+        element={
+          <RequireAuth>
+            <TeamDetails />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/knowledge"
+        element={
+          <RequireAuth>
+            <Knowledge />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/knowledge/documents/:documentId"
+        element={
+          <RequireAuth>
+            <KnowledgeDocumentDetail />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/join-requests"
+        element={
+          <RequireRole roles={["manager", "administrator"]}>
+            <JoinRequests />
           </RequireRole>
         }
       />

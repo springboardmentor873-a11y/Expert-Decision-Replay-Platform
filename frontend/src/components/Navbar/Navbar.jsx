@@ -48,6 +48,18 @@ export default function Navbar() {
           >
             Decisions
           </Link>
+          <Link
+            to="/teams"
+            className={`navbar__link ${location.pathname.startsWith("/teams") ? "navbar__link--active" : ""}`}
+          >
+            Teams
+          </Link>
+          <Link
+            to="/knowledge"
+            className={`navbar__link ${location.pathname.startsWith("/knowledge") ? "navbar__link--active" : ""}`}
+          >
+            Knowledge
+          </Link>
           {(user?.role === "reviewer" || user?.role === "manager" || user?.role === "administrator") && (
             <Link
               to="/approvals"
@@ -57,6 +69,14 @@ export default function Navbar() {
               {pendingCount > 0 && (
                 <span className="navbar__badge">{pendingCount}</span>
               )}
+            </Link>
+          )}
+          {(user?.role === "manager" || user?.role === "administrator") && (
+            <Link
+              to="/join-requests"
+              className={`navbar__link ${location.pathname === "/join-requests" ? "navbar__link--active" : ""}`}
+            >
+              Join Requests
             </Link>
           )}
           {(user?.role === "manager" || user?.role === "administrator") && (

@@ -1,0 +1,141 @@
+.team-hierarchy {
+  border: 1px solid var(--line-dark);
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.team-hierarchy__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.4rem 1.5rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.15rem;
+  color: var(--text-ink);
+  cursor: pointer;
+}
+
+.team-hierarchy__toggle:hover {
+  color: var(--brass-dim);
+}
+
+.team-hierarchy__chevron {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.team-hierarchy__graph {
+  padding: 0 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.team-hierarchy__team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid var(--line-dark);
+  border-radius: 8px;
+  padding: 0.55rem 1.15rem;
+  background: var(--paper-dim);
+  text-align: center;
+  min-width: 8rem;
+}
+
+.team-hierarchy__team-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.team-hierarchy__team-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1rem;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-hierarchy__stem {
+  width: 2px;
+  height: 1.5rem;
+  background: var(--line-dark);
+}
+
+.team-hierarchy__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  border: 1px solid var(--line-dark);
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  background: var(--paper);
+  text-align: center;
+  min-width: 6.5rem;
+}
+
+.team-hierarchy__node--leader {
+  border-color: var(--brass);
+  background: rgba(193, 137, 63, 0.06);
+}
+
+.team-hierarchy__node-name {
+  font-weight: 500;
+  font-size: 0.92rem;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-hierarchy__node-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--brass-dim);
+}
+
+.team-hierarchy__node-role {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.team-hierarchy__rail {
+  width: 100%;
+  border-top: 2px solid var(--line-dark);
+}
+
+.team-hierarchy__members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem 1.5rem;
+}
+
+.team-hierarchy__member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.team-hierarchy__stub {
+  width: 2px;
+  height: 1rem;
+  background: var(--line-dark);
+}
