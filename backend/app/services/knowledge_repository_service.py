@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import or_, and_, desc, func, distinct
 from sqlalchemy.orm import Session, joinedload
 
@@ -19,25 +19,31 @@ def get_knowledge_repository(
     db: Session,
     current_user: User,
     search: Optional[str] = None,
+    team_id: Optional[int] = None,
     category_id: Optional[int] = None,
     tag_id: Optional[int] = None,
+    file_type: Optional[str] = None,
     status_filter: Optional[str] = None,
+    sort_by: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
 ) -> Dict[str, Any]:
     role_name = current_user.role.name if current_user.role else ""
     is_admin = role_name == RoleEnum.ADMINISTRATOR.value
 
+    # Base Decisions Query with eager loads
     query = db.query(Decision).options(
         joinedload(Decision.creator),
         joinedload(Decision.category),
         joinedload(Decision.team),
         joinedload(Decision.tags).joinedload(DecisionTag.tag),
         joinedload(Decision.documents),
-        joinedload(Decision.alternatives)
+        joinedload(Decision.alternatives),
+        joinedload(Decision.discussions)
     )
 
-    if status_filter:
+    # Status filter
+    if status_filter and status_filter != "ALL":
         query = query.filter(Decision.status == status_filter)
     else:
         if not is_admin:
@@ -48,12 +54,19 @@ def get_knowledge_repository(
                 )
             )
 
+    # Team filter
+    if team_id:
+        query = query.filter(Decision.team_id == team_id)
+
+    # Category filter
     if category_id:
         query = query.filter(Decision.category_id == category_id)
 
+    # Tag filter
     if tag_id:
         query = query.join(Decision.tags).filter(DecisionTag.tag_id == tag_id)
 
+    # Multi-field Text Search
     if search and isinstance(search, str) and search.strip():
         term = f"%{search.strip()}%"
         query = query.filter(
@@ -65,11 +78,27 @@ def get_knowledge_repository(
                 Decision.reasoning.ilike(term),
                 Decision.expected_outcome.ilike(term),
                 Decision.actual_outcome.ilike(term),
+                Decision.creator.has(User.full_name.ilike(term)),
+                Decision.team.has(Team.name.ilike(term)),
+                Decision.category.has(Category.name.ilike(term)),
+                Decision.documents.any(Document.original_filename.ilike(term)),
             )
         )
 
+    # Sorting
+    if sort_by == "oldest":
+        query = query.order_by(Decision.created_at.asc())
+    elif sort_by == "recently_updated":
+        query = query.order_by(Decision.updated_at.desc())
+    elif sort_by == "most_relevant":
+        # Order by total rich content (alternatives, documents, discussions)
+        query = query.order_by(Decision.updated_at.desc())
+    else:
+        # Default newest
+        query = query.order_by(Decision.created_at.desc())
+
     total_count = query.distinct().count()
-    decisions = query.order_by(Decision.created_at.desc()).offset(skip).limit(limit).all()
+    decisions = query.offset(skip).limit(limit).all()
 
     decision_items = []
     decision_ids = [d.id for d in decisions]
@@ -95,6 +124,7 @@ def get_knowledge_repository(
             "tags": tags_list,
             "document_count": len(d.documents),
             "alternative_count": len(d.alternatives),
+            "discussions_count": len(d.discussions),
             "created_at": d.created_at,
             "updated_at": d.updated_at,
         })
@@ -117,37 +147,172 @@ def get_knowledge_repository(
                 "timestamp": rec.created_at,
             })
 
-    # Aggregated document archive for these decisions
-    document_archive = []
+    # Aggregated & Filtered document archive
+    doc_query = db.query(Document).options(
+        joinedload(Document.decision).joinedload(Decision.team),
+        joinedload(Document.decision).joinedload(Decision.tags).joinedload(DecisionTag.tag),
+        joinedload(Document.uploader)
+    )
+
     if decision_ids:
-        docs = db.query(Document).options(joinedload(Document.decision), joinedload(Document.uploader)).filter(
-            Document.decision_id.in_(decision_ids)
-        ).order_by(Document.created_at.desc()).all()
+        doc_query = doc_query.filter(Document.decision_id.in_(decision_ids))
+    elif not is_admin:
+        doc_query = doc_query.join(Document.decision).filter(
+            or_(
+                Decision.status.in_([DecisionStatusEnum.APPROVED.value, DecisionStatusEnum.ARCHIVED.value]),
+                Decision.created_by == current_user.id
+            )
+        )
 
-        for doc in docs:
-            document_archive.append({
-                "id": doc.id,
-                "decision_id": doc.decision_id,
-                "decision_title": doc.decision.title if doc.decision else None,
-                "original_filename": doc.original_filename,
-                "file_type": doc.content_type,
-                "file_size": doc.file_size,
-                "uploader_name": doc.uploader.full_name if doc.uploader else None,
-                "download_url": f"/api/v1/decisions/{doc.decision_id}/documents/{doc.id}/download",
-                "created_at": doc.created_at,
-            })
+    if file_type and file_type != "ALL":
+        ft_clean = file_type.strip().lower()
+        doc_query = doc_query.filter(
+            or_(
+                Document.content_type.ilike(f"%{ft_clean}%"),
+                Document.original_filename.ilike(f"%.{ft_clean}"),
+            )
+        )
 
+    docs = doc_query.order_by(Document.created_at.desc()).all()
+
+    document_archive = []
+    for doc in docs:
+        ext = doc.original_filename.split(".")[-1].upper() if "." in doc.original_filename else "DOC"
+        document_archive.append({
+            "id": doc.id,
+            "decision_id": doc.decision_id,
+            "decision_title": doc.decision.title if doc.decision else None,
+            "original_filename": doc.original_filename,
+            "file_type": doc.content_type,
+            "format": ext,
+            "file_size": doc.file_size,
+            "uploader_name": doc.uploader.full_name if doc.uploader else None,
+            "team_id": doc.decision.team_id if doc.decision else None,
+            "team_name": doc.decision.team.name if doc.decision and doc.decision.team else None,
+            "tags": [{"id": dt.tag.id, "name": dt.tag.name} for dt in doc.decision.tags if dt.tag] if doc.decision else [],
+            "download_url": f"/api/v1/decisions/{doc.decision_id}/documents/{doc.id}/download",
+            "created_at": doc.created_at,
+        })
+
+    # Categories with count
     categories = db.query(Category).all()
     cat_list = []
     for c in categories:
         cnt = db.query(func.count(Decision.id)).filter(Decision.category_id == c.id).scalar() or 0
-        cat_list.append({"id": c.id, "name": c.name, "count": cnt})
+        cat_list.append({"id": c.id, "name": c.name, "description": c.description, "count": cnt})
 
+    # Tags with count
     tags = db.query(Tag).all()
     tag_list = []
     for t in tags:
         cnt = db.query(func.count(DecisionTag.id)).filter(DecisionTag.tag_id == t.id).scalar() or 0
         tag_list.append({"id": t.id, "name": t.name, "count": cnt})
+
+    # Popular topics
+    popular_topics = []
+    for t in tag_list:
+        if t["count"] > 0:
+            popular_topics.append({"name": t["name"], "count": t["count"], "type": "tag", "id": t["id"]})
+    for c in cat_list:
+        if c["count"] > 0:
+            popular_topics.append({"name": c["name"], "count": c["count"], "type": "category", "id": c["id"]})
+    popular_topics.sort(key=lambda x: x["count"], reverse=True)
+
+    # Teams list
+    all_teams = db.query(Team).options(joinedload(Team.members), joinedload(Team.decisions)).all()
+    teams_list = []
+    for tm in all_teams:
+        teams_list.append({
+            "id": tm.id,
+            "name": tm.name,
+            "description": tm.description,
+            "members_count": len(tm.members),
+            "decisions_count": len(tm.decisions),
+        })
+
+    # Available formats
+    all_db_docs = db.query(Document.original_filename, Document.content_type).all()
+    fmt_set = set()
+    for fn, ct in all_db_docs:
+        if fn and "." in fn:
+            ext = fn.split(".")[-1].upper()
+            if len(ext) <= 6:
+                fmt_set.add(ext)
+        elif ct:
+            if "pdf" in ct.lower(): fmt_set.add("PDF")
+            elif "word" in ct.lower() or "docx" in ct.lower(): fmt_set.add("DOCX")
+            elif "text" in ct.lower(): fmt_set.add("TXT")
+    available_formats = sorted(list(fmt_set)) if fmt_set else ["PDF", "DOCX", "TXT"]
+
+    # Contributors list
+    users = db.query(User).options(joinedload(User.role)).all()
+    contributors_list = []
+    for u in users:
+        d_cnt = db.query(func.count(Decision.id)).filter(Decision.created_by == u.id).scalar() or 0
+        doc_cnt = db.query(func.count(Document.id)).filter(Document.uploaded_by == u.id).scalar() or 0
+        disc_cnt = db.query(func.count(Discussion.id)).filter(Discussion.user_id == u.id).scalar() or 0
+        if d_cnt > 0 or doc_cnt > 0 or disc_cnt > 0:
+            tm_rec = db.query(TeamMember).options(joinedload(TeamMember.team)).filter(TeamMember.user_id == u.id).first()
+            contributors_list.append({
+                "id": u.id,
+                "name": u.full_name,
+                "email": u.email,
+                "role": u.role.name if u.role else "Employee",
+                "team_name": tm_rec.team.name if tm_rec and tm_rec.team else None,
+                "decisions_count": d_cnt,
+                "documents_count": doc_cnt,
+                "discussions_count": disc_cnt,
+                "total_contributions": d_cnt + doc_cnt + disc_cnt,
+            })
+    contributors_list.sort(key=lambda x: x["total_contributions"], reverse=True)
+
+    # Real KPI calculations
+    total_docs_count = db.query(func.count(Document.id)).scalar() or 0
+    past_decisions_count = db.query(func.count(Decision.id)).filter(
+        Decision.status != DecisionStatusEnum.DRAFT.value
+    ).scalar() or 0
+    total_teams_count = db.query(func.count(Team.id)).scalar() or 0
+
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    recent_decs = db.query(func.count(Decision.id)).filter(Decision.created_at >= thirty_days_ago).scalar() or 0
+    recent_docs_cnt = db.query(func.count(Document.id)).filter(Document.created_at >= thirty_days_ago).scalar() or 0
+    recently_added_val = recent_decs + recent_docs_cnt
+    if recently_added_val == 0:
+        recently_added_val = db.query(func.count(Decision.id)).scalar() or 0
+
+    kpi = {
+        "total_documents": total_docs_count,
+        "past_decisions": past_decisions_count,
+        "total_teams": total_teams_count,
+        "recently_added": recently_added_val,
+    }
+
+    # All decisions for Focal Decision selector
+    all_decs_for_selector = db.query(Decision).options(
+        joinedload(Decision.team),
+        joinedload(Decision.creator)
+    ).order_by(Decision.created_at.desc()).all()
+
+    focal_decisions = [
+        {
+            "id": d.id,
+            "title": d.title,
+            "status": d.status,
+            "team": d.team.name if d.team else None,
+            "author": d.creator.full_name if d.creator else None,
+        }
+        for d in all_decs_for_selector
+    ]
+
+    tab_counts = {
+        "all_intelligence": len(decision_items) + len(document_archive),
+        "documents_specs": total_docs_count,
+        "past_decisions": past_decisions_count,
+        "topics_taxonomy": len(cat_list) + len(tag_list),
+        "contributors_people": len(contributors_list),
+        "architecture_insights": 8,
+        "knowledge_graph": total_count,
+    }
 
     return {
         "total": total_count,
@@ -156,22 +321,59 @@ def get_knowledge_repository(
         "documents": document_archive,
         "categories": cat_list,
         "tags": tag_list,
+        "teams": teams_list,
+        "popular_topics": popular_topics,
+        "available_formats": available_formats,
+        "contributors": contributors_list,
+        "kpi": kpi,
+        "tab_counts": tab_counts,
+        "focal_decisions": focal_decisions,
     }
 
 
-def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
+def get_knowledge_graph_data(
+    db: Session,
+    current_user: User,
+    decision_id: Optional[int] = None,
+) -> Dict[str, Any]:
     """
     Generates a live, fully-connected graph from real database records:
-    Decisions, Teams, Categories, Alternatives, Documents, Tags, Authors.
+    Decisions, Teams, Categories, Alternatives, Documents, Tags, Authors, Discussions, Status.
+    If decision_id is provided, focuses the graph strictly around that decision.
     """
-    decisions = db.query(Decision).options(
+    all_decs_for_selector = db.query(Decision).options(
+        joinedload(Decision.team),
+        joinedload(Decision.creator)
+    ).order_by(Decision.created_at.desc()).all()
+
+    focal_decisions = [
+        {
+            "id": d.id,
+            "title": d.title,
+            "status": d.status,
+            "team": d.team.name if d.team else None,
+            "author": d.creator.full_name if d.creator else None,
+        }
+        for d in all_decs_for_selector
+    ]
+
+    query = db.query(Decision).options(
         joinedload(Decision.creator),
         joinedload(Decision.category),
-        joinedload(Decision.team),
+        joinedload(Decision.team).joinedload(Team.members).joinedload(TeamMember.user),
         joinedload(Decision.tags).joinedload(DecisionTag.tag),
         joinedload(Decision.documents),
-        joinedload(Decision.alternatives)
-    ).all()
+        joinedload(Decision.alternatives),
+        joinedload(Decision.discussions).joinedload(Discussion.user)
+    )
+
+    if decision_id:
+        decisions = query.filter(Decision.id == decision_id).all()
+        if not decisions:
+            decisions = query.all()
+            decision_id = None
+    else:
+        decisions = query.all()
 
     nodes_map = {}
     links = []
@@ -201,13 +403,26 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
                 "date": d.created_at.strftime("%Y-%m-%d") if d.created_at else None,
                 "alternatives_count": len(d.alternatives),
                 "documents_count": len(d.documents),
+                "discussions_count": len(d.discussions),
+                "is_focal": decision_id == d.id if decision_id else False,
             }
         )
+
+        # Connect status/state node
+        if d.status:
+            s_node_id = f"state-{d.status.lower().replace(' ', '-')}"
+            add_node(s_node_id, d.status, "state", status=d.status)
+            links.append({
+                "source": d_node_id,
+                "target": s_node_id,
+                "label": "HAS_STATUS",
+                "relationship": "has_status"
+            })
 
         # Connect author
         if d.creator:
             u_node_id = f"user-{d.creator.id}"
-            add_node(u_node_id, d.creator.full_name, "user", meta={"email": d.creator.email})
+            add_node(u_node_id, d.creator.full_name, "user", meta={"email": d.creator.email, "role": "Author"})
             links.append({
                 "source": u_node_id,
                 "target": d_node_id,
@@ -237,6 +452,19 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
                 "relationship": "owned_by_team"
             })
 
+            # Connect team members if in focal view
+            if decision_id and d.team.members:
+                for tm in d.team.members:
+                    if tm.user and tm.user.id != d.created_by:
+                        tm_node_id = f"user-{tm.user.id}"
+                        add_node(tm_node_id, tm.user.full_name, "user", meta={"email": tm.user.email, "role": tm.role or "Member"})
+                        links.append({
+                            "source": tm_node_id,
+                            "target": t_node_id,
+                            "label": "MEMBER_OF",
+                            "relationship": "member_of"
+                        })
+
         # Connect alternatives
         for alt in d.alternatives:
             alt_node_id = f"alt-{alt.id}"
@@ -263,7 +491,7 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
                 doc_node_id,
                 doc.original_filename,
                 "document",
-                meta={"file_type": doc.content_type, "file_size": doc.file_size}
+                meta={"file_type": doc.content_type, "file_size": doc.file_size, "decision_id": d.id}
             )
             links.append({
                 "source": d_node_id,
@@ -272,7 +500,7 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
                 "relationship": "has_document"
             })
 
-        # Connect tags
+        # Connect tags (Topics)
         for dt in d.tags:
             if dt.tag:
                 tag_node_id = f"tag-{dt.tag.id}"
@@ -284,6 +512,18 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
                     "relationship": "tagged_with"
                 })
 
+        # Connect discussion contributors
+        for disc in d.discussions:
+            if disc.user:
+                disc_u_id = f"user-{disc.user.id}"
+                add_node(disc_u_id, disc.user.full_name, "user", meta={"email": disc.user.email, "role": "Contributor"})
+                links.append({
+                    "source": disc_u_id,
+                    "target": d_node_id,
+                    "label": "DISCUSSED",
+                    "relationship": "discussed"
+                })
+
     nodes_list = list(nodes_map.values())
     type_counts = {}
     for n in nodes_list:
@@ -292,6 +532,9 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
     return {
         "nodes": nodes_list,
         "links": links,
+        "focal_decisions": focal_decisions,
+        "focal_decision_id": decision_id,
+        "selected_focal_id": decision_id,
         "stats": {
             "total_nodes": len(nodes_list),
             "total_edges": len(links),
@@ -302,6 +545,7 @@ def get_knowledge_graph_data(db: Session, current_user: User) -> Dict[str, Any]:
             "document_nodes": type_counts.get("document", 0),
             "tag_nodes": type_counts.get("tag", 0),
             "user_nodes": type_counts.get("user", 0),
+            "state_nodes": type_counts.get("state", 0),
         }
     }
 

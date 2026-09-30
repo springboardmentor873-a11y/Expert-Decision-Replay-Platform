@@ -41,9 +41,12 @@ async function handleResponse(response) {
 export async function getKnowledgeRepository(params = {}, token = null) {
   const query = new URLSearchParams();
   if (params.search) query.append('search', params.search);
+  if (params.team_id) query.append('team_id', params.team_id.toString());
   if (params.category_id) query.append('category_id', params.category_id.toString());
   if (params.tag_id) query.append('tag_id', params.tag_id.toString());
+  if (params.file_type && params.file_type !== 'ALL') query.append('file_type', params.file_type);
   if (params.status && params.status !== 'ALL') query.append('status', params.status);
+  if (params.sort_by) query.append('sort_by', params.sort_by);
   if (params.limit) query.append('limit', params.limit.toString());
   if (params.skip) query.append('skip', params.skip.toString());
 
@@ -54,10 +57,25 @@ export async function getKnowledgeRepository(params = {}, token = null) {
   return handleResponse(response);
 }
 
-export async function getKnowledgeGraph(token = null) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/knowledge-repository/graph`, {
+export async function getKnowledgeGraph(params = {}, token = null) {
+  // Support both getKnowledgeGraph(token) and getKnowledgeGraph({ decision_id }, token)
+  let resolvedParams = {};
+  let resolvedToken = token;
+  if (typeof params === 'string') {
+    resolvedToken = params;
+  } else if (params && typeof params === 'object') {
+    resolvedParams = params;
+  }
+
+  const query = new URLSearchParams();
+  if (resolvedParams.decision_id) {
+    query.append('decision_id', resolvedParams.decision_id.toString());
+  }
+
+  const url = `${API_BASE_URL}/api/v1/knowledge-repository/graph${query.toString() ? `?${query.toString()}` : ''}`;
+  const response = await fetch(url, {
     method: 'GET',
-    headers: getHeaders(token),
+    headers: getHeaders(resolvedToken),
   });
   return handleResponse(response);
 }
