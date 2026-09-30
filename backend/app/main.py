@@ -54,6 +54,7 @@ except Exception as e:
     print("Column addition check (safe):", e)
 
 DEFAULT_TEAMS = [
+    ("FPGA and DSP Team", "Department"),
     ("Development Team", "Software development team"),
     ("AI Development", "AI project team"),
     ("Engineering Team", "Software development team"),
@@ -69,8 +70,62 @@ try:
             if not db_seed.query(models.Team).filter(models.Team.name == t_name).first():
                 db_seed.add(models.Team(name=t_name, description=t_desc))
         db_seed.commit()
+
+        # Seed Lead Architect user if not exists
+        lead_user = db_seed.query(models.User).filter(models.User.email == "dilleswarao@example.com").first()
+        if not lead_user:
+            lead_user = models.User(
+                name="dilleswarao",
+                email="dilleswarao@example.com",
+                password_hash=hash_password("admin123"),
+                role="REVIEWER",
+            )
+            db_seed.add(lead_user)
+            db_seed.commit()
+            db_seed.refresh(lead_user)
+
+        # Seed FPGA team
+        fpga_team = db_seed.query(models.Team).filter(models.Team.name == "FPGA and DSP Team").first()
+
+        # Seed FPGA decision if not exists
+        fpga_dec = db_seed.query(models.Decision).filter(models.Decision.title.ilike("%selection of fpga platform%")).first()
+        if not fpga_dec and lead_user:
+            fpga_dec = models.Decision(
+                title="selection of fpga platform for real time DSP application",
+                description="Evaluation and architectural selection of Xilinx UltraScale+ FPGA platform versus GPU/ASIC alternatives for hard real-time digital signal processing pipeline with deterministic latency.",
+                decision_type="Product & Strategy",
+                status="IN_APPROVAL",
+                created_by=lead_user.id,
+                team_id=fpga_team.id if fpga_team else None,
+                tags="cost-saving, high-impact",
+                rationale="Selected FPGA platform guarantees deterministic sub-2.5 microsecond signal processing latency, 40% reduced power envelope, and 35% lower unit production BOM cost compared to dedicated DSP hardware.",
+            )
+            db_seed.add(fpga_dec)
+            db_seed.commit()
+            db_seed.refresh(fpga_dec)
+
+            os.makedirs("uploads", exist_ok=True)
+            mock_doc_path = os.path.join("uploads", "MICRO_SYLLABUS_DSP_FPGA.pdf")
+            if not os.path.exists(mock_doc_path):
+                with open(mock_doc_path, "wb") as f_mock:
+                    f_mock.write(b"%PDF-1.4 Mock Micro Syllabus FPGA DSP Specifications")
+
+            db_seed.add(models.UploadedFile(
+                filename="MICRO_SYLLABUS_DSP_FPGA.pdf",
+                file_path=mock_doc_path,
+                decision_id=fpga_dec.id,
+            ))
+            db_seed.add(models.Approval(
+                decision_id=fpga_dec.id,
+                stage=1,
+                stage_name="Stage 1: Reviewer Verification",
+                reviewer_id=lead_user.id,
+                status="PENDING",
+                comments="Awaiting final FPGA timing closure benchmark validation.",
+            ))
+            db_seed.commit()
 except Exception as e:
-    print("Team seed check (safe):", e)
+    print("Seed check (safe):", e)
 
 
 app = FastAPI(

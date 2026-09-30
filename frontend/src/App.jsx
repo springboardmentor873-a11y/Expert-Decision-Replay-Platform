@@ -170,10 +170,102 @@ const ArchiveIcon = () => (
 );
 
 const INITIAL_TEAMS = [
-  { id: 1, name: "Development Team", members: 5 },
-  { id: 2, name: "AI Development", members: 4 },
-  { id: 3, name: "Engineering Team", members: 6 },
-  { id: 4, name: "Security Team", members: 4 },
+  { id: 1, name: "FPGA and DSP Team", members: 7, description: "Department" },
+  { id: 2, name: "Development Team", members: 5, description: "Software development team" },
+  { id: 3, name: "AI Development", members: 4, description: "AI project team" },
+  { id: 4, name: "Engineering Team", members: 6, description: "Software development team" },
+  { id: 5, name: "Security Team", members: 4, description: "Security compliance & governance" },
+];
+
+const INITIAL_DECISIONS = [
+  {
+    id: 1,
+    title: "selection of fpga platform for real time DSP application",
+    description: "Evaluation and architectural selection of Xilinx UltraScale+ FPGA platform versus GPU/ASIC alternatives for hard real-time digital signal processing pipeline with deterministic low latency.",
+    decision_type: "Product & Strategy",
+    status: "IN_APPROVAL",
+    created_by: 1,
+    author: "dilleswarao",
+    author_role: "Lead Architect",
+    team_id: 1,
+    team: "FPGA and DSP Team",
+    team_description: "Department",
+    tags: ["cost-saving", "high-impact"],
+    rationale: "Selected FPGA platform guarantees deterministic sub-2.5 microsecond signal processing latency, 40% reduced power envelope, and 35% lower unit production BOM cost compared to dedicated DSP hardware.",
+    files: [
+      { id: 1, filename: "MICRO_SYLLABUS_DSP_FPGA.pdf", file_type: "PDF", file_size: "1.8 MB" }
+    ],
+    approval_stage: 1,
+    approval_stage_name: "Not Started",
+    created_date_formatted: "18 Sep 2026",
+    created_at: "2026-09-18T10:30:00Z",
+  },
+  {
+    id: 2,
+    title: "Adopt PostgreSQL with TimescaleDB for High-Frequency Decision Telemetry",
+    description: "Transitioning audit logs and compliance event tracking from standard relational storage to a hybrid PostgreSQL time-series schema.",
+    decision_type: "Database",
+    status: "APPROVED",
+    created_by: 2,
+    author: "Sarah Chen",
+    author_role: "Principal Data Engineer",
+    team_id: 4,
+    team: "Engineering Team",
+    team_description: "Core Services",
+    tags: ["PostgreSQL", "Scalability", "Audit"],
+    rationale: "Delivers 10x compression on replay logs while preserving instant relational joins for institutional compliance audits.",
+    files: [
+      { id: 2, filename: "TimescaleDB_Benchmark_Report.pdf", file_type: "PDF", file_size: "3.2 MB" }
+    ],
+    approval_stage: 2,
+    approval_stage_name: "Approved & Deployed",
+    created_date_formatted: "12 Sep 2026",
+    created_at: "2026-09-12T14:15:00Z",
+  },
+  {
+    id: 3,
+    title: "Migrate Microservices Inter-Service Communication to gRPC & Protobuf",
+    description: "Replacing REST/JSON HTTP endpoints between internal decision-processing nodes with high-throughput gRPC streaming.",
+    decision_type: "Architecture",
+    status: "IN_REVIEW",
+    created_by: 3,
+    author: "Alex Morgan",
+    author_role: "Staff Infrastructure Engineer",
+    team_id: 2,
+    team: "Development Team",
+    team_description: "Software development team",
+    tags: ["API Design", "Performance", "Microservices"],
+    rationale: "Reduces payload size by 65% and serialization overhead by 4.2x under peak load during replay simulations.",
+    files: [
+      { id: 3, filename: "gRPC_Migration_RFC.pdf", file_type: "PDF", file_size: "2.1 MB" }
+    ],
+    approval_stage: 1,
+    approval_stage_name: "Level-1 Peer Review",
+    created_date_formatted: "08 Sep 2026",
+    created_at: "2026-09-08T09:00:00Z",
+  },
+  {
+    id: 4,
+    title: "Implement Zero-Trust mTLS and Role-Based Access Governance",
+    description: "Enforcing cryptographic identity verification across all service-to-service calls and privileged managerial replay actions.",
+    decision_type: "Security",
+    status: "APPROVED",
+    created_by: 4,
+    author: "Elena Rostov",
+    author_role: "Head of Information Security",
+    team_id: 5,
+    team: "Security Team",
+    team_description: "Security compliance & governance",
+    tags: ["Security", "Compliance", "Zero-Trust"],
+    rationale: "Fulfills SOC-2 Type II audit compliance standards and eliminates single point of compromise in the replay pipeline.",
+    files: [
+      { id: 4, filename: "Zero_Trust_Security_Whitepaper.pdf", file_type: "PDF", file_size: "4.5 MB" }
+    ],
+    approval_stage: 2,
+    approval_stage_name: "Executive Sign-Off",
+    created_date_formatted: "01 Sep 2026",
+    created_at: "2026-09-01T16:45:00Z",
+  },
 ];
 
 const INITIAL_DISCUSSIONS = [
@@ -251,7 +343,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [decisions, setDecisions] = useState([]);
+  const [decisions, setDecisions] = useState(INITIAL_DECISIONS);
   const [teams, setTeams] = useState(INITIAL_TEAMS);
   const [discussions] = useState(INITIAL_DISCUSSIONS);
   const [activities] = useState(INITIAL_ACTIVITIES);
@@ -2258,6 +2350,7 @@ function App() {
                 decisions={decisions}
                 knowledgeTagsList={knowledgeTagsList}
                 distinctCategories={distinctCategories}
+                allDocuments={allDocuments}
                 openDecisionTimeline={openDecisionTimeline}
                 handleViewDetails={handleViewDetails}
                 API_URL={API_URL}

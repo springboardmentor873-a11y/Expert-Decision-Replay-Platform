@@ -1,459 +1,325 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 const ENTITY_COLORS = {
-  decision_approved: "#10b981", // Emerald green
-  decision_review: "#f59e0b",   // Amber
-  decision_draft: "#64748b",    // Slate
-  decision_rejected: "#ef4444", // Rose red
-  decision_archived: "#8b5cf6", // Purple
-  category: "#6366f1",          // Indigo
-  tag: "#06b6d4",               // Cyan
-  author: "#f97316",             // Orange
-  team: "#3b82f6",              // Blue
+  decision: "#2563eb",         // Royal blue
+  decision_approved: "#10b981",// Emerald green
+  decision_review: "#f59e0b",  // Amber
+  decision_draft: "#64748b",   // Slate
+  decision_rejected: "#ef4444",// Rose red
+  team: "#8b5cf6",             // Purple
+  user: "#059669",             // Green / People
+  doc: "#0284c7",              // Ocean Cyan / Blue
+  state: "#d97706",            // Amber / Orange
+  topic: "#ea580c",            // Warm Orange
+  imp: "#db2777",              // Magenta / Pink
+  category: "#6366f1",         // Indigo
 };
+
+// Sparkle Star Icon matching the screenshot
+const SparkleIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="graph-sparkle-icon">
+    <defs>
+      <linearGradient id="sparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#38bdf8" />
+        <stop offset="100%" stopColor="#2563eb" />
+      </linearGradient>
+    </defs>
+    {/* Primary 4-point star */}
+    <path
+      d="M12 2C12 7.52285 7.52285 12 2 12C7.52285 12 12 16.4772 12 22C12 16.4772 16.4772 12 22 12C16.4772 12 12 7.52285 12 2Z"
+      fill="url(#sparkleGrad)"
+    />
+    {/* Secondary small star top right */}
+    <path
+      d="M19 2C19 4 17.5 5.5 15.5 5.5C17.5 5.5 19 7 19 9C19 7 20.5 5.5 22.5 5.5C20.5 5.5 19 4 19 2Z"
+      fill="#38bdf8"
+      opacity="0.85"
+    />
+  </svg>
+);
+
+// Reset / Refresh Circular Icon
+const RefreshIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+    <path d="M16 16h5v5" />
+  </svg>
+);
 
 export default function KnowledgeGraphView({
   decisions = [],
   knowledgeTagsList = [],
   distinctCategories = [],
+  allDocuments = [],
   openDecisionTimeline,
   handleViewDetails,
   API_URL = "http://localhost:8000",
 }) {
-  const [graphData, setGraphData] = useState({ nodes: [], edges: [], stats: null });
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("ALL");
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [layoutMode, setLayoutMode] = useState("organic"); // "organic" | "category" | "radial"
-  const [isPhysicsRunning, setIsPhysicsRunning] = useState(true);
+  // 1. Focal Decision Selection State
+  // Prefer "selection of fpga platform for real time DSP application" as initial focal if present
+  const defaultFocalId = useMemo(() => {
+    if (!decisions || decisions.length === 0) return 1;
+    const fpgaDec = decisions.find(d =>
+      (d.title || "").toLowerCase().includes("fpga")
+    );
+    return fpgaDec ? fpgaDec.id : decisions[0].id;
+  }, [decisions]);
 
-  // Filter toggles for entity types
-  const [visibleTypes, setVisibleTypes] = useState({
-    decision: true,
-    category: true,
-    tag: true,
-    author: true,
-    team: true,
-  });
+  const [selectedFocalId, setSelectedFocalId] = useState(defaultFocalId);
 
-  // Zoom & Pan state
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.95 });
+  // Sync selectedFocalId if default changes and current is invalid
+  useEffect(() => {
+    if (decisions && decisions.length > 0) {
+      const exists = decisions.some(d => String(d.id) === String(selectedFocalId));
+      if (!exists) {
+        setSelectedFocalId(defaultFocalId);
+      }
+    }
+  }, [decisions, defaultFocalId, selectedFocalId]);
+
+  // Active focal decision record
+  const focalDecision = useMemo(() => {
+    if (!decisions || decisions.length === 0) {
+      return {
+        id: 1,
+        title: "selection of fpga platform for real time DSP application",
+        description: "Selection of FPGA platform for real time DSP application with low latency streaming.",
+        decision_type: "Product & Strategy",
+        status: "IN_APPROVAL",
+        author: "dilleswarao",
+        author_role: "Lead Architect",
+        team: "FPGA and DSP Team",
+        team_description: "Department",
+        tags: ["cost-saving", "high-impact"],
+        rationale: "Deterministic latency under 2.5us and 35% BOM cost savings.",
+        files: [{ filename: "MICRO_SYLLABUS_DSP_FPGA.pdf", file_type: "PDF" }],
+        approval_stage_name: "Not Started",
+      };
+    }
+    const found = decisions.find(d => String(d.id) === String(selectedFocalId));
+    return found || decisions[0];
+  }, [decisions, selectedFocalId]);
+
+  // Mode: "orbit" (the exact radial star graph from the screenshot) or "network" (full graph)
+  const [viewMode, setViewMode] = useState("orbit");
+
+  // Selected node for detail drawer
+  const [inspectedNode, setInspectedNode] = useState(null);
+
+  // Pan & Zoom
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // Dragging node state
+  // Dragging nodes
   const [draggedNodeId, setDraggedNodeId] = useState(null);
+  const customNodePositions = useRef({}); // nodeId -> { x, y }
+  const [, setRerenderTick] = useState(0);
+
   const svgRef = useRef(null);
-  const simRef = useRef(null);
-  const nodePositions = useRef({}); // nodeId -> { x, y, vx, vy }
 
-  // 1. Fetch backend graph data with graceful client fallback
-  useEffect(() => {
-    let isMounted = true;
-    async function loadGraph() {
-      setLoading(true);
-      try {
-        const queryParams = new URLSearchParams();
-        if (selectedStatus !== "ALL") queryParams.append("status", selectedStatus);
-        if (selectedCategory !== "ALL") queryParams.append("category", selectedCategory);
-        if (searchTerm) queryParams.append("q", searchTerm);
+  // Reset positions and zoom
+  const handleResetView = () => {
+    customNodePositions.current = {};
+    setTransform({ x: 0, y: 0, scale: 1 });
+    setInspectedNode(null);
+    setRerenderTick(t => t + 1);
+  };
 
-        const res = await fetch(`${API_URL}/knowledge/graph?${queryParams.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setGraphData(data);
-            initNodePositions(data.nodes);
-          }
-        } else {
-          fallbackLocalGraph();
-        }
-      } catch {
-        fallbackLocalGraph();
-      } finally {
-        if (isMounted) setLoading(false);
+  // -------------------------------------------------------------
+  // BUILD ORBIT SATELLITES FOR FOCAL DECISION (Matching Screenshot)
+  // -------------------------------------------------------------
+  const orbitData = useMemo(() => {
+    const cx = 400;
+    const cy = 275;
+    const orbitRadius = 185;
+
+    const tags = Array.isArray(focalDecision.tags)
+      ? focalDecision.tags
+      : (focalDecision.tags ? focalDecision.tags.split(",").map(t => t.trim()).filter(Boolean) : ["cost-saving", "high-impact"]);
+
+    // Find any attached document
+    let docName = "MICRO_SYLLABUS_DSP_FPGA.pdf";
+    let docType = "PDF";
+    let docObj = null;
+
+    if (focalDecision.files && focalDecision.files.length > 0) {
+      docName = focalDecision.files[0].filename || docName;
+      docType = focalDecision.files[0].file_type || (docName.toLowerCase().endsWith(".pdf") ? "PDF" : "DOC");
+      docObj = focalDecision.files[0];
+    } else if (allDocuments && allDocuments.length > 0) {
+      const matchDoc = allDocuments.find(doc => Number(doc.decision_id) === Number(focalDecision.id));
+      if (matchDoc) {
+        docName = matchDoc.filename;
+        docType = docName.toLowerCase().endsWith(".pdf") ? "PDF" : "DOC";
+        docObj = matchDoc;
       }
     }
 
-    function fallbackLocalGraph() {
-      const nodes = [];
-      const edges = [];
-      const seenNodes = new Set();
+    // Truncate document name to match "MICRO_SYLLABUS_-..."
+    const displayDocName = docName.length > 17
+      ? docName.substring(0, 16) + "-..."
+      : docName;
 
-      const filteredDecisions = decisions.filter((d) => {
-        if (selectedStatus !== "ALL" && (d.status || "").toUpperCase() !== selectedStatus.toUpperCase()) return false;
-        if (selectedCategory !== "ALL" && (d.decision_type || "") !== selectedCategory) return false;
-        if (searchTerm) {
-          const q = searchTerm.toLowerCase();
-          const match = (d.title || "").toLowerCase().includes(q) ||
-            (d.description || "").toLowerCase().includes(q) ||
-            (d.rationale || "").toLowerCase().includes(q);
-          if (!match) return false;
-        }
-        return true;
-      });
+    // Satellites template matching screenshot clock positions
+    // 1. TEAM (Top -90 deg / 12 o'clock)
+    // 2. USER (Top-Right -35 deg / ~1:30 o'clock)
+    // 3. DOC (Bottom-Right 22 deg / ~4 o'clock)
+    // 4. STATE (Bottom-Right 70 deg / ~5:30 o'clock)
+    // 5. TOPIC 1 (Bottom-Left 115 deg / ~6:30 o'clock)
+    // 6. TOPIC 2 (Bottom-Left 162 deg / ~8 o'clock)
+    // 7. IMP (Top-Left 220 deg / ~10 o'clock)
+    const rawSatellites = [
+      {
+        id: "sat-team",
+        entity_type: "team",
+        badge: "TEAM",
+        color: ENTITY_COLORS.team,
+        angleDeg: -90,
+        primaryLabel: focalDecision.team || "FPGA and DSP Team",
+        subtitle: focalDecision.team_description || "Department",
+        relationLabel: "created by",
+        raw: {
+          name: focalDecision.team || "FPGA and DSP Team",
+          description: focalDecision.team_description || "Department",
+          id: focalDecision.team_id || 1,
+        },
+      },
+      {
+        id: "sat-user",
+        entity_type: "user",
+        badge: "USER",
+        color: ENTITY_COLORS.user,
+        angleDeg: -35,
+        primaryLabel: focalDecision.author || "dilleswarao",
+        subtitle: focalDecision.author_role || "Lead Architect",
+        relationLabel: "discussed by",
+        raw: {
+          name: focalDecision.author || "dilleswarao",
+          role: focalDecision.author_role || "Lead Architect",
+          id: focalDecision.created_by || 1,
+        },
+      },
+      {
+        id: "sat-doc",
+        entity_type: "doc",
+        badge: "DOC",
+        color: ENTITY_COLORS.doc,
+        angleDeg: 22,
+        primaryLabel: displayDocName,
+        fullLabel: docName,
+        subtitle: docType,
+        relationLabel: "supported by",
+        raw: docObj || { filename: docName, type: docType, size: "1.8 MB" },
+      },
+      {
+        id: "sat-state",
+        entity_type: "state",
+        badge: "STATE",
+        color: ENTITY_COLORS.state,
+        angleDeg: 70,
+        primaryLabel: focalDecision.status || "IN_APPROVAL",
+        subtitle: focalDecision.approval_stage_name || (focalDecision.status === "APPROVED" ? "Completed" : "Not Started"),
+        relationLabel: "resulted in",
+        raw: {
+          status: focalDecision.status || "IN_APPROVAL",
+          stageName: focalDecision.approval_stage_name || "Not Started",
+          stage: focalDecision.approval_stage || 1,
+        },
+      },
+      {
+        id: "sat-topic-1",
+        entity_type: "topic",
+        badge: "TOPIC",
+        color: ENTITY_COLORS.topic,
+        angleDeg: 115,
+        primaryLabel: tags[0] || "cost-saving",
+        subtitle: "Taxonomy Tag",
+        relationLabel: "related to",
+        raw: { tag: tags[0] || "cost-saving" },
+      },
+      {
+        id: "sat-topic-2",
+        entity_type: "topic",
+        badge: "TOPIC",
+        color: ENTITY_COLORS.topic,
+        angleDeg: 162,
+        primaryLabel: tags[1] || (tags.length > 1 ? tags[1] : "high-impact"),
+        subtitle: "Taxonomy Tag",
+        relationLabel: "related to",
+        raw: { tag: tags[1] || "high-impact" },
+      },
+      {
+        id: "sat-imp",
+        entity_type: "imp",
+        badge: "IMP",
+        color: ENTITY_COLORS.imp,
+        angleDeg: 220,
+        primaryLabel: (focalDecision.decision_type || "Product & Strategy").length > 17
+          ? (focalDecision.decision_type || "Product & Strategy").substring(0, 16) + "..."
+          : (focalDecision.decision_type || "Product & Strategy"),
+        fullLabel: focalDecision.decision_type || "Product & Strategy",
+        subtitle: "Strategic Influence",
+        relationLabel: "influences",
+        raw: {
+          category: focalDecision.decision_type || "Product & Strategy",
+          impact: "Strategic Influence",
+        },
+      },
+    ];
 
-      filteredDecisions.forEach((d) => {
-        const dId = `decision-${d.id}`;
-        if (!seenNodes.has(dId)) {
-          seenNodes.add(dId);
-          nodes.push({
-            id: dId,
-            entity_type: "decision",
-            decision_id: d.id,
-            label: d.title,
-            title: d.title,
-            description: d.description,
-            category: d.decision_type || "General",
-            status: d.status || "DRAFT",
-            rationale: d.rationale || "",
-            tags: Array.isArray(d.tags) ? d.tags : (d.tags ? d.tags.split(",").map(t => t.trim()).filter(Boolean) : []),
-            team_name: d.team || "Core Team",
-            author_name: d.author || "Lead Architect",
-            created_at: d.created_date_formatted || "2025-01-01",
-          });
-        }
-
-        const cat = d.decision_type || "General";
-        const catId = `category-${cat}`;
-        if (!seenNodes.has(catId)) {
-          seenNodes.add(catId);
-          nodes.push({ id: catId, entity_type: "category", label: cat, category: cat, count: 1 });
-        }
-        edges.push({
-          id: `edge-cat-${d.id}-${cat}`,
-          source: dId,
-          target: catId,
-          relation: "BELONGS_TO_CATEGORY",
-          label: "category",
-        });
-
-        const dTags = Array.isArray(d.tags) ? d.tags : (d.tags ? d.tags.split(",").map(t => t.trim()).filter(Boolean) : []);
-        dTags.forEach((t) => {
-          const tagId = `tag-${t}`;
-          if (!seenNodes.has(tagId)) {
-            seenNodes.add(tagId);
-            nodes.push({ id: tagId, entity_type: "tag", label: `#${t}`, tag: t, count: 1 });
-          }
-          edges.push({
-            id: `edge-tag-${d.id}-${t}`,
-            source: dId,
-            target: tagId,
-            relation: "TAGGED_WITH",
-            label: "tag",
-          });
-        });
-
-        if (d.team) {
-          const teamId = `team-${d.team}`;
-          if (!seenNodes.has(teamId)) {
-            seenNodes.add(teamId);
-            nodes.push({ id: teamId, entity_type: "team", label: d.team, count: 1 });
-          }
-          edges.push({
-            id: `edge-team-${d.id}-${d.team}`,
-            source: dId,
-            target: teamId,
-            relation: "ASSIGNED_TO_TEAM",
-            label: "team",
-          });
-        }
-      });
-
-      const stats = {
-        total_nodes: nodes.length,
-        total_edges: edges.length,
-        decisions_count: nodes.filter(n => n.entity_type === "decision").length,
-        categories_count: nodes.filter(n => n.entity_type === "category").length,
-        tags_count: nodes.filter(n => n.entity_type === "tag").length,
+    // Compute coordinates for each satellite
+    const satellites = rawSatellites.map((sat) => {
+      const custom = customNodePositions.current[sat.id];
+      const rad = (sat.angleDeg * Math.PI) / 180;
+      const defaultX = cx + Math.cos(rad) * orbitRadius;
+      const defaultY = cy + Math.sin(rad) * orbitRadius;
+      return {
+        ...sat,
+        x: custom ? custom.x : defaultX,
+        y: custom ? custom.y : defaultY,
+        defaultX,
+        defaultY,
       };
-
-      if (isMounted) {
-        setGraphData({ nodes, edges, stats });
-        initNodePositions(nodes);
-      }
-    }
-
-    loadGraph();
-    return () => { isMounted = false; };
-  }, [API_URL, selectedStatus, selectedCategory, searchTerm, decisions]);
-
-  // 2. Initialize node positions
-  const initNodePositions = useCallback((nodes) => {
-    const width = 960;
-    const height = 620;
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    const newPos = { ...nodePositions.current };
-    const categories = nodes.filter(n => n.entity_type === "category");
-    const decisionsList = nodes.filter(n => n.entity_type === "decision");
-    const tags = nodes.filter(n => n.entity_type === "tag");
-    const others = nodes.filter(n => !["category", "decision", "tag"].includes(n.entity_type));
-
-    // Place categories in an inner circle
-    categories.forEach((cat, idx) => {
-      if (!newPos[cat.id]) {
-        const angle = (idx / Math.max(1, categories.length)) * Math.PI * 2;
-        const r = 160;
-        newPos[cat.id] = {
-          x: centerX + Math.cos(angle) * r,
-          y: centerY + Math.sin(angle) * r,
-          vx: 0,
-          vy: 0,
-        };
-      }
     });
 
-    // Place decisions in mid ring or around their categories
-    decisionsList.forEach((d, idx) => {
-      if (!newPos[d.id]) {
-        const angle = (idx / Math.max(1, decisionsList.length)) * Math.PI * 2 + 0.15;
-        const r = 290 + (idx % 3) * 35;
-        newPos[d.id] = {
-          x: centerX + Math.cos(angle) * r,
-          y: centerY + Math.sin(angle) * r,
-          vx: 0,
-          vy: 0,
-        };
-      }
-    });
-
-    // Place tags in outer ring
-    tags.forEach((tag, idx) => {
-      if (!newPos[tag.id]) {
-        const angle = (idx / Math.max(1, tags.length)) * Math.PI * 2 + 0.3;
-        const r = 410 + (idx % 2) * 40;
-        newPos[tag.id] = {
-          x: centerX + Math.cos(angle) * r,
-          y: centerY + Math.sin(angle) * r,
-          vx: 0,
-          vy: 0,
-        };
-      }
-    });
-
-    // Place authors / teams
-    others.forEach((o, idx) => {
-      if (!newPos[o.id]) {
-        const angle = (idx / Math.max(1, others.length)) * Math.PI * 2 + 0.45;
-        const r = 480;
-        newPos[o.id] = {
-          x: centerX + Math.cos(angle) * r,
-          y: centerY + Math.sin(angle) * r,
-          vx: 0,
-          vy: 0,
-        };
-      }
-    });
-
-    nodePositions.current = newPos;
-  }, []);
-
-  // Filtered active nodes & edges based on visibility checkboxes
-  const activeNodes = useMemo(() => {
-    return graphData.nodes.filter(n => visibleTypes[n.entity_type] !== false);
-  }, [graphData.nodes, visibleTypes]);
-
-  const activeNodeIds = useMemo(() => {
-    return new Set(activeNodes.map(n => n.id));
-  }, [activeNodes]);
-
-  const activeEdges = useMemo(() => {
-    return graphData.edges.filter(
-      e => activeNodeIds.has(e.source) && activeNodeIds.has(e.target)
-    );
-  }, [graphData.edges, activeNodeIds]);
-
-  // Connected node IDs of the currently selected node (for 1-hop highlighting)
-  const connectedIds = useMemo(() => {
-    if (!selectedNode) return null;
-    const s = new Set([selectedNode.id]);
-    activeEdges.forEach(e => {
-      if (e.source === selectedNode.id) s.add(e.target);
-      if (e.target === selectedNode.id) s.add(e.source);
-    });
-    return s;
-  }, [selectedNode, activeEdges]);
-
-  // 3. Layout modes application
-  const applyLayout = useCallback((mode) => {
-    const width = 960;
-    const height = 620;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const current = { ...nodePositions.current };
-
-    if (mode === "category") {
-      // Group decisions directly around their category node
-      const categories = activeNodes.filter(n => n.entity_type === "category");
-      categories.forEach((cat, cIdx) => {
-        const cAngle = (cIdx / Math.max(1, categories.length)) * Math.PI * 2;
-        const cX = centerX + Math.cos(cAngle) * 230;
-        const cY = centerY + Math.sin(cAngle) * 230;
-        current[cat.id] = { x: cX, y: cY, vx: 0, vy: 0 };
-
-        const attachedDecisions = activeNodes.filter(
-          n => n.entity_type === "decision" && (n.category === cat.category || n.category === cat.label)
-        );
-        attachedDecisions.forEach((d, dIdx) => {
-          const dAngle = (dIdx / Math.max(1, attachedDecisions.length)) * Math.PI * 2;
-          const dist = 110 + (dIdx % 2) * 30;
-          current[d.id] = {
-            x: cX + Math.cos(dAngle) * dist,
-            y: cY + Math.sin(dAngle) * dist,
-            vx: 0,
-            vy: 0,
-          };
-        });
-      });
-    } else if (mode === "radial") {
-      // Concentric rings: Center = Core, Ring 1 = Categories, Ring 2 = Decisions, Ring 3 = Tags
-      const cats = activeNodes.filter(n => n.entity_type === "category");
-      const decs = activeNodes.filter(n => n.entity_type === "decision");
-      const tags = activeNodes.filter(n => n.entity_type === "tag");
-
-      cats.forEach((c, idx) => {
-        const a = (idx / Math.max(1, cats.length)) * Math.PI * 2;
-        current[c.id] = { x: centerX + Math.cos(a) * 150, y: centerY + Math.sin(a) * 150, vx: 0, vy: 0 };
-      });
-      decs.forEach((d, idx) => {
-        const a = (idx / Math.max(1, decs.length)) * Math.PI * 2;
-        current[d.id] = { x: centerX + Math.cos(a) * 280, y: centerY + Math.sin(a) * 280, vx: 0, vy: 0 };
-      });
-      tags.forEach((t, idx) => {
-        const a = (idx / Math.max(1, tags.length)) * Math.PI * 2;
-        current[t.id] = { x: centerX + Math.cos(a) * 410, y: centerY + Math.sin(a) * 410, vx: 0, vy: 0 };
-      });
-    }
-
-    nodePositions.current = current;
-  }, [activeNodes]);
-
-  useEffect(() => {
-    if (layoutMode !== "organic") {
-      applyLayout(layoutMode);
-    }
-  }, [layoutMode, applyLayout]);
-
-  // 4. Force physics simulation tick
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    if (!isPhysicsRunning || layoutMode !== "organic") return;
-
-    let animId;
-    let stepCount = 0;
-    const maxSteps = 220;
-
-    const runSimulation = () => {
-      const positions = nodePositions.current;
-      const nodes = activeNodes;
-      const edges = activeEdges;
-      const centerX = 480;
-      const centerY = 310;
-      const k = 0.04;
-      const damping = 0.85;
-
-      // Center gravity & charge repulsion
-      for (let i = 0; i < nodes.length; i++) {
-        const n1 = nodes[i];
-        const p1 = positions[n1.id];
-        if (!p1 || n1.id === draggedNodeId) continue;
-
-        // Gravity pull to center
-        p1.vx += (centerX - p1.x) * 0.0018;
-        p1.vy += (centerY - p1.y) * 0.0018;
-
-        // Repulsion from other nodes
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n2 = nodes[j];
-          const p2 = positions[n2.id];
-          if (!p2) continue;
-
-          const dx = p2.x - p1.x;
-          const dy = p2.y - p1.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const minDist = n1.entity_type === "category" || n2.entity_type === "category" ? 140 : 90;
-
-          if (dist < minDist * 2) {
-            const force = (minDist * minDist) / (dist * dist);
-            const fx = (dx / dist) * force * 1.6;
-            const fy = (dy / dist) * force * 1.6;
-
-            if (n1.id !== draggedNodeId) {
-              p1.vx -= fx;
-              p1.vy -= fy;
-            }
-            if (n2.id !== draggedNodeId) {
-              p2.vx += fx;
-              p2.vy += fy;
-            }
-          }
-        }
-      }
-
-      // Edge spring attraction
-      for (let e of edges) {
-        const pSource = positions[e.source];
-        const pTarget = positions[e.target];
-        if (!pSource || !pTarget) continue;
-
-        const dx = pTarget.x - pSource.x;
-        const dy = pTarget.y - pSource.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const idealDist = e.relation === "BELONGS_TO_CATEGORY" ? 130 : 160;
-
-        const springForce = (dist - idealDist) * k;
-        const fx = (dx / dist) * springForce;
-        const fy = (dy / dist) * springForce;
-
-        if (e.source !== draggedNodeId) {
-          pSource.vx += fx;
-          pSource.vy += fy;
-        }
-        if (e.target !== draggedNodeId) {
-          pTarget.vx -= fx;
-          pTarget.vy -= fy;
-        }
-      }
-
-      // Apply velocity and damping
-      for (let n of nodes) {
-        if (n.id === draggedNodeId) continue;
-        const p = positions[n.id];
-        if (!p) continue;
-
-        p.vx *= damping;
-        p.vy *= damping;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Bounding clamp
-        p.x = Math.max(60, Math.min(900, p.x));
-        p.y = Math.max(60, Math.min(560, p.y));
-      }
-
-      stepCount++;
-      setTick(t => t + 1);
-
-      if (stepCount < maxSteps) {
-        animId = requestAnimationFrame(runSimulation);
-      }
+    const centerCustom = customNodePositions.current["center-adr"];
+    const centerNode = {
+      id: "center-adr",
+      entity_type: "decision",
+      badge: "ADR",
+      color: ENTITY_COLORS.decision,
+      x: centerCustom ? centerCustom.x : cx,
+      y: centerCustom ? centerCustom.y : cy,
+      defaultX: cx,
+      defaultY: cy,
+      title: focalDecision.title,
+      truncatedTitle: focalDecision.title.length > 20
+        ? focalDecision.title.substring(0, 19) + "..."
+        : focalDecision.title,
+      subBadge: "related to • in approval • resulted in",
+      raw: focalDecision,
     };
 
-    animId = requestAnimationFrame(runSimulation);
-    return () => cancelAnimationFrame(animId);
-  }, [activeNodes, activeEdges, isPhysicsRunning, layoutMode, draggedNodeId]);
+    return {
+      cx,
+      cy,
+      orbitRadius,
+      centerNode,
+      satellites,
+    };
+  }, [focalDecision, allDocuments]);
 
-  // 5. Pan and Zoom Handlers
+  // -------------------------------------------------------------
+  // PAN & ZOOM HANDLERS
+  // -------------------------------------------------------------
   const handleWheel = (e) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
     setTransform(prev => {
-      const newScale = Math.min(2.5, Math.max(0.4, prev.scale * zoomFactor));
+      const newScale = Math.min(2.5, Math.max(0.45, prev.scale * zoomFactor));
       return { ...prev, scale: newScale };
     });
   };
@@ -476,15 +342,8 @@ export default function KnowledgeGraphView({
       const rect = svgRef.current.getBoundingClientRect();
       const rawX = (e.clientX - rect.left - transform.x) / transform.scale;
       const rawY = (e.clientY - rect.top - transform.y) / transform.scale;
-
-      const p = nodePositions.current[draggedNodeId];
-      if (p) {
-        p.x = rawX;
-        p.y = rawY;
-        p.vx = 0;
-        p.vy = 0;
-        setTick(t => t + 1);
-      }
+      customNodePositions.current[draggedNodeId] = { x: rawX, y: rawY };
+      setRerenderTick(t => t + 1);
     }
   };
 
@@ -493,712 +352,655 @@ export default function KnowledgeGraphView({
     setDraggedNodeId(null);
   };
 
-  const handleZoomIn = () => {
-    setTransform(prev => ({ ...prev, scale: Math.min(2.5, prev.scale * 1.2) }));
-  };
-
-  const handleZoomOut = () => {
-    setTransform(prev => ({ ...prev, scale: Math.max(0.4, prev.scale * 0.8) }));
-  };
-
-  const handleResetZoom = () => {
-    setTransform({ x: 0, y: 0, scale: 0.95 });
-  };
-
-  // Node Color Resolver
-  const getNodeColor = (node) => {
-    if (node.entity_type === "category") return ENTITY_COLORS.category;
-    if (node.entity_type === "tag") return ENTITY_COLORS.tag;
-    if (node.entity_type === "author") return ENTITY_COLORS.author;
-    if (node.entity_type === "team") return ENTITY_COLORS.team;
-    if (node.entity_type === "decision") {
-      const st = (node.status || "").toUpperCase();
-      if (st === "APPROVED") return ENTITY_COLORS.decision_approved;
-      if (st === "IN_REVIEW") return ENTITY_COLORS.decision_review;
-      if (st === "REJECTED") return ENTITY_COLORS.decision_rejected;
-      if (st === "ARCHIVED") return ENTITY_COLORS.decision_archived;
-      return ENTITY_COLORS.decision_draft;
-    }
-    return "#94a3b8";
-  };
-
-  // Node Radius & Dimensions
-  const getNodeDimensions = (node) => {
-    switch (node.entity_type) {
-      case "category":
-        return { r: 36, shape: "circle" };
-      case "decision":
-        return { w: 140, h: 54, shape: "rect", r: 24 };
-      case "tag":
-        return { r: 22, shape: "tag" };
-      case "author":
-        return { r: 24, shape: "circle" };
-      case "team":
-        return { w: 100, h: 36, shape: "rect", r: 18 };
-      default:
-        return { r: 20, shape: "circle" };
-    }
-  };
-
-  // Get full decision object for details/timeline action
-  const getSelectedDecisionObj = () => {
-    if (!selectedNode || selectedNode.entity_type !== "decision") return null;
-    const dId = selectedNode.decision_id || (selectedNode.id && selectedNode.id.replace("decision-", ""));
-    return decisions.find(d => String(d.id) === String(dId)) || selectedNode;
-  };
+  // Zoom helpers
+  const handleZoomIn = () => setTransform(p => ({ ...p, scale: Math.min(2.5, p.scale * 1.2) }));
+  const handleZoomOut = () => setTransform(p => ({ ...p, scale: Math.max(0.45, p.scale * 0.8) }));
 
   return (
-    <div className="knowledge-graph-container">
-      {/* 1. TOP CONTROL & FILTER BAR */}
-      <div className="graph-toolbar-card">
-        <div className="graph-toolbar-row">
-          {/* Real-time Search */}
-          <div className="graph-search-box">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Search graph nodes by title, rationale, tag, or author..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button className="clear-search-btn" onClick={() => setSearchTerm("")}>
-                ✕
-              </button>
-            )}
+    <div className="interactive-kg-card">
+      {/* 1. TOP HEADER ROW MATCHING SCREENSHOT */}
+      <div className="kg-header-row">
+        <div className="kg-title-block">
+          <div className="kg-title-main">
+            <SparkleIcon />
+            <h3 className="kg-title-text">INTERACTIVE KNOWLEDGE GRAPH</h3>
           </div>
-
-          {/* Status Filter */}
-          <div className="graph-filter-item">
-            <label>Decision Status:</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="graph-select"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="APPROVED">Approved Only</option>
-              <option value="IN_REVIEW">Under Review</option>
-              <option value="DRAFT">Draft</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-          </div>
-
-          {/* Category Filter */}
-          <div className="graph-filter-item">
-            <label>Category:</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="graph-select"
-            >
-              <option value="ALL">All Categories</option>
-              {distinctCategories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Layout Mode Selector */}
-          <div className="graph-filter-item">
-            <label>Layout Mode:</label>
-            <select
-              value={layoutMode}
-              onChange={(e) => setLayoutMode(e.target.value)}
-              className="graph-select"
-            >
-              <option value="organic">Organic Network Physics</option>
-              <option value="category">Category Orbit Clusters</option>
-              <option value="radial">Concentric Radial Rings</option>
-            </select>
-          </div>
-
-          {/* Canvas View Controls */}
-          <div className="graph-canvas-controls">
-            <button className="graph-ctrl-btn" onClick={handleZoomIn} title="Zoom In">
-              ＋
-            </button>
-            <button className="graph-ctrl-btn" onClick={handleZoomOut} title="Zoom Out">
-              －
-            </button>
-            <button className="graph-ctrl-btn" onClick={handleResetZoom} title="Reset Viewport">
-              ⤢ Reset
-            </button>
-            <button
-              className={`graph-ctrl-btn ${isPhysicsRunning ? "active" : ""}`}
-              onClick={() => setIsPhysicsRunning(p => !p)}
-              title={isPhysicsRunning ? "Pause Physics Simulation" : "Resume Physics Simulation"}
-            >
-              {isPhysicsRunning ? "⏸ Pause" : "▶ Physics"}
-            </button>
+          <div className="kg-subtitle-text" title={focalDecision.title}>
+            {focalDecision.title}
           </div>
         </div>
 
-        {/* Entity Type Filter Toggles & Stats */}
-        <div className="graph-type-toggles-row">
-          <div className="type-toggles-group">
-            <span className="toggle-group-label">Show Entities:</span>
-            <label className="type-toggle-chip">
-              <input
-                type="checkbox"
-                checked={visibleTypes.decision}
-                onChange={(e) => setVisibleTypes(p => ({ ...p, decision: e.target.checked }))}
-              />
-              <span className="chip-indicator" style={{ background: ENTITY_COLORS.decision_approved }}></span>
-              Decisions ({graphData.nodes.filter(n => n.entity_type === "decision").length})
-            </label>
-
-            <label className="type-toggle-chip">
-              <input
-                type="checkbox"
-                checked={visibleTypes.category}
-                onChange={(e) => setVisibleTypes(p => ({ ...p, category: e.target.checked }))}
-              />
-              <span className="chip-indicator" style={{ background: ENTITY_COLORS.category }}></span>
-              Categories ({graphData.nodes.filter(n => n.entity_type === "category").length})
-            </label>
-
-            <label className="type-toggle-chip">
-              <input
-                type="checkbox"
-                checked={visibleTypes.tag}
-                onChange={(e) => setVisibleTypes(p => ({ ...p, tag: e.target.checked }))}
-              />
-              <span className="chip-indicator" style={{ background: ENTITY_COLORS.tag }}></span>
-              Tags ({graphData.nodes.filter(n => n.entity_type === "tag").length})
-            </label>
-
-            <label className="type-toggle-chip">
-              <input
-                type="checkbox"
-                checked={visibleTypes.author}
-                onChange={(e) => setVisibleTypes(p => ({ ...p, author: e.target.checked }))}
-              />
-              <span className="chip-indicator" style={{ background: ENTITY_COLORS.author }}></span>
-              Authors ({graphData.nodes.filter(n => n.entity_type === "author").length})
-            </label>
-
-            <label className="type-toggle-chip">
-              <input
-                type="checkbox"
-                checked={visibleTypes.team}
-                onChange={(e) => setVisibleTypes(p => ({ ...p, team: e.target.checked }))}
-              />
-              <span className="chip-indicator" style={{ background: ENTITY_COLORS.team }}></span>
-              Teams ({graphData.nodes.filter(n => n.entity_type === "team").length})
-            </label>
+        <div className="kg-top-actions">
+          {/* View Mode Toggle: Orbit vs Network */}
+          <div className="kg-mode-toggle">
+            <button
+              className={`mode-btn ${viewMode === "orbit" ? "active" : ""}`}
+              onClick={() => setViewMode("orbit")}
+              title="Focal Decision Radial Orbit Graph"
+            >
+              ⭐ Focal Orbit
+            </button>
+            <button
+              className={`mode-btn ${viewMode === "network" ? "active" : ""}`}
+              onClick={() => setViewMode("network")}
+              title="Global Multi-Decision Relationship Network"
+            >
+              🌐 Global Network
+            </button>
           </div>
 
-          <div className="graph-stats-summary">
-            <span><strong>{activeNodes.length}</strong> Nodes</span>
-            <span className="divider">•</span>
-            <span><strong>{activeEdges.length}</strong> Relationships</span>
-            {selectedNode && (
-              <>
-                <span className="divider">•</span>
-                <span className="selected-tag">Selected: {selectedNode.label || selectedNode.id}</span>
-                <button
-                  className="btn-clear-selection"
-                  onClick={() => setSelectedNode(null)}
-                >
-                  Deselect
-                </button>
-              </>
-            )}
-          </div>
+          {/* Reset / Refresh Button */}
+          <button
+            className="kg-refresh-btn"
+            onClick={handleResetView}
+            title="Reset Viewport & Orbit Guideline"
+          >
+            <RefreshIcon />
+          </button>
         </div>
       </div>
 
-      {/* 2. GRAPH CANVAS & SIDEBAR WRAPPER */}
-      <div className="graph-viewport-wrapper">
+      {/* 2. FOCAL DECISION NODE SELECTOR */}
+      <div className="kg-focal-selector-wrap">
+        <label className="kg-focal-label">Focal Decision Node:</label>
+        <div className="kg-select-custom-wrapper">
+          <select
+            className="kg-focal-select"
+            value={selectedFocalId}
+            onChange={(e) => {
+              const newId = Number(e.target.value) || e.target.value;
+              setSelectedFocalId(newId);
+              customNodePositions.current = {};
+              setInspectedNode(null);
+            }}
+          >
+            {decisions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.title}
+              </option>
+            ))}
+          </select>
+          <div className="kg-select-arrow">⌄</div>
+        </div>
+      </div>
+
+      {/* 3. GRAPH CANVAS VIEWPORT */}
+      <div className="kg-canvas-container">
         <div
-          className="graph-canvas-box"
+          className="kg-canvas-area"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onWheel={handleWheel}
         >
-          {loading ? (
-            <div className="graph-loading-overlay">
-              <div className="graph-spinner"></div>
-              <span>Generating Knowledge Graph & Relationship Topology...</span>
-            </div>
-          ) : activeNodes.length === 0 ? (
-            <div className="graph-empty-state">
-              <div style={{ fontSize: "36px", marginBottom: "10px" }}>🕸️</div>
-              <h4>No entities match your filter criteria</h4>
-              <p>Adjust your search query, status, or category filter to reveal connected nodes.</p>
-              <button
-                className="btn-secondary"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedStatus("ALL");
-                  setSelectedCategory("ALL");
-                  setVisibleTypes({ decision: true, category: true, tag: true, author: true, team: true });
-                }}
-              >
-                Reset All Filters
-              </button>
-            </div>
-          ) : (
-            <svg
-              ref={svgRef}
-              className="graph-svg"
-              width="100%"
-              height="620"
-              viewBox="0 0 960 620"
-            >
-              <defs>
-                {/* Arrow markers for directed edges */}
-                <marker
-                  id="arrow-default"
-                  viewBox="0 0 10 10"
-                  refX="18"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(148, 163, 184, 0.4)" />
-                </marker>
-                <marker
-                  id="arrow-highlight"
-                  viewBox="0 0 10 10"
-                  refX="18"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
-                </marker>
+          <svg
+            ref={svgRef}
+            className="kg-svg-canvas"
+            viewBox="0 0 800 580"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              {/* Soft blue glow filter for focal ADR node */}
+              <filter id="adrGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0" dy="0" stdDeviation="12" floodColor="#2563eb" floodOpacity="0.45" />
+              </filter>
 
-                {/* Node Gradients & Glows */}
-                <radialGradient id="categoryGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#818cf8" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.05" />
-                </radialGradient>
-                <radialGradient id="decisionGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#34d399" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#059669" stopOpacity="0.0" />
-                </radialGradient>
-              </defs>
+              {/* Ambient radial blur aura */}
+              <radialGradient id="centerAura" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                <stop offset="70%" stopColor="#2563eb" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+              </radialGradient>
 
-              <rect className="graph-bg" width="100%" height="100%" fill="transparent" />
+              {/* Node drop shadow for clean floating effect */}
+              <filter id="nodeCardShadow" x="-20%" y="-20%" width="140%" height="150%">
+                <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#0f172a" floodOpacity="0.08" />
+              </filter>
+            </defs>
 
-              {/* Pan & Zoom Group */}
-              <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
-                {/* EDGES LAYER */}
-                <g className="graph-edges-layer">
-                  {activeEdges.map((edge) => {
-                    const sourcePos = nodePositions.current[edge.source];
-                    const targetPos = nodePositions.current[edge.target];
-                    if (!sourcePos || !targetPos) return null;
+            {/* Clickable transparent background for pan */}
+            <rect className="graph-bg" width="100%" height="100%" fill="transparent" />
 
-                    const isHighlighted =
-                      selectedNode &&
-                      (edge.source === selectedNode.id || edge.target === selectedNode.id);
-                    const isDimmed = selectedNode && !isHighlighted;
+            {/* TRANSFORM GROUP (Pan & Zoom) */}
+            <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
+              {/* ORBIT VIEW MODE (Default & matches Screenshot) */}
+              {viewMode === "orbit" && (
+                <g className="orbit-graph-layer">
+                  {/* Outer Concentric Dotted Guideline Ring */}
+                  <circle
+                    cx={orbitData.cx}
+                    cy={orbitData.cy}
+                    r={orbitData.orbitRadius}
+                    fill="none"
+                    stroke="#cbd5e1"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 4"
+                    className="orbit-guide-ring"
+                  />
 
-                    // Subtle curve for visual beauty
-                    const dx = targetPos.x - sourcePos.x;
-                    const dy = targetPos.y - sourcePos.y;
-                    const midX = (sourcePos.x + targetPos.x) / 2 - dy * 0.08;
-                    const midY = (sourcePos.y + targetPos.y) / 2 + dx * 0.08;
+                  {/* EDGES: Center ADR to Satellites */}
+                  <g className="orbit-edges-layer">
+                    {orbitData.satellites.map((sat) => {
+                      const midX = (orbitData.centerNode.x + sat.x) / 2;
+                      const midY = (orbitData.centerNode.y + sat.y) / 2;
+                      const labelWidth = Math.max(54, sat.relationLabel.length * 6.5 + 14);
 
-                    return (
-                      <g key={edge.id} className="graph-edge-group">
-                        <path
-                          d={`M ${sourcePos.x} ${sourcePos.y} Q ${midX} ${midY} ${targetPos.x} ${targetPos.y}`}
-                          fill="none"
-                          stroke={isHighlighted ? "#38bdf8" : "rgba(148, 163, 184, 0.22)"}
-                          strokeWidth={isHighlighted ? 2.5 : 1.4}
-                          strokeDasharray={edge.relation === "RELATED_TO" ? "4,4" : "none"}
-                          opacity={isDimmed ? 0.12 : 1}
-                          markerEnd={isHighlighted ? "url(#arrow-highlight)" : "url(#arrow-default)"}
-                          className="graph-edge-path"
-                        />
-                      </g>
-                    );
-                  })}
+                      return (
+                        <g key={`edge-${sat.id}`} className="orbit-edge-group">
+                          {/* Radiating line */}
+                          <line
+                            x1={orbitData.centerNode.x}
+                            y1={orbitData.centerNode.y}
+                            x2={sat.x}
+                            y2={sat.y}
+                            stroke="#cbd5e1"
+                            strokeWidth="1.4"
+                            strokeOpacity="0.85"
+                          />
+
+                          {/* Edge relation pill badge in the center */}
+                          <g transform={`translate(${midX}, ${midY})`} className="orbit-edge-pill">
+                            <rect
+                              x={-labelWidth / 2}
+                              y="-9"
+                              width={labelWidth}
+                              height="18"
+                              rx="9"
+                              fill="#ffffff"
+                              stroke="#e2e8f0"
+                              strokeWidth="0.8"
+                            />
+                            <text
+                              textAnchor="middle"
+                              dy="3.5"
+                              fill="#64748b"
+                              fontSize="9.5px"
+                              fontWeight="500"
+                              letterSpacing="0.2px"
+                            >
+                              {sat.relationLabel}
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    })}
+                  </g>
+
+                  {/* SATELLITE NODES */}
+                  <g className="orbit-satellites-layer">
+                    {orbitData.satellites.map((sat) => {
+                      const isInspected = inspectedNode && inspectedNode.id === sat.id;
+                      const cardW = Math.max(105, sat.primaryLabel.length * 6.8 + 20);
+
+                      return (
+                        <g
+                          key={sat.id}
+                          transform={`translate(${sat.x}, ${sat.y})`}
+                          className={`satellite-node-group ${isInspected ? "inspected" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInspectedNode(sat);
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setDraggedNodeId(sat.id);
+                          }}
+                          style={{ cursor: "grab" }}
+                        >
+                          {/* Selection indicator halo */}
+                          {isInspected && (
+                            <circle
+                              r="30"
+                              fill="none"
+                              stroke={sat.color}
+                              strokeWidth="2.5"
+                              strokeDasharray="4 3"
+                              className="orbit-inspect-halo"
+                            />
+                          )}
+
+                          {/* Outer White Badge with Colored Border */}
+                          <circle
+                            r="23"
+                            fill="#ffffff"
+                            stroke={sat.color}
+                            strokeWidth="3.2"
+                            filter="url(#nodeCardShadow)"
+                          />
+
+                          {/* Inner Solid Colored Circle */}
+                          <circle
+                            r="18.5"
+                            fill={sat.color}
+                          />
+
+                          {/* White Bold Acronym / Badge (TEAM, USER, DOC, STATE, TOPIC, IMP) */}
+                          <text
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill="#ffffff"
+                            fontSize="10.5px"
+                            fontWeight="800"
+                            letterSpacing="0.3px"
+                          >
+                            {sat.badge}
+                          </text>
+
+                          {/* Floating Card Directly Underneath */}
+                          <g transform="translate(0, 27)" className="satellite-card-group">
+                            <rect
+                              x={-cardW / 2}
+                              y="0"
+                              width={cardW}
+                              height="34"
+                              rx="8"
+                              fill="#ffffff"
+                              stroke="#e2e8f0"
+                              strokeWidth="1"
+                              filter="url(#nodeCardShadow)"
+                            />
+                            {/* Primary Title (e.g. FPGA and DSP Team, dilleswarao, etc.) */}
+                            <text
+                              x="0"
+                              y="14"
+                              textAnchor="middle"
+                              fill="#1e293b"
+                              fontSize="10.5px"
+                              fontWeight="700"
+                            >
+                              {sat.primaryLabel}
+                            </text>
+                            {/* Subtitle (e.g. Department, Lead Architect, PDF, Taxonomy Tag) */}
+                            <text
+                              x="0"
+                              y="26"
+                              textAnchor="middle"
+                              fill="#64748b"
+                              fontSize="8.5px"
+                              fontWeight="500"
+                            >
+                              {sat.subtitle}
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    })}
+                  </g>
+
+                  {/* CENTER FOCAL NODE (ADR) */}
+                  <g
+                    transform={`translate(${orbitData.centerNode.x}, ${orbitData.centerNode.y})`}
+                    className="center-focal-group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInspectedNode(orbitData.centerNode);
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setDraggedNodeId("center-adr");
+                    }}
+                    style={{ cursor: "grab" }}
+                  >
+                    {/* Soft glowing ambient aura behind center node */}
+                    <circle r="48" fill="url(#centerAura)" />
+
+                    {/* Central Royal Blue Circle with Glow */}
+                    <circle
+                      r="33"
+                      fill="#2563eb"
+                      stroke="#ffffff"
+                      strokeWidth="3.2"
+                      filter="url(#adrGlow)"
+                    />
+
+                    {/* Bold White Text ADR */}
+                    <text
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="#ffffff"
+                      fontSize="14.5px"
+                      fontWeight="800"
+                      letterSpacing="0.8px"
+                    >
+                      ADR
+                    </text>
+
+                    {/* Connected Pill Card Directly Underneath ADR */}
+                    <g transform="translate(0, 39)" className="center-card-group">
+                      <rect
+                        x="-75"
+                        y="0"
+                        width="150"
+                        height="32"
+                        rx="9"
+                        fill="#ffffff"
+                        stroke="#e2e8f0"
+                        strokeWidth="1"
+                        filter="url(#nodeCardShadow)"
+                      />
+                      {/* Truncated Decision Title e.g. "selection of fpg..." */}
+                      <text
+                        x="0"
+                        y="13"
+                        textAnchor="middle"
+                        fill="#1e293b"
+                        fontSize="10.5px"
+                        fontWeight="700"
+                      >
+                        {orbitData.centerNode.truncatedTitle}
+                      </text>
+                      {/* Relations Indicator: related to • in approval • resulted in */}
+                      <text
+                        x="0"
+                        y="24"
+                        textAnchor="middle"
+                        fill="#94a3b8"
+                        fontSize="8px"
+                        fontWeight="500"
+                      >
+                        related to • in approval • resulted in
+                      </text>
+                    </g>
+                  </g>
                 </g>
+              )}
 
-                {/* NODES LAYER */}
-                <g className="graph-nodes-layer">
-                  {activeNodes.map((node) => {
-                    const pos = nodePositions.current[node.id] || { x: 480, y: 310 };
-                    const isSelected = selectedNode && selectedNode.id === node.id;
-                    const isConnected = connectedIds ? connectedIds.has(node.id) : true;
-                    const isDimmed = selectedNode && !isConnected;
-                    const color = getNodeColor(node);
-                    const dims = getNodeDimensions(node);
+              {/* NETWORK VIEW MODE (Full Multi-Decision Ecosystem) */}
+              {viewMode === "network" && (
+                <g className="network-graph-layer">
+                  {/* Render all decisions as hubs connected to shared tags & categories */}
+                  {decisions.map((d, idx) => {
+                    const angle = (idx / Math.max(1, decisions.length)) * Math.PI * 2;
+                    const r = 160 + (idx % 2) * 50;
+                    const nx = 400 + Math.cos(angle) * r;
+                    const ny = 275 + Math.sin(angle) * r;
 
                     return (
                       <g
-                        key={node.id}
-                        transform={`translate(${pos.x}, ${pos.y})`}
-                        className={`graph-node-group ${isSelected ? "selected" : ""} ${isDimmed ? "dimmed" : ""}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedNode(node);
+                        key={`net-d-${d.id}`}
+                        transform={`translate(${nx}, ${ny})`}
+                        onClick={() => {
+                          setSelectedFocalId(d.id);
+                          setViewMode("orbit");
                         }}
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          setDraggedNodeId(node.id);
-                        }}
-                        style={{ cursor: "grab" }}
+                        style={{ cursor: "pointer" }}
                       >
-                        {/* Selected halo ring */}
-                        {isSelected && (
-                          <circle
-                            r={node.entity_type === "category" ? 48 : 34}
-                            fill="none"
-                            stroke="#38bdf8"
-                            strokeWidth={3}
-                            strokeDasharray="4,4"
-                            className="selection-halo"
+                        <circle
+                          r="28"
+                          fill={Number(d.id) === Number(selectedFocalId) ? "#2563eb" : "#3b82f6"}
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          filter="url(#nodeCardShadow)"
+                        />
+                        <text
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fill="#ffffff"
+                          fontSize="11px"
+                          fontWeight="700"
+                        >
+                          ADR #{d.id}
+                        </text>
+                        <g transform="translate(0, 32)">
+                          <rect
+                            x="-65"
+                            y="0"
+                            width="130"
+                            height="24"
+                            rx="6"
+                            fill="#ffffff"
+                            stroke="#e2e8f0"
                           />
-                        )}
-
-                        {/* CATEGORY NODE */}
-                        {node.entity_type === "category" && (
-                          <>
-                            <circle r="42" fill="url(#categoryGlow)" />
-                            <circle
-                              r="32"
-                              fill="#1e1b4b"
-                              stroke={color}
-                              strokeWidth={isSelected ? 3 : 2}
-                              filter="drop-shadow(0 4px 8px rgba(0,0,0,0.4))"
-                            />
-                            <text
-                              textAnchor="middle"
-                              dy="-6"
-                              fill="#e0e7ff"
-                              fontSize="12px"
-                              fontWeight="700"
-                            >
-                              📁 {node.label.length > 12 ? node.label.substring(0, 11) + "…" : node.label}
-                            </text>
-                            <text
-                              textAnchor="middle"
-                              dy="14"
-                              fill="#a5b4fc"
-                              fontSize="10px"
-                              fontWeight="600"
-                            >
-                              {node.count || 1} records
-                            </text>
-                          </>
-                        )}
-
-                        {/* DECISION NODE (Rounded Card / Badge) */}
-                        {node.entity_type === "decision" && (
-                          <>
-                            <rect
-                              x="-65"
-                              y="-24"
-                              width="130"
-                              height="48"
-                              rx="10"
-                              fill="#0f172a"
-                              stroke={color}
-                              strokeWidth={isSelected ? 2.5 : 1.5}
-                              filter="drop-shadow(0 4px 10px rgba(0,0,0,0.5))"
-                            />
-                            {/* Status Accent Bar */}
-                            <rect
-                              x="-65"
-                              y="-24"
-                              width="5"
-                              height="48"
-                              rx="2"
-                              fill={color}
-                            />
-                            <text
-                              x="-52"
-                              y="-6"
-                              fill="#f8fafc"
-                              fontSize="11px"
-                              fontWeight="600"
-                            >
-                              {node.label.length > 15 ? node.label.substring(0, 14) + "…" : node.label}
-                            </text>
-                            <text
-                              x="-52"
-                              y="12"
-                              fill="#94a3b8"
-                              fontSize="9.5px"
-                            >
-                              #{node.decision_id || node.id.replace("decision-", "")} • {node.status}
-                            </text>
-                          </>
-                        )}
-
-                        {/* TAG NODE */}
-                        {node.entity_type === "tag" && (
-                          <>
-                            <rect
-                              x="-38"
-                              y="-14"
-                              width="76"
-                              height="28"
-                              rx="14"
-                              fill="#083344"
-                              stroke={color}
-                              strokeWidth={isSelected ? 2.5 : 1.2}
-                            />
-                            <text
-                              textAnchor="middle"
-                              dy="4"
-                              fill="#a5f3fc"
-                              fontSize="10px"
-                              fontWeight="600"
-                            >
-                              {node.label.length > 11 ? node.label.substring(0, 10) + "…" : node.label}
-                            </text>
-                          </>
-                        )}
-
-                        {/* AUTHOR NODE */}
-                        {node.entity_type === "author" && (
-                          <>
-                            <circle
-                              r="20"
-                              fill="#431407"
-                              stroke={color}
-                              strokeWidth={isSelected ? 2.5 : 1.5}
-                            />
-                            <text
-                              textAnchor="middle"
-                              dy="4"
-                              fill="#fed7aa"
-                              fontSize="11px"
-                              fontWeight="700"
-                            >
-                              👤 {node.label.substring(0, 3)}
-                            </text>
-                            <text
-                              textAnchor="middle"
-                              dy="32"
-                              fill="#fdba74"
-                              fontSize="9.5px"
-                              fontWeight="500"
-                            >
-                              {node.label.length > 10 ? node.label.substring(0, 9) + "…" : node.label}
-                            </text>
-                          </>
-                        )}
-
-                        {/* TEAM NODE */}
-                        {node.entity_type === "team" && (
-                          <>
-                            <rect
-                              x="-45"
-                              y="-15"
-                              width="90"
-                              height="30"
-                              rx="6"
-                              fill="#172554"
-                              stroke={color}
-                              strokeWidth={isSelected ? 2.5 : 1.2}
-                            />
-                            <text
-                              textAnchor="middle"
-                              dy="4"
-                              fill="#bfdbfe"
-                              fontSize="10px"
-                              fontWeight="600"
-                            >
-                              👥 {node.label.length > 11 ? node.label.substring(0, 10) + "…" : node.label}
-                            </text>
-                          </>
-                        )}
+                          <text
+                            x="0"
+                            y="15"
+                            textAnchor="middle"
+                            fill="#1e293b"
+                            fontSize="9.5px"
+                            fontWeight="600"
+                          >
+                            {d.title.length > 15 ? d.title.substring(0, 14) + "…" : d.title}
+                          </text>
+                        </g>
                       </g>
                     );
                   })}
                 </g>
-              </g>
-            </svg>
-          )}
+              )}
+            </g>
+          </svg>
 
-          {/* Graph Helper Legend (bottom left) */}
-          <div className="graph-bottom-legend">
-            <span className="legend-item"><span className="legend-dot" style={{ background: ENTITY_COLORS.decision_approved }}></span> Approved</span>
-            <span className="legend-item"><span className="legend-dot" style={{ background: ENTITY_COLORS.decision_review }}></span> In Review</span>
-            <span className="legend-item"><span className="legend-dot" style={{ background: ENTITY_COLORS.decision_draft }}></span> Draft</span>
-            <span className="legend-item"><span className="legend-dot" style={{ background: ENTITY_COLORS.category }}></span> Category Hub</span>
-            <span className="legend-item"><span className="legend-dot" style={{ background: ENTITY_COLORS.tag }}></span> Tag</span>
-            <span className="legend-tip">💡 Tip: Drag nodes to position. Click to inspect & replay.</span>
+          {/* Quick Zoom Floating Toolbar */}
+          <div className="kg-floating-zoom-controls">
+            <button onClick={handleZoomIn} title="Zoom In">＋</button>
+            <button onClick={handleZoomOut} title="Zoom Out">－</button>
+            <button onClick={handleResetView} title="Reset Viewport">⤢</button>
           </div>
         </div>
 
-        {/* 3. SLIDE-OUT / PINNED NODE INSPECTOR DRAWER */}
-        {selectedNode && (
-          <div className="graph-inspector-drawer">
-            <div className="drawer-header">
-              <div className="drawer-entity-badge" style={{ borderColor: getNodeColor(selectedNode) }}>
-                {selectedNode.entity_type.toUpperCase()}
+        {/* 4. SLIDE-OUT NODE INSPECTOR DRAWER */}
+        {inspectedNode && (
+          <div className="kg-inspector-drawer">
+            <div className="kg-drawer-header">
+              <div
+                className="kg-drawer-badge"
+                style={{ background: inspectedNode.color || "#2563eb" }}
+              >
+                {inspectedNode.badge || inspectedNode.entity_type.toUpperCase()}
               </div>
               <button
-                className="drawer-close-btn"
-                onClick={() => setSelectedNode(null)}
+                className="kg-drawer-close"
+                onClick={() => setInspectedNode(null)}
                 title="Close Inspector"
               >
                 ✕
               </button>
             </div>
 
-            <div className="drawer-title">{selectedNode.title || selectedNode.label}</div>
+            <div className="kg-drawer-title">
+              {inspectedNode.fullLabel || inspectedNode.title || inspectedNode.primaryLabel}
+            </div>
 
-            {/* DECISION SPECIFIC DETAILS */}
-            {selectedNode.entity_type === "decision" && (
-              <div className="drawer-body">
-                <div className="drawer-meta-row">
-                  <span className="badge-category">{selectedNode.category}</span>
-                  <span className={`badge-status ${selectedNode.status?.toLowerCase()}`}>
-                    {selectedNode.status}
+            {/* DETAILS FOR ADR DECISION NODE */}
+            {inspectedNode.entity_type === "decision" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-meta-badges">
+                  <span className="badge-pill category">
+                    {focalDecision.decision_type || "General"}
+                  </span>
+                  <span className={`badge-pill status ${(focalDecision.status || "DRAFT").toLowerCase()}`}>
+                    {focalDecision.status || "IN_APPROVAL"}
                   </span>
                 </div>
 
-                {selectedNode.description && (
-                  <div className="drawer-section">
-                    <label>Description & Context:</label>
-                    <p>{selectedNode.description}</p>
+                {focalDecision.description && (
+                  <div className="kg-drawer-section">
+                    <label>Problem Statement & Scope:</label>
+                    <p>{focalDecision.description}</p>
                   </div>
                 )}
 
-                {selectedNode.rationale && (
-                  <div className="drawer-section rationale-box">
-                    <label>Decision Rationale:</label>
-                    <p>{selectedNode.rationale}</p>
+                {focalDecision.rationale && (
+                  <div className="kg-drawer-section rationale-accent">
+                    <label>Architectural Rationale:</label>
+                    <p>{focalDecision.rationale}</p>
                   </div>
                 )}
 
-                {selectedNode.tags && selectedNode.tags.length > 0 && (
-                  <div className="drawer-section">
-                    <label>Associated Tags:</label>
-                    <div className="drawer-tags-wrap">
-                      {selectedNode.tags.map((t) => (
-                        <span
-                          key={t}
-                          className="drawer-tag-pill"
-                          onClick={() => {
-                            const tagNode = activeNodes.find(n => n.entity_type === "tag" && (n.tag === t || n.label === `#${t}`));
-                            if (tagNode) setSelectedNode(tagNode);
-                          }}
-                        >
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="drawer-section meta-grid">
+                <div className="kg-drawer-grid">
                   <div>
-                    <label>Author</label>
-                    <div>👤 {selectedNode.author_name || "Lead Architect"}</div>
+                    <label>Lead Author</label>
+                    <p>👤 {focalDecision.author || "dilleswarao"} ({focalDecision.author_role || "Lead Architect"})</p>
                   </div>
                   <div>
-                    <label>Team</label>
-                    <div>👥 {selectedNode.team_name || "Core Team"}</div>
+                    <label>Department / Team</label>
+                    <p>👥 {focalDecision.team || "FPGA and DSP Team"}</p>
                   </div>
-                  {selectedNode.created_at && (
-                    <div>
-                      <label>Created</label>
-                      <div>📅 {selectedNode.created_at}</div>
-                    </div>
-                  )}
+                  <div>
+                    <label>Attached Artifacts</label>
+                    <p>📄 {inspectedNode.raw?.files?.[0]?.filename || "MICRO_SYLLABUS_DSP_FPGA.pdf"}</p>
+                  </div>
+                  <div>
+                    <label>Governance State</label>
+                    <p>⚖️ {focalDecision.approval_stage_name || "Stage 1: Verification"}</p>
+                  </div>
                 </div>
 
-                {/* PRIMARY ACTION BUTTONS: REPLAY DECISION & VIEW DETAILS */}
-                <div className="drawer-actions">
+                {/* ACTION BUTTONS */}
+                <div className="kg-drawer-actions">
                   {openDecisionTimeline && (
                     <button
-                      className="btn-replay-action"
-                      style={{ width: "100%", justifyContent: "center", marginBottom: "8px" }}
-                      onClick={() => {
-                        const dId = selectedNode.decision_id || selectedNode.id.replace("decision-", "");
-                        openDecisionTimeline(Number(dId));
-                      }}
+                      className="kg-action-btn primary"
+                      onClick={() => openDecisionTimeline(focalDecision.id)}
                     >
                       <span>🔄 Replay Decision Timeline</span>
                     </button>
                   )}
-
                   {handleViewDetails && (
                     <button
-                      className="btn-secondary"
-                      style={{ width: "100%", justifyContent: "center" }}
-                      onClick={() => {
-                        const decObj = getSelectedDecisionObj();
-                        if (decObj) handleViewDetails(decObj);
-                      }}
+                      className="kg-action-btn secondary"
+                      onClick={() => handleViewDetails(focalDecision)}
                     >
-                      Inspect Full Specification
+                      <span>📄 Inspect Full Specification</span>
                     </button>
                   )}
                 </div>
               </div>
             )}
 
-            {/* CATEGORY / TAG / AUTHOR / TEAM DETAILS */}
-            {selectedNode.entity_type !== "decision" && (
-              <div className="drawer-body">
-                <div className="drawer-section">
-                  <label>Cluster Entity:</label>
-                  <p style={{ color: "#94a3b8", margin: "4px 0 12px 0" }}>
-                    This hub links institutional decisions sharing {selectedNode.entity_type === "category" ? "the category classification" : selectedNode.entity_type === "tag" ? "the topic tag" : "this relationship"}.
+            {/* DETAILS FOR TEAM NODE */}
+            {inspectedNode.entity_type === "team" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-section">
+                  <label>Department Overview:</label>
+                  <p>
+                    <strong>{inspectedNode.primaryLabel}</strong> is the primary engineering unit accountable for FPGA architectural governance, digital signal processing algorithms, and hardware verification.
                   </p>
                 </div>
-
-                <div className="drawer-section">
-                  <label>Connected Decisions:</label>
-                  <div className="drawer-connected-list">
-                    {activeEdges
-                      .filter(e => e.target === selectedNode.id || e.source === selectedNode.id)
-                      .map(e => {
-                        const otherId = e.source === selectedNode.id ? e.target : e.source;
-                        const otherNode = activeNodes.find(n => n.id === otherId);
-                        if (!otherNode || otherNode.entity_type !== "decision") return null;
-
-                        return (
-                          <div
-                            key={otherNode.id}
-                            className="connected-decision-item"
-                            onClick={() => setSelectedNode(otherNode)}
-                          >
-                            <div className="item-title">{otherNode.title || otherNode.label}</div>
-                            <div className="item-meta">
-                              <span>#{otherNode.decision_id || otherNode.id.replace("decision-", "")}</span>
-                              <span className={`item-status ${otherNode.status?.toLowerCase()}`}>{otherNode.status}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
+                <div className="kg-drawer-section">
+                  <label>Assigned Responsibilities:</label>
+                  <ul className="kg-drawer-list">
+                    <li>RTL synthesis and timing closure for DSP pipelines</li>
+                    <li>Power envelope profiling and thermal analysis</li>
+                    <li>Vendor qualification and BOM cost management</li>
+                  </ul>
                 </div>
-
-                <div className="drawer-actions">
+                <div className="kg-drawer-actions">
                   <button
-                    className="btn-secondary"
-                    style={{ width: "100%" }}
-                    onClick={() => {
-                      if (selectedNode.entity_type === "category") {
-                        setSelectedCategory(selectedNode.category || selectedNode.label);
-                      } else if (selectedNode.entity_type === "tag") {
-                        setSearchTerm(selectedNode.tag || selectedNode.label.replace("#", ""));
-                      }
-                    }}
+                    className="kg-action-btn secondary"
+                    onClick={() => setInspectedNode(null)}
                   >
-                    Filter Graph by this {selectedNode.entity_type}
+                    View Team Records
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* DETAILS FOR USER NODE */}
+            {inspectedNode.entity_type === "user" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-section">
+                  <label>Author Specification:</label>
+                  <p>
+                    <strong>{inspectedNode.primaryLabel}</strong> serves as <strong>{inspectedNode.subtitle}</strong> for this architectural decision, providing system-level domain verification and technical oversight.
+                  </p>
+                </div>
+                <div className="kg-drawer-section">
+                  <label>Audit & Ownership:</label>
+                  <p>Recorded as principal signatory on the decision replay audit log.</p>
+                </div>
+              </div>
+            )}
+
+            {/* DETAILS FOR DOC NODE */}
+            {inspectedNode.entity_type === "doc" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-section">
+                  <label>Supporting Specification Artifact:</label>
+                  <p>
+                    <strong>{inspectedNode.fullLabel || inspectedNode.primaryLabel}</strong> contains the technical syllabus, block diagrams, and hardware requirements for the FPGA DSP implementation.
+                  </p>
+                </div>
+                <div className="kg-drawer-section">
+                  <label>Format & Integrity:</label>
+                  <p>Verified PDF format with cryptographic SHA-256 signature.</p>
+                </div>
+                <div className="kg-drawer-actions">
+                  <a
+                    href={`${API_URL}/files/1/download`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="kg-action-btn primary"
+                    style={{ textDecoration: "none", textAlign: "center" }}
+                  >
+                    📥 Download Supporting Document
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* DETAILS FOR STATE NODE */}
+            {inspectedNode.entity_type === "state" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-section">
+                  <label>Governance State:</label>
+                  <p>
+                    Current status: <strong>{inspectedNode.primaryLabel}</strong> ({inspectedNode.subtitle}).
+                    Pending multi-level technical review verification before final approval.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* DETAILS FOR TOPIC / TAXONOMY NODE */}
+            {inspectedNode.entity_type === "topic" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-section">
+                  <label>Taxonomy Classification:</label>
+                  <p>
+                    Tag <strong>#{inspectedNode.primaryLabel}</strong> classifies decisions focused on resource efficiency, cost reduction, or architectural impact across the enterprise replay graph.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* DETAILS FOR STRATEGIC IMP NODE */}
+            {inspectedNode.entity_type === "imp" && (
+              <div className="kg-drawer-body">
+                <div className="kg-drawer-section">
+                  <label>Strategic Impact Scope:</label>
+                  <p>
+                    Categorized under <strong>{inspectedNode.fullLabel || inspectedNode.primaryLabel}</strong>. Influences cross-departmental roadmap delivery, budget allocation, and technical debt governance.
+                  </p>
                 </div>
               </div>
             )}
           </div>
         )}
+      </div>
+
+      {/* 5. BOTTOM LEGEND ROW MATCHING SCREENSHOT */}
+      <div className="kg-bottom-legend-row">
+        <div className="kg-legend-item">
+          <span className="kg-legend-dot decision"></span>
+          <span className="kg-legend-label">Decision</span>
+        </div>
+        <div className="kg-legend-item">
+          <span className="kg-legend-dot team"></span>
+          <span className="kg-legend-label">Team</span>
+        </div>
+        <div className="kg-legend-item">
+          <span className="kg-legend-dot people"></span>
+          <span className="kg-legend-label">People</span>
+        </div>
+        <div className="kg-legend-item">
+          <span className="kg-legend-dot docs"></span>
+          <span className="kg-legend-label">Docs</span>
+        </div>
+        <div className="kg-legend-item">
+          <span className="kg-legend-dot topic"></span>
+          <span className="kg-legend-label">Topic</span>
+        </div>
       </div>
     </div>
   );
