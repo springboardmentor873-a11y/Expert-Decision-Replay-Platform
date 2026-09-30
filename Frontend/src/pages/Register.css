@@ -105,12 +105,70 @@
 /* Right */
 
 .register-right {
+  position: relative;
   width: 54%;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 40px 7%;
+}
+
+.register-theme-toggle {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  z-index: 2;
+}
+
+body[data-theme="dark"] .register-badge,
+body[data-theme="dark"] .role-info div {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+
+body[data-theme="dark"] .register-button {
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.3);
+}
+
+body[data-theme="dark"] .register-page {
+  background:
+    radial-gradient(circle at 10% 90%, rgba(37, 99, 235, 0.22), transparent 30%),
+    #0b1220;
+}
+
+body[data-theme="dark"] .register-left {
+  background: linear-gradient(145deg, #111c32, #0b1220);
+}
+
+body[data-theme="dark"] .register-brand h3,
+body[data-theme="dark"] .register-intro h1,
+body[data-theme="dark"] .register-content h2,
+body[data-theme="dark"] .register-logo h1,
+body[data-theme="dark"] .register-input label {
+  color: #f8fbff;
+}
+
+body[data-theme="dark"] .register-brand p,
+body[data-theme="dark"] .register-intro > p,
+body[data-theme="dark"] .register-logo p,
+body[data-theme="dark"] .register-subtitle,
+body[data-theme="dark"] .login-link,
+body[data-theme="dark"] .role-info {
+  color: #a8b7cb;
+}
+
+body[data-theme="dark"] .register-card {
+  background: #111b2e;
+  border-color: rgba(148, 163, 184, 0.22);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.35);
+}
+
+body[data-theme="dark"] .register-input input,
+body[data-theme="dark"] .register-input select {
+  background: #0f1a2c;
+  color: #f8fbff;
+  border-color: rgba(148, 163, 184, 0.28);
 }
 
 .register-card {

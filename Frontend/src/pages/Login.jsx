@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE, setCurrentUser } from "../api";
+import { ThemeToggle } from "../theme";
 import "./Login.css";
 
 function Login() {
@@ -103,6 +104,9 @@ function Login() {
       </div>
 
       <div className="login-right">
+        <div className="login-theme-toggle">
+          <ThemeToggle />
+        </div>
         <div className="login-card">
           <p className="card-brand">Replay Platform</p>
           <h2>Welcome Back</h2>

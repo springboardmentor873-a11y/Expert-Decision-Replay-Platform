@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { API_BASE } from "../api";
+import { ThemeToggle } from "../theme";
 import "./Register.css";
 
 function Register() {
@@ -94,6 +95,9 @@ function Register() {
       </div>
 
       <div className="register-right">
+        <div className="register-theme-toggle">
+          <ThemeToggle />
+        </div>
         <div className="register-card">
           <div className="register-logo">
             <div className="register-logo-icon">ED</div>

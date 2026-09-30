@@ -1,0 +1,11 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+Backend/decision_platform.db
+Backend/uploads/
+
+node_modules/
+dist/
+.env

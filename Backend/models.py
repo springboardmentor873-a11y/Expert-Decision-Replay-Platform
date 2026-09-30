@@ -16,6 +16,19 @@ class User(Base):
 
     decisions = relationship("Decision", back_populates="user")
 
+    # Milestone 3: Approval workflow
+    approval_requests = relationship(
+        "Approval",
+        foreign_keys="Approval.requested_by",
+        back_populates="requester"
+    )
+
+    approvals_reviewed = relationship(
+        "Approval",
+        foreign_keys="Approval.reviewed_by",
+        back_populates="reviewer"
+    )
+
 
 class Decision(Base):
     __tablename__ = "decisions"
@@ -37,6 +50,13 @@ class Decision(Base):
     outcome = relationship("Outcome", back_populates="decision", uselist=False)
     documents = relationship("Document", back_populates="decision")
     comments = relationship("Comment", back_populates="decision")
+
+    # Milestone 3: Approval workflow
+    approvals = relationship(
+        "Approval",
+        back_populates="decision",
+        cascade="all, delete-orphan"
+    )
 
 
 class Alternative(Base):
@@ -109,3 +129,85 @@ class Comment(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     decision = relationship("Decision", back_populates="comments")
+
+
+# ============================================================
+# MILESTONE 3 - APPROVAL WORKFLOW
+# ============================================================
+
+class Approval(Base):
+    __tablename__ = "approvals"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    decision_id = Column(
+        Integer,
+        ForeignKey("decisions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    requested_by = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    reviewed_by = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
+    status = Column(
+        String(50),
+        nullable=False,
+        default="Pending"
+    )
+
+    comments = Column(Text, nullable=True)
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    reviewed_at = Column(
+        DateTime,
+        nullable=True
+    )
+
+    decision = relationship(
+        "Decision",
+        back_populates="approvals"
+    )
+
+    requester = relationship(
+        "User",
+        foreign_keys=[requested_by],
+        back_populates="approval_requests"
+    )
+
+    reviewer = relationship(
+        "User",
+        foreign_keys=[reviewed_by],
+        back_populates="approvals_reviewed"
+    )
+
+
+# ============================================================
+# MILESTONE 3 - AUDIT LOGS
+# ============================================================
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    user_name = Column(String(100), nullable=True)
+    user_role = Column(String(50), nullable=True)
+    action = Column(String(100), nullable=False, index=True)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True, index=True)
+    description = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
