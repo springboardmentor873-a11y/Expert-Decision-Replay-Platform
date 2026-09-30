@@ -1,0 +1,7 @@
+Demo copy of: Security Incident Response Guide.pdf
+
+Playbook for detecting, triaging, and responding to security incidents.
+
+Tags: Security, Incident, Response
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

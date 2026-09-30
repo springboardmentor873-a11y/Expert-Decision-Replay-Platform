@@ -1,0 +1,7 @@
+Demo copy of: Data Privacy Guidelines.pdf
+
+Guidelines for handling personal data in dashboards, reports, and experiments.
+
+Tags: Privacy, Compliance, Data
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

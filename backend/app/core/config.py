@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     STORAGE_DIR: str = "storage/attachments"
     MAX_UPLOAD_SIZE_MB: int = 20
 
+    # --- Knowledge Repository ---
+    # Small demo copies for the read-only Repository (seeded, never uploaded).
+    REPOSITORY_DOCS_DIR: str = "storage/repository_documents"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property

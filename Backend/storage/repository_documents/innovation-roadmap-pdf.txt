@@ -1,0 +1,7 @@
+Demo copy of: Innovation Roadmap.pdf
+
+Quarterly roadmap of early-stage experiments and innovation bets.
+
+Tags: Research, Innovation, Planning
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

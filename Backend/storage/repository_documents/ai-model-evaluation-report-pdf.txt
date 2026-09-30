@@ -1,0 +1,7 @@
+Demo copy of: AI Model Evaluation Report.pdf
+
+Evaluation results for the platform's latest recommendation model, including accuracy benchmarks and edge-case behaviour.
+
+Tags: AI, Evaluation, Research
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

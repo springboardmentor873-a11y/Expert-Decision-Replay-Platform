@@ -56,3 +56,11 @@ class User(Base):
     notifications: Mapped[list["Notification"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )
+    join_requests: Mapped[list["TeamJoinRequest"]] = relationship(  # noqa: F821
+        back_populates="user",
+        foreign_keys="TeamJoinRequest.user_id",
+        cascade="all, delete-orphan",
+    )
+    reviewed_join_requests: Mapped[list["TeamJoinRequest"]] = relationship(  # noqa: F821
+        back_populates="reviewer", foreign_keys="TeamJoinRequest.reviewed_by"
+    )

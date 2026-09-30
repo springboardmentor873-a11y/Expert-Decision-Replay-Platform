@@ -18,3 +18,6 @@ class Team(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     members: Mapped[list["User"]] = relationship(back_populates="team")  # noqa: F821
+    join_requests: Mapped[list["TeamJoinRequest"]] = relationship(  # noqa: F821
+        back_populates="team", foreign_keys="TeamJoinRequest.team_id", cascade="all, delete-orphan"
+    )

@@ -1,0 +1,7 @@
+Demo copy of: Data Quality Checklist.pdf
+
+Checklist used before publishing data-dependent analyses or reports.
+
+Tags: Data, Quality, Checklist
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

@@ -9,8 +9,10 @@ from app.routers import (
     auth,
     decisions,
     files,
+    knowledge,
     notifications,
     reports,
+    teams,
     users,
 )
 
@@ -37,6 +39,8 @@ app.include_router(files.router)
 app.include_router(notifications.router)
 app.include_router(audit_logs.router)
 app.include_router(reports.router)
+app.include_router(teams.router)
+app.include_router(knowledge.router)
 
 
 @app.get("/")

@@ -1,0 +1,7 @@
+Demo copy of: ML Model Deployment Guide.pdf
+
+Step-by-step guide for taking ML models from experimentation to production safely.
+
+Tags: ML, Deployment, Engineering
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

@@ -1,0 +1,7 @@
+Demo copy of: Model Performance Benchmark.pdf
+
+Benchmark suite results comparing model versions across latency and quality.
+
+Tags: AI, Performance, Benchmark
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

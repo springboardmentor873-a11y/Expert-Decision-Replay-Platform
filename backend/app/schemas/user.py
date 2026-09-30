@@ -17,6 +17,7 @@ class UserOut(BaseModel):
     full_name: str
     email: EmailStr
     role: UserRole
+    team_id: uuid.UUID | None
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)

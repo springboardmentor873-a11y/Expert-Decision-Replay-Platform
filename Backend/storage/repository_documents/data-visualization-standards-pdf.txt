@@ -1,0 +1,7 @@
+Demo copy of: Data Visualization Standards.pdf
+
+Standards for charts and dashboards so output is consistent and accessible.
+
+Tags: Visualization, Analytics
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

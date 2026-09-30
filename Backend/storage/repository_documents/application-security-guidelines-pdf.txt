@@ -1,0 +1,7 @@
+Demo copy of: Application Security Guidelines.pdf
+
+Guidelines for secure application development and review.
+
+Tags: Security, Application
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

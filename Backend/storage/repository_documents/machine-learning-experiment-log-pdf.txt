@@ -1,0 +1,7 @@
+Demo copy of: Machine Learning Experiment Log.pdf
+
+Running log of ML experiments, hypotheses, and recorded outcomes.
+
+Tags: ML, Experiments, Research
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

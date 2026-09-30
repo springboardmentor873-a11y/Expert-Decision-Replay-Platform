@@ -1,0 +1,7 @@
+Demo copy of: Project Requirements.pdf
+
+Captured requirements for the current quarter's delivery commitments.
+
+Tags: Requirements, Planning
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

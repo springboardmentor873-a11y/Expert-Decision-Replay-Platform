@@ -1,0 +1,7 @@
+Demo copy of: Team Decision Framework.pdf
+
+Framework the team follows to prepare, review, and record decisions.
+
+Tags: Decisions, Framework, Planning
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

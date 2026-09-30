@@ -1,0 +1,7 @@
+Demo copy of: Cyber Security Policy.pdf
+
+Organisation-wide security policy covering access control, acceptable use, and incident handling.
+
+Tags: Security, Policy, Compliance
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

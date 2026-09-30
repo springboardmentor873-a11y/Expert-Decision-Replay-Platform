@@ -1,0 +1,7 @@
+Demo copy of: Data Analysis Guidelines.pdf
+
+Standard operating guidelines for producing and reviewing data analyses.
+
+Tags: Data, Analytics, Guidelines
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.

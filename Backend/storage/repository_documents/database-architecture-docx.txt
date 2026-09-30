@@ -1,0 +1,7 @@
+Demo copy of: Database Architecture.docx
+
+Architecture notes for the decision replay data layer, covering schema, migrations, and indexing strategy.
+
+Tags: Database, Architecture, Technical
+
+This lightweight demo copy exists only so the Knowledge Repository View/Download flow can be exercised. It is not the original document.
