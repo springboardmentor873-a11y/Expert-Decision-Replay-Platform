@@ -1,19 +1,31 @@
 const User = require("../models/User");
 
-// Get all users
+// =====================================================
+// GET ALL USERS
+// Administrator
+// =====================================================
+
 const getUsers = async (req, res) => {
     try {
         const users = await User.find().select("-password");
 
         res.json(users);
+
     } catch (error) {
+        console.error("Get users error:", error);
+
         res.status(500).json({
             message: "Failed to fetch users"
         });
     }
 };
 
-// Change user role
+
+// =====================================================
+// CHANGE USER ROLE
+// Administrator
+// =====================================================
+
 const updateUserRole = async (req, res) => {
     try {
         const { role } = req.body;
@@ -40,10 +52,12 @@ const updateUserRole = async (req, res) => {
         }
 
         user.role = role;
+
         await user.save();
 
         res.json({
             message: "User role updated successfully",
+
             user: {
                 id: user._id,
                 name: user.name,
@@ -53,13 +67,20 @@ const updateUserRole = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Update role error:", error);
+
         res.status(500).json({
             message: "Failed to update role"
         });
     }
 };
 
-// Delete user
+
+// =====================================================
+// DELETE USER
+// Administrator
+// =====================================================
+
 const deleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -77,11 +98,18 @@ const deleteUser = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Delete user error:", error);
+
         res.status(500).json({
             message: "Failed to delete user"
         });
     }
 };
+
+
+// =====================================================
+// EXPORTS
+// =====================================================
 
 module.exports = {
     getUsers,

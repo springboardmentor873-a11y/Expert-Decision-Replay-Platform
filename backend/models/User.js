@@ -25,6 +25,12 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ["Employee", "Reviewer", "Manager", "Administrator"],
             default: "Employee"
+        },
+
+        // Teams joined by the user
+        joinedTeams: {
+            type: [String],
+            default: []
         }
     },
     {

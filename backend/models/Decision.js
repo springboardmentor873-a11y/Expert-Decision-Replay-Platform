@@ -9,9 +9,16 @@ const decisionSchema = new mongoose.Schema(
     },
 
     description: {
-      type: String,
-      required: true,
-    },
+  type: String,
+  required: true,
+},
+
+category: {
+  type: String,
+  default: "General",
+  trim: true,
+},
+
 
     // Employee who created the decision
     createdBy: {

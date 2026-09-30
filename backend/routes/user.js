@@ -1,4 +1,7 @@
 const express = require("express");
+
+const router = express.Router();
+
 const protect = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
@@ -8,17 +11,27 @@ const {
     deleteUser
 } = require("../controllers/userController");
 
-const router = express.Router();
 
-// Protected profile route
-router.get("/profile", protect, (req, res) => {
-    res.json({
-        message: "You accessed a protected route",
-        user: req.user
-    });
-});
+// =====================================================
+// PROFILE
+// =====================================================
 
-// Admin test route
+router.get(
+    "/profile",
+    protect,
+    (req, res) => {
+        res.json({
+            message: "You accessed a protected route",
+            user: req.user
+        });
+    }
+);
+
+
+// =====================================================
+// ADMIN TEST ROUTE
+// =====================================================
+
 router.get(
     "/admin",
     protect,
@@ -30,7 +43,11 @@ router.get(
     }
 );
 
-// Manager test route
+
+// =====================================================
+// MANAGER TEST ROUTE
+// =====================================================
+
 router.get(
     "/manager",
     protect,
@@ -42,7 +59,12 @@ router.get(
     }
 );
 
-// Administrator: view all users
+
+// =====================================================
+// ADMIN USER MANAGEMENT
+// =====================================================
+
+// Get all users
 router.get(
     "/",
     protect,
@@ -50,7 +72,8 @@ router.get(
     getUsers
 );
 
-// Administrator: change user's role
+
+// Change user role
 router.put(
     "/:id/role",
     protect,
@@ -58,12 +81,14 @@ router.put(
     updateUserRole
 );
 
-// Administrator: delete user
+
+// Delete user
 router.delete(
     "/:id",
     protect,
     authorizeRoles("Administrator"),
     deleteUser
 );
+
 
 module.exports = router;

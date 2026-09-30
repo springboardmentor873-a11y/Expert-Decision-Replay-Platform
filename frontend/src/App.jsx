@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Teams from "./pages/Teams";
+import KnowledgeRepository from "./pages/KnowledgeRepository";
 
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import ReviewerDashboard from "./pages/ReviewerDashboard";
@@ -16,12 +18,49 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
 
-        {/* Employee Dashboard */}
+        {/* =====================================================
+            PUBLIC ROUTES
+        ===================================================== */}
+
+        <Route path="/" element={<Login />} />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
+        />
+
+        {/* =====================================================
+            TEAMS
+        ===================================================== */}
+
+        <Route
+          path="/teams"
+          element={<Teams />}
+        />
+
+        {/* =====================================================
+            KNOWLEDGE REPOSITORY
+        ===================================================== */}
+
+        <Route
+          path="/knowledge-repository"
+          element={
+            <ProtectedRoute>
+              <KnowledgeRepository />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* =====================================================
+            EMPLOYEE DASHBOARD
+        ===================================================== */}
+
         <Route
           path="/employee"
           element={
@@ -31,7 +70,10 @@ function App() {
           }
         />
 
-        {/* Reviewer Dashboard */}
+        {/* =====================================================
+            REVIEWER DASHBOARD
+        ===================================================== */}
+
         <Route
           path="/reviewer"
           element={
@@ -41,7 +83,10 @@ function App() {
           }
         />
 
-        {/* Manager Dashboard */}
+        {/* =====================================================
+            MANAGER DASHBOARD
+        ===================================================== */}
+
         <Route
           path="/manager"
           element={
@@ -51,7 +96,10 @@ function App() {
           }
         />
 
-        {/* Administrator Dashboard */}
+        {/* =====================================================
+            ADMINISTRATOR DASHBOARD
+        ===================================================== */}
+
         <Route
           path="/admin"
           element={
@@ -60,6 +108,7 @@ function App() {
             </AdminRoute>
           }
         />
+
       </Routes>
     </BrowserRouter>
   );
