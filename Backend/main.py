@@ -332,7 +332,40 @@ def get_users(db: Session = Depends(get_db)):
 @app.get("/teams")
 def get_teams(db: Session = Depends(get_db)):
     teams = db.query(Team).all()
-    return [{"id": t.id, "name": t.name, "description": t.description} for t in teams]
+    results = []
+    for t in teams:
+        users = db.query(User).filter(User.team_id == t.id).all()
+        decisions = db.query(Decision).filter(Decision.team_id == t.id).all()
+        # Find lead (manager or first user)
+        lead_user = next((u for u in users if getattr(u, 'role', None) and u.role.name in ("Manager", "Administrator")), users[0] if users else None)
+        results.append({
+            "id": t.id,
+            "name": t.name,
+            "description": t.description,
+            "members_count": len(users),
+            "lead": lead_user.name if lead_user else "Unassigned",
+            "members": [
+                {
+                    "id": u.id,
+                    "name": u.name,
+                    "email": u.email,
+                    "role_name": u.role.name if getattr(u, 'role', None) else "Contributor"
+                }
+                for u in users
+            ],
+            "decisions_count": len(decisions),
+            "recent_decisions": [
+                {
+                    "id": d.id,
+                    "title": d.title,
+                    "status": d.status,
+                    "priority": d.priority,
+                    "timeAgo": "Recently"
+                }
+                for d in decisions[:3]
+            ]
+        })
+    return results
 
 
 @app.post("/teams")
