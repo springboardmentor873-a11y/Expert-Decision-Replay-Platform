@@ -1,43 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - Expert Decision Replay Platform</title>
-  <link rel="stylesheet" href="css/style.css" />
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sign In - Expert Decision Replay Platform</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-  <div class="topbar">
-    <h1>Expert Decision Replay Platform</h1>
-  </div>
-
-  <div class="auth-container">
-    <div class="card">
-      <h2>Login</h2>
-
-      <div id="login-alert" class="alert"></div>
-
-      <form id="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" required autocomplete="email" />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" required autocomplete="current-password" />
-        </div>
-
-        <button type="submit" class="full-width">Login</button>
-      </form>
-
-      <p class="helper-text">
-        Don't have an account? <a href="register.html">Register here</a>
-      </p>
+<body class="login-page">
+<div class="login-shell">
+  <section class="login-brand">
+    <div class="brand-mark">✦</div>
+    <h1>Expert Decision<br>Replay Platform</h1>
+    <p>Capture decisions. Compare alternatives. Preserve organizational knowledge.</p>
+    <div class="brand-points"><span>✓ Structured decision records</span><span>✓ Secure role-based access</span><span>✓ Collaborative decision history</span></div>
+  </section>
+  <section class="login-card">
+    <div class="login-heading">
+      <span class="eyebrow">WELCOME BACK</span>
+      <h2>Sign in to your account</h2>
+      <p>Access your decisions, teams and collaboration workspace.</p>
     </div>
-  </div>
-
-  <script src="js/api.js"></script>
-  <script src="js/auth.js"></script>
+    <div id="login-alert" class="alert"></div>
+    <form id="login-form">
+      <div class="form-group"><label for="email">Email address</label><div class="input-wrap"><span>✉</span><input type="email" id="email" required autocomplete="email" placeholder="you@example.com"></div></div>
+      <div class="form-group"><label for="password">Password</label><div class="input-wrap"><span>●</span><input type="password" id="password" required autocomplete="current-password" placeholder="Enter your password"></div></div>
+      <button type="submit" class="login-btn">Sign In <span>→</span></button>
+    </form>
+    <p class="helper-text">Don't have an account? <a href="register.html">Create an account</a></p>
+  </section>
+</div>
+<script src="js/api.js"></script><script src="js/auth.js"></script>
 </body>
 </html>

@@ -84,6 +84,73 @@ CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_decisions_status ON decisions(status);
 CREATE INDEX idx_decisions_created_by ON decisions(created_by);
 
+-- ---------------------------------------------------------------------
+-- Milestone 2: decision alternatives
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS decision_alternatives (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    decision_id INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NULL,
+    pros TEXT NULL,
+    cons TEXT NULL,
+    estimated_cost DECIMAL(15,2) NULL,
+    feasibility VARCHAR(100) NULL,
+    risk TEXT NULL,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_alternatives_decision FOREIGN KEY (decision_id) REFERENCES decisions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_alternatives_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS decision_documents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    decision_id INT NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    content_type VARCHAR(150) NULL,
+    file_size BIGINT NULL,
+    uploaded_by INT NOT NULL,
+    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_documents_decision FOREIGN KEY (decision_id) REFERENCES decisions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_documents_uploader FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS discussion_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    decision_id INT NOT NULL,
+    parent_id INT NULL,
+    comment_text TEXT NOT NULL,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_discussion_decision FOREIGN KEY (decision_id) REFERENCES decisions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_discussion_parent FOREIGN KEY (parent_id) REFERENCES discussion_comments(id) ON DELETE CASCADE,
+    CONSTRAINT fk_discussion_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS decision_versions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    decision_id INT NOT NULL,
+    version_number INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    problem_statement TEXT NOT NULL,
+    category VARCHAR(100) NULL,
+    status VARCHAR(50) NOT NULL,
+    changed_by INT NOT NULL,
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_decision_version (decision_id, version_number),
+    CONSTRAINT fk_versions_decision FOREIGN KEY (decision_id) REFERENCES decisions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_versions_user FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_alternatives_decision ON decision_alternatives(decision_id);
+CREATE INDEX idx_documents_decision ON decision_documents(decision_id);
+CREATE INDEX idx_discussion_decision ON discussion_comments(decision_id);
+CREATE INDEX idx_versions_decision ON decision_versions(decision_id);
+
 -- =====================================================================
 -- End of schema.sql
 -- =====================================================================

@@ -1,48 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - Expert Decision Replay Platform</title>
-  <link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
-  <div class="topbar">
-    <h1>Expert Decision Replay Platform</h1>
-    <div class="user-chip">
-      <span id="welcome-name-topbar"></span>
-      <button id="logout-btn" class="secondary">Logout</button>
-    </div>
-  </div>
-
-  <div class="container">
-    <div class="card">
-      <h2>Welcome, <span id="welcome-name">...</span> 👋</h2>
-      <p style="color: var(--color-muted);">
-        Here is your account information, retrieved live from the backend.
-      </p>
-
-      <dl class="info-grid">
-        <dt>Full Name</dt>
-        <dd id="info-name">Loading...</dd>
-
-        <dt>Email</dt>
-        <dd id="info-email">Loading...</dd>
-
-        <dt>Role</dt>
-        <dd id="info-role">Loading...</dd>
-
-        <dt>Team</dt>
-        <dd id="info-team">Loading...</dd>
-      </dl>
-
-      <div class="nav-links">
-        <a href="users.html" id="admin-link" style="display:none;">Manage Users →</a>
-      </div>
-    </div>
-  </div>
-
-  <script src="js/api.js"></script>
-  <script src="js/dashboard.js"></script>
-</body>
-</html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Dashboard - Expert Decision Replay Platform</title><link rel="stylesheet" href="css/style.css"></head>
+<body class="app-page">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-icon">✦</div><div><b>Expert Decision</b><br><b>Replay Platform</b></div></div>
+  <nav>
+    <a class="active" href="dashboard.html">⌂ <span>Dashboard</span></a>
+    <a href="decisions.html">✓ <span>Decisions</span></a>
+    <a href="decision.html">＋ <span>Create Decision</span></a>
+    <a href="users.html" id="admin-link" style="display:none">♙ <span>User Management</span></a>
+    <a href="register.html">＋ <span>Add User</span></a>
+  </nav>
+  <div class="sidebar-bottom"><a href="#" id="logout-btn">⇥ <span>Logout</span></a></div>
+</aside>
+<main class="app-main">
+<header class="app-header"><div></div><div class="profile-chip"><span class="avatar" id="avatar">U</span><span><b id="welcome-name-topbar">User</b><small id="role-topbar">Employee</small></span></div></header>
+<section class="page-content">
+<div class="welcome-row"><div><h1>Welcome back, <span id="welcome-name">...</span>!</h1><p>Here's an overview of your decisions and team activity.</p></div><div id="today"></div></div>
+<div class="stat-grid">
+<div class="stat-card blue"><span class="stat-icon">▤</span><b id="stat-total">0</b><span>Total Decisions</span><a href="decisions.html">View all →</a></div>
+<div class="stat-card yellow"><span class="stat-icon">✎</span><b id="stat-draft">0</b><span>Draft</span><a href="decisions.html">View →</a></div>
+<div class="stat-card blue"><span class="stat-icon">◷</span><b id="stat-review">0</b><span>Under Review</span><a href="decisions.html">View →</a></div>
+<div class="stat-card green"><span class="stat-icon">✓</span><b id="stat-approved">0</b><span>Approved</span><a href="decisions.html">View →</a></div>
+<div class="stat-card red"><span class="stat-icon">×</span><b id="stat-rejected">0</b><span>Rejected</span><a href="decisions.html">View →</a></div>
+</div>
+<div class="dashboard-grid">
+<section class="panel wide"><div class="panel-title"><h2>Recent Decisions</h2><a class="primary-btn" href="decision.html">＋ Create Decision</a></div><div class="table-wrap"><table><thead><tr><th>Title</th><th>Team</th><th>Status</th><th>Created On</th><th>Actions</th></tr></thead><tbody id="recent-decisions"><tr><td colspan="5">Loading...</td></tr></tbody></table></div><div class="panel-footer"><a href="decisions.html">View all decisions →</a></div></section>
+<section class="panel"><h2>Quick Access</h2><div class="quick-list"><a href="decisions.html">▤ <span><b>Decision Library</b><small>View and manage decisions</small></span></a><a href="decision.html">＋ <span><b>Create Decision</b><small>Record a new decision</small></span></a><a href="decisions.html">💬 <span><b>Discussions</b><small>Collaborate on decisions</small></span></a><a href="decisions.html">▣ <span><b>Documents</b><small>Access decision files</small></span></a></div></section>
+</div>
+</section></main>
+<script src="js/api.js"></script><script src="js/dashboard.js"></script>
+</body></html>

@@ -10,10 +10,10 @@ discussions, approvals, implementation status, and outcomes — so that
 employees can review past decisions and avoid repeating past
 mistakes.
 
-**This repository contains Milestone 1 only.** Later milestones will
-add the full decision-management workflow, approvals, notifications,
-reporting, and deployment. See `docs/requirements.md` for details on
-what is (and is not) in scope here.
+**This repository contains Milestones 1 and 2.** Milestone 2 extends the
+Milestone 1 authentication/user-management foundation with decision
+management, alternative comparison, document uploads, discussions,
+version history, and a professional enterprise-style UI.
 
 ## Problem Statement
 
@@ -29,9 +29,9 @@ them — are recorded, searchable, and reviewable by the right people,
 with role-based access so the right stakeholders can contribute at
 the right stage.
 
-## Milestone 1
+## Milestone 1 and Milestone 2
 
-This milestone covers exactly seven tasks:
+Milestone 1 covers the foundation; Milestone 2 adds the working decision workflow and collaboration features.
 
 1. **Requirement Analysis** — `docs/requirements.md`
 2. **Database Design** — `database/schema.sql`, `docs/database-design.md`
@@ -43,6 +43,17 @@ This milestone covers exactly seven tasks:
 
 Expected outcomes: project initialized, authentication working,
 database designed, user roles implemented.
+
+## Milestone 2
+
+Milestone 2 implements:
+1. Decision creation, editing, viewing, searching and status management.
+2. Multiple alternatives per decision with pros, cons, cost, feasibility and risk.
+3. Supporting document uploads with metadata and secure local storage.
+4. Decision-level discussions/comments.
+5. Decision version history created when an existing decision is edited.
+
+The dashboard and decision workspace use a professional enterprise-style visual design inspired by the mentor reference UI. The existing Milestone 1 authentication, users, roles and teams remain in place.
 
 ## Technology Stack
 

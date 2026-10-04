@@ -28,3 +28,8 @@ http://127.0.0.1:8000/health to confirm the API and database are up.
 
 See the root `README.md` for full MySQL setup and frontend
 instructions.
+
+
+## Milestone 2 APIs
+
+Decision, alternative, document, discussion and version endpoints are available under `/decisions` and `/documents`. Interactive API documentation is available at `/docs` when FastAPI is running.
