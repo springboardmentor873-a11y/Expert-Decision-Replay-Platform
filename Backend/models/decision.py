@@ -33,11 +33,17 @@ class Decision(Base):
     version = Column(Integer, default=1, nullable=False)
 
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     creator = relationship("User", back_populates="decisions", foreign_keys=[created_by_id])
+    team = relationship("Team", back_populates="decisions")
     alternatives = relationship("Alternative", back_populates="decision", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="decision", cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="decision", cascade="all, delete-orphan")
     versions = relationship("DecisionVersion", back_populates="decision", cascade="all, delete-orphan")
+
+    @property
+    def team_name(self):
+        return self.team.name if self.team else None

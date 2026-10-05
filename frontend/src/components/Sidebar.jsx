@@ -13,6 +13,7 @@ export default function Sidebar() {
     { to: "/my-discussions", label: "My Discussions" },
     { to: "/documents", label: "Documents" },
     { to: "/analytics", label: "Analytics" },
+    { to: "/decision-graph", label: "Decision Graph" },
     { to: "/profile", label: "Profile" },
     { to: "/settings", label: "Settings" },
   ];

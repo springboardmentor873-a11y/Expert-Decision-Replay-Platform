@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class TeamCreate(BaseModel):
@@ -19,3 +19,10 @@ class TeamOut(BaseModel):
 
 class AssignTeam(BaseModel):
     team_id: int
+
+
+class TeamMemberOut(BaseModel):
+    id: int
+    full_name: str
+    email: EmailStr
+    role: str

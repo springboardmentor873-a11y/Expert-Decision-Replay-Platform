@@ -12,6 +12,7 @@ from models.decision import Decision
 from models.attachment import Attachment
 from models.user import User
 from Schemas.attachment import AttachmentOut
+from services.milestone3 import add_audit
 
 router = APIRouter(prefix="/decisions/{decision_id}", tags=["File Management"])
 
@@ -50,6 +51,8 @@ def upload_file(
     db.add(attachment)
     db.commit()
     db.refresh(attachment)
+    add_audit(db, current_user, "supporting_document_uploaded", decision, f"Uploaded {file.filename}")
+    db.commit()
     return attachment
 
 

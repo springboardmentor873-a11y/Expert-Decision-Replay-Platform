@@ -9,6 +9,7 @@ from models.decision import Decision
 from models.comment import Comment
 from models.user import User
 from Schemas.comment import CommentCreate, CommentOut
+from services.milestone3 import add_audit
 
 router = APIRouter(prefix="/decisions/{decision_id}/comments", tags=["Discussion"])
 
@@ -38,6 +39,8 @@ def add_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+    add_audit(db, current_user, "comment_added", decision, "Comment added to decision")
+    db.commit()
     return comment
 
 
@@ -79,6 +82,13 @@ def delete_comment(
     if comment.user_id != current_user.id and role_name != "administrator":
         raise HTTPException(status_code=403, detail="Not allowed to delete this comment")
 
+    add_audit(
+        db,
+        current_user,
+        "comment_deleted",
+        comment.decision,
+        f"Comment {comment_id} deleted",
+    )
     db.delete(comment)
     db.commit()
     return None

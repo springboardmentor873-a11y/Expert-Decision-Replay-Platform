@@ -50,6 +50,7 @@ export const api = {
 
   // ---- Teams (Milestone 1) ----
   listTeams: () => request("/teams", { auth: false }),
+  listTeamMembers: (teamId) => request(`/teams/${teamId}/members`),
   createTeam: (payload) => request("/teams", { method: "POST", body: payload }),
   assignUserToTeam: (userId, teamId) =>
     request(`/teams/assign/${userId}`, { method: "PUT", body: { team_id: Number(teamId) } }),
@@ -80,7 +81,40 @@ export const api = {
   },
 
   listVersions: (id) => request(`/decisions/${id}/versions`),
+
+  // ---- Milestone 3: approval workflow, notifications & reporting ----
+  submitDecision: (id) => request(`/decisions/${id}/submit`, { method: "POST" }),
+  approveDecision: (id) => request(`/decisions/${id}/approve`, { method: "POST" }),
+  rejectDecision: (id) => request(`/decisions/${id}/reject`, { method: "POST" }),
+  listNotifications: () => request("/notifications"),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: "PATCH" }),
+  listAuditLogs: (decisionId) => {
+    const qs = decisionId ? `?decision_id=${encodeURIComponent(decisionId)}` : "";
+    return request(`/audit-logs${qs}`);
+  },
+  getDecisionReport: () => request("/reports/decisions"),
+  listRecentActivity: () => request("/reports/activity"),
+  listTeamActivity: () => request("/reports/team-activity"),
+  getDecisionGraph: (decisionId) =>
+    request(`/decision-graph?decision_id=${encodeURIComponent(decisionId)}`),
 };
+
+export function getAttachmentUrl(filePath) {
+  if (typeof filePath !== "string" || !filePath) return null;
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const marker = normalizedPath.lastIndexOf("static/uploads/");
+  if (marker < 0) return null;
+
+  const pathParts = normalizedPath
+    .slice(marker + "static/uploads/".length)
+    .split("/");
+  if (pathParts.length === 0 || pathParts.some((part) => !part || part === "." || part === "..")) {
+    return null;
+  }
+
+  const encodedPath = pathParts.map((part) => encodeURIComponent(part)).join("/");
+  return new URL(`/static/uploads/${encodedPath}`, `${BASE_URL.replace(/\/+$/, "")}/`).toString();
+}
 
 export function setToken(token) {
   localStorage.setItem("edrp_token", token);

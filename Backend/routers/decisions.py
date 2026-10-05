@@ -6,15 +6,28 @@ from sqlalchemy.orm import Session
 from database.database import get_db
 from security.auth import get_current_user
 from models.decision import Decision, DecisionCategory, DecisionStatus
+from models.team import Team
 from models.version import DecisionVersion
 from models.user import User
 from Schemas.decision import DecisionCreate, DecisionUpdate, DecisionOut
+from services.milestone3 import add_audit, add_version_snapshot
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
 
 
 def _role_name(user: User) -> Optional[str]:
     return user.role.name if user.role else None
+
+
+def _validate_team_assignment(db: Session, user: User, team_id: Optional[int]) -> None:
+    if team_id is None:
+        return
+
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    if _role_name(user) == "employee" and user.team_id != team.id:
+        raise HTTPException(status_code=403, detail="Employees can only select a team they belong to")
 
 
 @router.post("", response_model=DecisionOut, status_code=201)
@@ -28,12 +41,14 @@ def create_decision(
             status_code=403,
             detail="Only an employee, reviewer, manager, or administrator can create decisions",
         )
+    _validate_team_assignment(db, current_user, payload.team_id)
     decision = Decision(
         title=payload.title,
         problem_statement=payload.problem_statement,
         category=payload.category,
         rationale=payload.rationale,
         created_by_id=current_user.id,
+        team_id=payload.team_id,
     )
     db.add(decision)
     db.commit()
@@ -52,6 +67,7 @@ def create_decision(
         created_by_id=current_user.id,
     )
     db.add(snapshot)
+    add_audit(db, current_user, "decision_created", decision, "Decision created as Draft")
     db.commit()
 
     return decision
@@ -106,29 +122,25 @@ def update_decision(
             detail="Only the creator, a reviewer, a manager, or an administrator can update this decision",
         )
 
+    previous_status = decision.status
     update_data = payload.model_dump(exclude_unset=True, exclude={"change_summary"})
+    if "team_id" in update_data:
+        _validate_team_assignment(db, current_user, update_data["team_id"])
     for field, value in update_data.items():
         setattr(decision, field, value)
 
-    # Every update bumps the version and stores an immutable snapshot
-    decision.version += 1
-    db.add(decision)
+    # Preserve the M2 update contract and record the resulting state atomically.
+    add_version_snapshot(db, decision, current_user, payload.change_summary or "Updated")
+    if decision.status != previous_status:
+        add_audit(
+            db,
+            current_user,
+            "decision_status_updated",
+            decision,
+            f"Status changed from {previous_status.value} to {decision.status.value} via decision update",
+        )
     db.commit()
     db.refresh(decision)
-
-    snapshot = DecisionVersion(
-        decision_id=decision.id,
-        version=decision.version,
-        title=decision.title,
-        problem_statement=decision.problem_statement,
-        category=decision.category.value,
-        status=decision.status.value,
-        rationale=decision.rationale,
-        change_summary=payload.change_summary or "Updated",
-        created_by_id=current_user.id,
-    )
-    db.add(snapshot)
-    db.commit()
 
     return decision
 

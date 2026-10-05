@@ -18,11 +18,22 @@ from Schemas.user import (
     UserOut,
     UserUpdate,
 )
-from Schemas.team import AssignTeam, TeamCreate, TeamOut
+from Schemas.team import AssignTeam, TeamCreate, TeamMemberOut, TeamOut
 from security.auth import get_current_user, require_role
 from security.jwt import create_access_token
 from security.password import hash_password, verify_password
-from routers import decisions, alternatives, comments, attachments, versions
+from routers import (
+    decisions,
+    alternatives,
+    comments,
+    attachments,
+    versions,
+    approvals,
+    notifications,
+    audit_logs,
+    reports,
+    decision_graph,
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -50,6 +61,11 @@ app.include_router(alternatives.router)
 app.include_router(comments.router)
 app.include_router(attachments.router)
 app.include_router(versions.router)
+app.include_router(approvals.router)
+app.include_router(notifications.router)
+app.include_router(audit_logs.router)
+app.include_router(reports.router)
+app.include_router(decision_graph.router)
 
 
 def seed_default_roles(db: Session):
@@ -200,6 +216,8 @@ def create_team(
         manager = db.query(User).filter(User.id == team.manager_id).first()
         if not manager:
             raise HTTPException(status_code=404, detail="manager_id does not match any user")
+        if not manager.role or manager.role.name != "manager":
+            raise HTTPException(status_code=400, detail="manager_id must belong to a manager")
 
     new_team = Team(name=team.name, manager_id=team.manager_id)
     db.add(new_team)
@@ -211,6 +229,37 @@ def create_team(
 @app.get("/teams", response_model=List[TeamOut])
 def list_teams(db: Session = Depends(get_db)):
     return db.query(Team).all()
+
+
+@app.get("/teams/{team_id}/members", response_model=List[TeamMemberOut])
+def list_team_members(
+    team_id: int,
+    current_user: User = Depends(require_role("administrator", "manager")),
+    db: Session = Depends(get_db),
+):
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    role_name = current_user.role.name if current_user.role else None
+    if role_name == "manager" and team.manager_id != current_user.id and current_user.team_id != team.id:
+        raise HTTPException(status_code=403, detail="You can only view members of your own team")
+
+    members = (
+        db.query(User)
+        .filter(User.team_id == team.id)
+        .order_by(User.full_name.asc(), User.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": member.id,
+            "full_name": member.full_name,
+            "email": member.email,
+            "role": member.role.name,
+        }
+        for member in members
+    ]
 
 
 @app.put("/teams/assign/{user_id}")

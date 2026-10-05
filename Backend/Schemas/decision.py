@@ -11,6 +11,7 @@ class DecisionCreate(BaseModel):
     problem_statement: Optional[str] = None
     category: DecisionCategory
     rationale: Optional[str] = None
+    team_id: Optional[int] = None
 
 
 class DecisionUpdate(BaseModel):
@@ -20,6 +21,7 @@ class DecisionUpdate(BaseModel):
     status: Optional[DecisionStatus] = None
     rationale: Optional[str] = None
     change_summary: Optional[str] = None  # recorded in the version snapshot
+    team_id: Optional[int] = None
 
 
 class DecisionOut(BaseModel):
@@ -31,6 +33,8 @@ class DecisionOut(BaseModel):
     category: DecisionCategory
     status: DecisionStatus
     rationale: Optional[str] = None
+    team_id: Optional[int] = None
+    team_name: Optional[str] = None
     version: int
     created_by_id: int
     created_at: datetime

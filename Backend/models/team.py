@@ -14,3 +14,4 @@ class Team(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     members = relationship("User", back_populates="team", foreign_keys="User.team_id")
+    decisions = relationship("Decision", back_populates="team")

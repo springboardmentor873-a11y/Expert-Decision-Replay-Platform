@@ -15,6 +15,7 @@ import Profile from "./pages/Profile.jsx";
 import Teams from "./pages/Teams.jsx";
 import Settings from "./pages/Settings.jsx";
 import Admin from "./pages/Admin.jsx";
+import DecisionGraph from "./pages/DecisionGraph.jsx";
 
 function RequireAuth({ children }) {
   const { authed } = useAuth();
@@ -99,6 +100,16 @@ export default function App() {
             <RequireAuth>
               <AppShell>
                 <Analytics />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/decision-graph"
+          element={
+            <RequireAuth>
+              <AppShell>
+                <DecisionGraph />
               </AppShell>
             </RequireAuth>
           }

@@ -6,6 +6,8 @@ from models.alternative import Alternative
 from models.comment import Comment
 from models.attachment import Attachment
 from models.version import DecisionVersion
+from models.notification import Notification
+from models.audit_log import AuditLog
 
 __all__ = [
     "Role",
@@ -19,4 +21,6 @@ __all__ = [
     "Comment",
     "Attachment",
     "DecisionVersion",
+    "Notification",
+    "AuditLog",
 ]
