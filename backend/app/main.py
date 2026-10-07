@@ -29,15 +29,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     logger.info("Starting %s (%s)", settings.app_name, settings.environment)
     if settings.environment != "test":
-        try:
-            Base.metadata.create_all(bind=engine)
-            seed_database()
-            logger.info("Database initialized and verified.")
-        except Exception as e:
-            logger.warning("Database auto-init warning: %s", e)
+        # In serverless/production, avoid heavy DDL/reseeding on every cold-start
+        # unless explicitly requested via AUTO_INIT_DB or in development mode
+        if settings.should_init_db:
+            try:
+                Base.metadata.create_all(bind=engine)
+                if settings.should_seed_db:
+                    seed_database()
+                logger.info("Database initialized and verified.")
+            except Exception as e:
+                logger.warning("Database auto-init warning: %s", e)
     yield
     logger.info("Shutting down %s", settings.app_name)
-
 
 
 def create_app() -> FastAPI:
@@ -53,6 +56,7 @@ def create_app() -> FastAPI:
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        allow_origin_regex=settings.cors_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -95,6 +99,17 @@ def create_app() -> FastAPI:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"code": "internal_error", "message": "An unexpected error occurred", "details": None},
         )
+
+    @application.get("/", tags=["root"])
+    def root() -> dict:
+        return {
+            "app": settings.app_name,
+            "version": "0.1.0",
+            "environment": settings.environment,
+            "status": "online",
+            "docs": "/docs" if settings.is_development else None,
+            "health": "/health",
+        }
 
     @application.get("/health", response_model=HealthResponse, tags=["health"])
     def liveness() -> HealthResponse:

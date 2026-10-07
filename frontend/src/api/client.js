@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+/**
+ * Normalizes the backend API base URL:
+ * - Checks VITE_API_URL (primary) and VITE_API_BASE_URL (fallback).
+ * - In local dev (empty), defaults to '/api/v1' (proxied via Vite).
+ * - In production (e.g. 'https://expert-decision-replay-4b9m.vercel.app'),
+ *   safely appends '/api/v1' without duplicating it if already present.
+ */
+const getApiBaseUrl = () => {
+  const rawUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+  if (!rawUrl) {
+    return '/api/v1';
+  }
+  const cleanUrl = rawUrl.trim().replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api/v1') ? cleanUrl : `${cleanUrl}/api/v1`;
+};
+
+const API_BASE = getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE,
