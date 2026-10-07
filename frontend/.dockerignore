@@ -1,0 +1,20 @@
+# Node dependencies and build output
+node_modules/
+dist/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Logs and system files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# IDE and version control
+.vscode/
+.idea/
+.git
+.gitignore

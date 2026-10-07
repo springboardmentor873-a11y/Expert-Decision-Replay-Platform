@@ -1,4 +1,5 @@
-import os
+﻿import os
+from pathlib import Path
 import sys
 import json
 import urllib.request
@@ -11,7 +12,7 @@ test_env["DATABASE_URL"] = "sqlite:///./test_login_verification.db"
 
 proc = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8897"],
-    cwd="backend",
+    cwd=str(Path(__file__).resolve().parent.parent / "backend"),
     env=test_env
 )
 

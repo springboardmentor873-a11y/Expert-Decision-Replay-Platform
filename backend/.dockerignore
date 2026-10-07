@@ -1,0 +1,27 @@
+# Python / virtual environment
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Local environment and database files
+.env
+.env.*
+*.db
+*.sqlite3
+
+# Uploads directory (persisted via Docker volume)
+uploads/
+
+# IDE & testing caches
+.pytest_cache/
+.coverage
+htmlcov/
+.vscode/
+.idea/
+.git
+.gitignore

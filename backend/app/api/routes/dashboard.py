@@ -21,3 +21,16 @@ def get_dashboard_summary(
     recent items, discussions, documents, audit activity, and notifications.
     """
     return dashboard_service.get_dashboard_summary(db=db, current_user=current_user)
+
+
+@router.get("/kpis", response_model=DashboardSummaryResponse)
+def get_dashboard_kpis(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Alias for /summary — returns the same consolidated dashboard data.
+    Provided for backwards compatibility with frontend clients that call /kpis.
+    """
+    return dashboard_service.get_dashboard_summary(db=db, current_user=current_user)
+

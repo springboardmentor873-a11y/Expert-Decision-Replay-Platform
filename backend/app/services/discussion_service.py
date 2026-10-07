@@ -240,8 +240,19 @@ def delete_discussion(
     """
     Deletes a discussion comment and its child replies.
     Only the original author or an Administrator can delete comments.
+
+    Note: We intentionally perform an existence-only check on the parent decision
+    rather than a full visibility/ownership check.  A user who authored a comment
+    must always be able to delete their own words, even if the decision was later
+    moved back to Draft or reassigned to a different owner.
     """
-    get_decision_by_id(db=db, decision_id=decision_id, current_user=current_user)
+    # Existence-only guard — does the decision exist at all?
+    decision_exists = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision_exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decision with ID {decision_id} not found."
+        )
 
     discussion = (
         db.query(Discussion)

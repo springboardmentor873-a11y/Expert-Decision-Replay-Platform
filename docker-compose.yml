@@ -1,40 +1,105 @@
 version: '3.8'
 
 services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database Service
+  # Dedicated container with persistent volume storage and readiness healthcheck
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: expert_decision_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-expert_decision_replay}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-expert_decision_replay}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - expert_network
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend Service
+  # Connects to PostgreSQL over internal network using 'postgres:5432'
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: expert_decision_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-expert_decision_replay}
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_expert_decision_replay_platform_2026}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - ENVIRONMENT=production
+      - UPLOAD_DIR=uploads
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/expert_decision_db
     depends_on:
-      - db
+      postgres:
+        condition: service_healthy
     volumes:
-      - ./backend:/app
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - expert_network
 
+  # ---------------------------------------------------------------------------
+  # React / Vite Frontend Service
+  # Multi-stage production build served via Nginx with SPA routing on port 80
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    container_name: expert_decision_frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - expert_network
 
-  db:
-    image: postgres:15-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: expert_decision_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
+# -----------------------------------------------------------------------------
+# Persistent Volumes
+# - postgres_data: preserves database tables and data across container restarts
+# - uploads_data: preserves uploaded documents without storing in image layers
+# -----------------------------------------------------------------------------
 volumes:
   postgres_data:
+    name: expert_decision_postgres_data
+  uploads_data:
+    name: expert_decision_uploads_data
+
+# -----------------------------------------------------------------------------
+# Isolated Docker Bridge Network
+# -----------------------------------------------------------------------------
+networks:
+  expert_network:
+    name: expert_decision_network
+    driver: bridge

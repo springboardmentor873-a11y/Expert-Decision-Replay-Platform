@@ -11,6 +11,7 @@ from app.api.routes import (
     meeting_notes,
     notifications,
     reports,
+    search,
     tags,
     teams,
     users,
@@ -45,6 +46,9 @@ api_router.include_router(reports.router, prefix="/reports", tags=["Reports & An
 
 # Register Dashboard endpoints under /dashboard
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+
+# Register Global Search endpoint under /search
+api_router.include_router(search.router, prefix="/search", tags=["Search"])
 
 # Register Teams endpoints under /teams
 api_router.include_router(teams.router, prefix="/teams", tags=["Teams"])
