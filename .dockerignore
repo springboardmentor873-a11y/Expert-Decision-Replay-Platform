@@ -1,0 +1,10 @@
+.git/
+.gitignore
+.venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+expert_decision_replay.db

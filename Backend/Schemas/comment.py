@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -17,6 +17,8 @@ class MeetingNoteCreate(BaseModel):
 
 
 class CommentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     decision_id: int
     user_id: int
@@ -30,6 +32,3 @@ class CommentOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     replies: Optional[List["CommentOut"]] = []
-
-    class Config:
-        from_attributes = True

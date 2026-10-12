@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ApprovalActionCreate(BaseModel):
@@ -18,6 +18,8 @@ class ApprovalEscalateCreate(BaseModel):
 
 
 class ApprovalActionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     workflow_id: int
     decision_id: int
@@ -29,11 +31,10 @@ class ApprovalActionResponse(BaseModel):
     comments: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ApprovalWorkflowResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     decision_id: int
     decision_title: Optional[str] = None
@@ -50,6 +51,3 @@ class ApprovalWorkflowResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     actions: List[ApprovalActionResponse] = []
-
-    class Config:
-        from_attributes = True

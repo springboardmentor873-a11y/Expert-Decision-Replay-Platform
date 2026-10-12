@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from Schemas.alternative import AlternativeCreate, AlternativeOut
@@ -42,6 +42,8 @@ class DecisionSelectAlternative(BaseModel):
 
 
 class DecisionOut(DecisionBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     status: str
     created_by_id: int
@@ -55,6 +57,3 @@ class DecisionOut(DecisionBase):
     comments_count: Optional[int] = 0
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

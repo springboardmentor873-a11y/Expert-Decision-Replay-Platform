@@ -26,3 +26,7 @@ Thumbs.db
 
 # Local SQLite database
 *.db
+
+# Uploaded documents / test files
+Backend/uploads/*
+!Backend/uploads/.gitkeep

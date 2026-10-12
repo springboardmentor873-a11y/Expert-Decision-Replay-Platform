@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List, Union
 from datetime import datetime
 
@@ -36,9 +36,8 @@ class AlternativeUpdate(BaseModel):
 
 
 class AlternativeOut(AlternativeBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     decision_id: int
     created_at: datetime
-
-    class Config:
-        from_attributes = True

@@ -1,13 +1,16 @@
 # 🧠 Expert Decision Replay Platform
 
-> A platform for capturing, managing, reviewing, and replaying expert decision-making processes.
+> An enterprise decision intelligence platform for capturing, evaluating, approving, and replaying expert decision-making processes with Knowledge Graphs and Outcome Analysis.
 
-![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)
-![React](https://img.shields.io/badge/React-Frontend-61DAFB?logo=react&logoColor=black)
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-1.0.0-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-Build%20Tool-646CFF?logo=vite&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-Authentication-000000?logo=jsonwebtokens&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-100%25%20Passing-success?logo=pytest&logoColor=white)
+![Milestone 4](https://img.shields.io/badge/Milestone%204-Completed-brightgreen)
 
 ---
 
@@ -452,10 +455,50 @@ Automated Event Notifications & Immutable Audit Trail (Security, Activity, Acces
 
 ---
 
+## 🎯 Milestone 4: Production Deployment, Hardening & Testing (Completed)
+
+Milestone 4 concludes the development cycle with end-to-end automated testing, bug fixes, containerized Docker orchestration, production documentation, and the final presentation deck.
+
+### 🌟 Milestone 4 Capabilities & Deliverables
+
+#### 1. Multi-Container Production Docker Stack
+- **Docker Compose Orchestration**: Single command (`docker compose up -d --build`) provisions the complete ecosystem:
+  - `postgres` (PostgreSQL 15 Alpine with persistent volume and healthchecks)
+  - `redis` (Redis 7 Alpine in-memory cache)
+  - `backend` (FastAPI Python 3.10 ASGI server running non-root container with auto-seeding)
+  - `frontend` (Vite React 18 multi-stage build served through high-performance Nginx Alpine reverse proxy)
+- **Container Hardening**: Non-root container execution, gzip compression, security headers (`X-Frame-Options`, `X-Content-Type-Options`), persistent volume isolation, and container health probes.
+- **Reference**: Detailed in [DEPLOYMENT.md](file:///c:/Users/alanv/OneDrive/Desktop/expert%20decision%20replay%20platform/Expert-Decision-Replay-Platform/DEPLOYMENT.md).
+
+#### 2. Comprehensive Automated Testing & Regression Suite
+- **Unified Test Runner**: `python run_all_tests.py` executes all test suites sequentially with formatted summary table reporting.
+- **Milestone 4 Test Suite** (`test_milestone4.py`):
+  - System diagnostics and production health probes (`/health`, `/`).
+  - Role-Based Access Control (RBAC) security boundary tests: validates that Employee accounts are blocked (HTTP 403) from approving review stages.
+  - Negative authentication testing: bad password rejection (HTTP 401), unauthenticated route rejection (HTTP 401).
+  - Full end-to-end decision replay lifecycle: creation, dynamic alternative addition, rationale selection, document upload/byte download, threaded comments, ARB meeting notes, multi-stage approval, SLA escalation, notification delivery, immutable audit logs, multi-format exports (PDF, Excel, CSV), Knowledge Graph connectivity, and dynamic KPI dashboards.
+  - 100% test pass rate across all suites.
+- **Reference**: Detailed in [TESTING_REPORT.md](file:///c:/Users/alanv/OneDrive/Desktop/expert%20decision%20replay%20platform/Expert-Decision-Replay-Platform/TESTING_REPORT.md).
+
+#### 3. Bug Fixes & Production Hardening
+- **Database Path Resolution**: Resolved SQLite URL fallback to absolute path relative to project root, allowing tests to run from any working directory without schema drift.
+- **Dependency Hygiene**: Pinned missing production dependencies (`pandas`, `openpyxl`, `xlsxwriter`, `PyMuPDF`, `pytest`, `httpx`) in `requirements.txt`.
+- **FastAPI Lifespan Migration**: Modernized startup handlers from deprecated `@app.on_event("startup")` to Starlette `lifespan` context manager.
+- **Pydantic v2 Migration**: Migrated all schemas across models to `model_config = ConfigDict(from_attributes=True)`.
+- **Healthcheck Observability**: Configured `/health` endpoint returning HTTP 200/503 for container orchestration liveness probes.
+
+#### 4. Complete Project Documentation & Defense Deck
+- 📚 [DEPLOYMENT.md](file:///c:/Users/alanv/OneDrive/Desktop/expert%20decision%20replay%20platform/Expert-Decision-Replay-Platform/DEPLOYMENT.md): Enterprise deployment runbook (Docker, manual, reverse proxy, backups, SSL/TLS).
+- 📖 [API_DOCUMENTATION.md](file:///c:/Users/alanv/OneDrive/Desktop/expert%20decision%20replay%20platform/Expert-Decision-Replay-Platform/API_DOCUMENTATION.md): Complete OpenAPI reference across all 30+ endpoints.
+- 🧪 [TESTING_REPORT.md](file:///c:/Users/alanv/OneDrive/Desktop/expert%20decision%20replay%20platform/Expert-Decision-Replay-Platform/TESTING_REPORT.md): Testing matrix, verification results, and security boundary tests.
+- 🎓 [FINAL_PRESENTATION.md](file:///c:/Users/alanv/OneDrive/Desktop/expert%20decision%20replay%20platform/Expert-Decision-Replay-Platform/FINAL_PRESENTATION.md): Full slide deck and defense script for project presentation and evaluation.
+
+---
+
 ## 👥 Seeded User Accounts (Development / Demo)
 
 | Email | Password | Role | Primary Responsibility |
-|-------|----------|------|------------------------|
+|---|---|---|---|
 | `admin@company.com` | `password123` | Administrator | Overall platform, security logs, and compliance |
 | `emp@company.com` | `password123` | Employee | Decision authoring, alternative definition, discussions |
 | `reviewer@company.com` | `password123` | Reviewer | Stage 1 technical review and feedback |
@@ -465,18 +508,44 @@ Automated Event Notifications & Immutable Audit Trail (Security, Activity, Acces
 
 ## 🧪 Automated Test Verification
 
-Run the comprehensive Milestone 3 test suite:
+### Run the Unified Test Runner (All Milestones)
+From the repository root:
 
 ```bash
-cd Backend
-python test_milestone3.py
+python run_all_tests.py
 ```
 
-All 26 automated unit & integration tests pass with 100% test coverage across authentication, multi-tier approvals, escalation, notifications, audit logging, analytics calculation, Excel/CSV/PDF exports, and dynamic role metric endpoints.
+### Run with Pytest
+```bash
+python -m pytest Backend/test_milestone2.py Backend/test_milestone3.py Backend/test_milestone4.py -v
+```
+
+### Run Milestone 4 Individually
+```bash
+python Backend/test_milestone4.py
+```
+
+All 3 suites pass with **100% success rate**.
+
+---
+
+## 🐳 Docker 1-Click Deployment
+
+Launch the complete stack (PostgreSQL, Redis, FastAPI, React/Nginx):
+
+```bash
+docker compose up -d --build
+```
+
+Access services at:
+- **Web Application**: `http://localhost` (or `http://localhost:5173`)
+- **Interactive API Docs**: `http://localhost:8000/docs`
+- **Healthcheck Probe**: `http://localhost:8000/health`
 
 ---
 
 ## 📄 License
 
 This project is developed as part of the Expert Decision Replay Platform project.
+
 

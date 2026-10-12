@@ -1,9 +1,11 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class AuditLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: Optional[int] = None
     user_email: Optional[str] = None
@@ -14,9 +16,6 @@ class AuditLogResponse(BaseModel):
     details: Optional[str] = None
     ip_address: Optional[str] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AuditLogListResponse(BaseModel):

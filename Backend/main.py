@@ -6,6 +6,7 @@ import uuid
 import shutil
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
+from contextlib import asynccontextmanager
 
 import pandas as pd
 import fitz  # PyMuPDF for PDF generation
@@ -64,9 +65,20 @@ except Exception as e:
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from seed_data import seed_database
+        seed_database()
+    except Exception as e:
+        print(f"Startup seeding notice: {e}")
+    yield
+
 app = FastAPI(
     title="Expert Decision Replay Platform",
-    description="Enterprise Decision Intelligence Platform for capturing, managing, reviewing, and replaying expert decisions with Knowledge Graphs and Outcome Analysis."
+    description="Enterprise Decision Intelligence Platform for capturing, managing, reviewing, and replaying expert decisions with Knowledge Graphs and Outcome Analysis.",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -144,15 +156,6 @@ def create_notification(
         db.rollback()
 
 
-@app.on_event("startup")
-def on_startup():
-    try:
-        from seed_data import seed_database
-        seed_database()
-    except Exception as e:
-        print(f"Startup seeding notice: {e}")
-
-
 # ==========================================
 # SYSTEM & HEALTH
 # ==========================================
@@ -161,19 +164,30 @@ def on_startup():
 def home():
     return {
         "message": "Expert Decision Replay Platform API is running",
-        "milestone": "Milestone 3 - Multi-Level Approvals, Notifications, Audit & Reporting"
+        "version": "1.0.0",
+        "status": "online",
+        "milestone": "Milestone 4 - Production Deployment, Testing & Enterprise Verification"
     }
 
 
 @app.get("/health")
-def health_check():
+def health_check(response: Response):
     try:
         with engine.connect():
-            return {"status": "Database connected successfully"}
-    except Exception as e:
+            pass
         return {
-            "status": "Database connection failed",
-            "error": str(e)
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat(),
+            "environment": os.getenv("ENVIRONMENT", "production")
+        }
+    except Exception as e:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
         }
 
 
