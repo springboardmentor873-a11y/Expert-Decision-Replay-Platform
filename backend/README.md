@@ -1,35 +1,29 @@
-# Backend — Expert Decision Replay Platform (Milestone 1)
+# Backend — Expert Decision Replay Platform
 
-FastAPI backend using `mysql-connector-python` directly (no ORM), JWT
-authentication, and bcrypt password hashing.
+FastAPI backend for Milestones 1, 2 and 3.
 
-## Quick Start
+## Milestone 3 APIs
+
+- `GET /approvals` — approval queue
+- `GET /approvals/reviewers` — reviewer candidates (Manager/Administrator)
+- `POST /decisions/{id}/submit` — submit a decision for review
+- `POST /decisions/{id}/assign-reviewer` — assign a reviewer
+- `POST /approvals/{id}/review` — approve/reject an assigned approval
+- `GET /decisions/{id}/approvals` — approval assignments for a decision
+- `GET /decisions/{id}/approval-history` — approval history
+- `GET /notifications` — current user's notifications
+- `PATCH /notifications/{id}/read` — mark notification as read
+- `POST /notifications/read-all` — mark all notifications read
+- `GET /audit-logs` — Manager/Administrator audit logs
+- `GET /dashboard/summary` — role-aware dashboard statistics/activity
+- `GET /reports/{kind}` — live report data
+- `GET /reports/{kind}/export?format=pdf|excel` — report export
+
+## Start
 
 ```bash
-cd backend
-python -m venv .venv
-
-# Activate it:
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
 pip install -r requirements.txt
-
-cp .env.example .env
-# Edit .env: set DB_PASSWORD and JWT_SECRET_KEY
-
 uvicorn app.main:app --reload
 ```
 
-Then open http://127.0.0.1:8000/docs for interactive Swagger docs, or
-http://127.0.0.1:8000/health to confirm the API and database are up.
-
-See the root `README.md` for full MySQL setup and frontend
-instructions.
-
-
-## Milestone 2 APIs
-
-Decision, alternative, document, discussion and version endpoints are available under `/decisions` and `/documents`. Interactive API documentation is available at `/docs` when FastAPI is running.
+Swagger: `http://127.0.0.1:8000/docs`

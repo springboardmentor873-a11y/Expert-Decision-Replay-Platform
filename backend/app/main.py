@@ -8,15 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import check_database_connection
-from app.routers import auth, users, teams, decisions, documents
+from app.routers import auth, users, teams, decisions, documents, milestone3
 
 app = FastAPI(
     title="Expert Decision Replay Platform API",
     description=(
-        "Milestones 1 and 2 backend: authentication, user management, "
-        "decision management, alternatives, documents, discussions and version history."
+        "Milestones 1, 2 and 3 backend: authentication, user management, "
+        "decision management, alternatives, documents, discussions, version history, approvals, notifications, audit logs, reports and dashboards."
     ),
-    version="2.0.0",
+    version="3.0.0",
 )
 
 # ---------------------------------------------------------------------
@@ -39,6 +39,7 @@ app.include_router(users.router)
 app.include_router(teams.router)
 app.include_router(decisions.router)
 app.include_router(documents.router)
+app.include_router(milestone3.router)
 
 
 @app.get("/", tags=["Health"])

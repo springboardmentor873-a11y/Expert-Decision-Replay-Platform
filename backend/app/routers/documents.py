@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
 from app.auth.dependencies import get_current_user
 from app.models import decision_model as m
+from app.models.milestone3_model import log_audit
 
 UPLOAD_DIR=Path(__file__).resolve().parents[3]/"uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -31,6 +32,7 @@ async def upload(decision_id:int,file:UploadFile=File(...),current_user=Depends(
     target=UPLOAD_DIR/stored
     target.write_bytes(data)
     i=m.create_document(decision_id,Path(file.filename).name,stored,str(target),file.content_type,len(data),current_user["id"])
+    log_audit(current_user["id"], "Document Uploaded", "Documents", f"Uploaded '{Path(file.filename).name}'.", "decision", decision_id)
     return {"id":i,"message":"File uploaded successfully."}
 
 @router.get("/{document_id}/download")

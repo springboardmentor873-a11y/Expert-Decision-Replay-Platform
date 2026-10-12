@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.auth.dependencies import get_current_user
 from app.schemas.decision import DecisionCreate, DecisionOut, AlternativeIn, CommentIn
 from app.models import decision_model as m
+from app.models.milestone3_model import log_audit
 
 router=APIRouter(prefix="/decisions",tags=["Decision Management"])
 
@@ -23,6 +24,7 @@ def decision_stats(current_user=Depends(get_current_user)):
 @router.post("",response_model=DecisionOut,status_code=201)
 def add_decision(payload:DecisionCreate,current_user=Depends(get_current_user)):
     i=m.create_decision(payload.title,payload.problem_statement,payload.category,payload.status,current_user["id"])
+    log_audit(current_user["id"], "Decision Created", "Decision", f"Created decision '{payload.title}'.", "decision", i)
     return out(m.get_decision(i))
 
 @router.get("/{decision_id}",response_model=DecisionOut)
@@ -35,11 +37,14 @@ def one_decision(decision_id:int,current_user=Depends(get_current_user)):
 def edit_decision(decision_id:int,payload:DecisionCreate,current_user=Depends(get_current_user)):
     r=m.update_decision(decision_id,payload.title,payload.problem_statement,payload.category,payload.status,current_user["id"])
     if not r: raise HTTPException(404,"Decision not found.")
+    log_audit(current_user["id"], "Decision Updated", "Decision", f"Updated decision '{payload.title}'.", "decision", decision_id)
     return out(r)
 
 @router.delete("/{decision_id}")
 def remove_decision(decision_id:int,current_user=Depends(get_current_user)):
+    decision = m.get_decision(decision_id)
     if not m.delete_decision(decision_id): raise HTTPException(404,"Decision not found.")
+    log_audit(current_user["id"], "Decision Deleted", "Decision", f"Deleted decision '{decision['title']}'.", "decision", decision_id)
     return {"message":"Decision deleted."}
 
 @router.get("/{decision_id}/alternatives")
@@ -51,6 +56,7 @@ def alternatives(decision_id:int,current_user=Depends(get_current_user)):
 def add_alternative(decision_id:int,payload:AlternativeIn,current_user=Depends(get_current_user)):
     if not m.get_decision(decision_id): raise HTTPException(404,"Decision not found.")
     i=m.create_alternative(decision_id,payload.model_dump(),current_user["id"])
+    log_audit(current_user["id"], "Alternative Added", "Decision", "Added an alternative.", "decision", decision_id)
     return {"id":i,"message":"Alternative added."}
 
 @router.put("/alternatives/{alternative_id}")
@@ -76,6 +82,7 @@ def discussions(decision_id:int,current_user=Depends(get_current_user)):
 def add_discussion(decision_id:int,payload:CommentIn,current_user=Depends(get_current_user)):
     if not m.get_decision(decision_id): raise HTTPException(404,"Decision not found.")
     i=m.create_comment(decision_id,payload.comment_text,current_user["id"],payload.parent_id)
+    log_audit(current_user["id"], "Discussion Added", "Discussion", "Added a decision discussion comment.", "decision", decision_id)
     return {"id":i,"message":"Comment added."}
 
 @router.delete("/discussions/{comment_id}")

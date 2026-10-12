@@ -286,3 +286,40 @@ what was verified and what should be re-verified locally (this
 generation environment has no network access or MySQL server, so a
 live end-to-end run could not be performed here — see that file for
 exact details).
+
+## Milestone 3
+
+Milestone 3 adds the Week 5-6 workflow without removing Milestones 1 or 2:
+
+- Approval workflow with reviewer assignment, approval/rejection, multi-level approval levels and approval history.
+- In-app notifications for review assignments and approval decisions.
+- Audit logging for authentication, decisions, alternatives, discussions, documents and approval actions.
+- Reports for decisions, approvals, teams and audit activity.
+- PDF and Excel report export.
+- Role-aware dashboard statistics, pending reviews and recent activity.
+
+### New Milestone 3 pages
+
+- `approvals.html` — reviewer queue and reviewer assignment for Managers/Administrators.
+- `notifications.html` — user notifications and read/unread controls.
+- `reports.html` — live reports and PDF/Excel export.
+- `audit.html` — Manager/Administrator audit log view.
+
+### Milestone 3 database tables
+
+`approvals`, `approval_history`, `notifications`, and `audit_logs` are added to `database/schema.sql`.
+
+For an existing Milestone 2 database, run `database/milestone3_schema.sql` once. For a fresh database, run `database/schema.sql`.
+
+### Milestone 3 demo flow
+
+1. Log in as Manager/Administrator and open a decision.
+2. Assign a Reviewer from **Approvals**.
+3. Submit the decision for review.
+4. Log in as the assigned Reviewer and approve/reject it.
+5. Show the approval history and generated notification.
+6. Open **Audit Logs** as Manager/Administrator.
+7. Open **Reports**, switch between report types, and export PDF/Excel.
+8. Return to **Dashboard** and show pending reviews, decision statistics and recent activity.
+
+The project continues to use FastAPI + MySQL + plain HTML/CSS/JavaScript with JWT authentication.

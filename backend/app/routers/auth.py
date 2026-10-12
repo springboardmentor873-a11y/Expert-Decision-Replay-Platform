@@ -11,6 +11,7 @@ from app.auth.security import hash_password, verify_password, create_access_toke
 from app.auth.dependencies import get_current_user
 from app.models.user_model import get_user_by_email, create_user, get_user_by_id
 from app.models.team_model import get_team_by_id
+from app.models.milestone3_model import log_audit
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -61,6 +62,7 @@ def register(payload: UserRegister):
         )
 
     created = get_user_by_id(new_id)
+    log_audit(new_id, "User Registered", "Authentication", f"Registered account for {created['full_name']}.", "user", new_id)
     return _user_row_to_out(created)
 
 
@@ -83,6 +85,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         data={"sub": str(user["id"]), "role": user["role"], "email": user["email"]}
     )
 
+    log_audit(user["id"], "User Login", "Authentication", "User signed in.", "user", user["id"])
     return TokenResponse(access_token=token, user=_user_row_to_out(user))
 
 
@@ -104,6 +107,7 @@ def login_json(payload: UserLogin):
         data={"sub": str(user["id"]), "role": user["role"], "email": user["email"]}
     )
 
+    log_audit(user["id"], "User Login", "Authentication", "User signed in.", "user", user["id"])
     return TokenResponse(access_token=token, user=_user_row_to_out(user))
 
 

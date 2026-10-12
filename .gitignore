@@ -17,3 +17,7 @@ env/
 
 # Logs
 *.log
+
+# Uploaded/generated runtime files
+uploads/*
+!uploads/.gitkeep
