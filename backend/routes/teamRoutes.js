@@ -1,5 +1,4 @@
 const express = require("express");
-
 const router = express.Router();
 
 const protect = require("../middleware/authMiddleware");
@@ -9,6 +8,7 @@ const {
     createTeam,
     getAllTeams,
     getMyTeams,
+    getTeamDetails,
     requestToJoinTeam,
     getTeamJoinRequests,
     approveJoinRequest,
@@ -17,85 +17,146 @@ const {
     deleteTeam
 } = require("../controllers/teamController");
 
+
 // =====================================================
-// EMPLOYEE / ALL AUTHENTICATED USERS
+// GET ALL TEAMS
 // =====================================================
 
-// Get all active teams
 router.get(
     "/",
     protect,
     getAllTeams
 );
 
-// Get teams where current user is a member
+
+// =====================================================
+// GET MY TEAMS
+// =====================================================
+
 router.get(
     "/my-teams",
     protect,
     getMyTeams
 );
 
-// Request to join a team
+
+// =====================================================
+// GET COMPLETE DETAILS OF ONE TEAM
+// Members + Decisions + Statistics
+// =====================================================
+
+router.get(
+    "/:teamId/details",
+    protect,
+    getTeamDetails
+);
+
+
+// =====================================================
+// SEND JOIN REQUEST
+// =====================================================
+
 router.post(
     "/join-request",
     protect,
     requestToJoinTeam
 );
 
+
 // =====================================================
-// MANAGER / ADMINISTRATOR
+// CREATE TEAM
+// Manager / Administrator only
 // =====================================================
 
-// Create a team
 router.post(
     "/",
     protect,
-    authorizeRoles("Manager", "Administrator"),
+    authorizeRoles(
+        "Manager",
+        "Administrator"
+    ),
     createTeam
 );
 
-// Get pending join requests
+
+// =====================================================
+// GET JOIN REQUESTS
+// Manager / Administrator only
+// =====================================================
+
 router.get(
     "/join-requests",
     protect,
-    authorizeRoles("Manager", "Administrator"),
+    authorizeRoles(
+        "Manager",
+        "Administrator"
+    ),
     getTeamJoinRequests
 );
 
-// Approve join request
+
+// =====================================================
+// APPROVE JOIN REQUEST
+// Manager / Administrator only
+// =====================================================
+
 router.put(
     "/join-requests/:requestId/approve",
     protect,
-    authorizeRoles("Manager", "Administrator"),
+    authorizeRoles(
+        "Manager",
+        "Administrator"
+    ),
     approveJoinRequest
 );
 
-// Reject join request
+
+// =====================================================
+// REJECT JOIN REQUEST
+// Manager / Administrator only
+// =====================================================
+
 router.put(
     "/join-requests/:requestId/reject",
     protect,
-    authorizeRoles("Manager", "Administrator"),
+    authorizeRoles(
+        "Manager",
+        "Administrator"
+    ),
     rejectJoinRequest
 );
 
-// Remove member
+
+// =====================================================
+// REMOVE MEMBER
+// Manager / Administrator only
+// =====================================================
+
 router.delete(
     "/:teamId/members/:memberId",
     protect,
-    authorizeRoles("Manager", "Administrator"),
+    authorizeRoles(
+        "Manager",
+        "Administrator"
+    ),
     removeMemberFromTeam
 );
 
-// Delete team
+
+// =====================================================
+// DELETE TEAM
+// Manager / Administrator only
+// =====================================================
+
 router.delete(
     "/:teamId",
     protect,
-    authorizeRoles("Manager", "Administrator"),
+    authorizeRoles(
+        "Manager",
+        "Administrator"
+    ),
     deleteTeam
 );
 
-// =====================================================
-// EXPORT ROUTER
-// =====================================================
 
 module.exports = router;

@@ -14,6 +14,7 @@ const alternativeRoutes = require("./routes/alternativeRoutes");
 const auditRoutes = require("./routes/auditRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const teamRoutes = require("./routes/teamRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 // ==================== ROUTES ====================
 
 
@@ -53,6 +54,7 @@ app.use("/api/discussions", discussionRoutes);
 app.use("/api/alternatives", alternativeRoutes);
 
 app.use("/api/teams", teamRoutes);
+app.use("/api/reports", reportRoutes);
 
 // ==================== TEST ROUTE ====================
 

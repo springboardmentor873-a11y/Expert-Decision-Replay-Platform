@@ -967,7 +967,6 @@ const styles = {
 
   quoteCard: {
     marginTop: "18px",
-    padding: "25px",
     borderRadius: "13px",
     background: "#eef2f7",
     display: "flex",

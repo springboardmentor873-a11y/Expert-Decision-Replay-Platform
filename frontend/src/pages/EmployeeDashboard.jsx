@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import DecisionKnowledgeGraph from "../components/DecisionKnowledgeGraph";
 import {
   BarChart,
   Bar,
@@ -9,6 +10,9 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -76,10 +80,30 @@ const [teamLoading, setTeamLoading] = useState(false);
 const [teamMessage, setTeamMessage] = useState("");
 const [teamSearch, setTeamSearch] = useState("");
 const [requestedTeams, setRequestedTeams] = useState([]);
+
+// =====================================================
+// TEAM DETAILS
+// =====================================================
+
+const [selectedTeam, setSelectedTeam] = useState(null);
+const [teamDetails, setTeamDetails] = useState(null);
+const [teamDetailsLoading, setTeamDetailsLoading] = useState(false);
+const [teamDetailsMessage, setTeamDetailsMessage] = useState("");
+const [activeSection, setActiveSection] = useState("dashboard");
+const [allDecisions, setAllDecisions] = useState([]);
+const [expandedGraphNode, setExpandedGraphNode] = useState(null);
+const [selectedGraphDecision, setSelectedGraphDecision] = useState(null);
+// =====================================================
+// REPORTS & EXPORT
+// =====================================================
+
+const [activeReport, setActiveReport] = useState("decisions");
+const [reportData, setReportData] = useState(null);
+const [reportLoading, setReportLoading] = useState(false);
+const [reportError, setReportError] = useState("");
   // ============================================================
 // REVIEWER + MANAGER FEEDBACK
 // ============================================================
-
 const openFeedback = (decision) => {
   setFeedbackDecision(decision);
 };
@@ -118,6 +142,43 @@ const closeFeedback = () => {
       setLoading(false);
     }
   };
+  // =====================================================
+// FETCH REPORTS
+// =====================================================
+
+const fetchReport = async (type) => {
+  try {
+    setReportLoading(true);
+    setReportError("");
+    setReportData(null);
+
+    const response = await fetch(
+      `${API_URL}/api/reports/${type}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to fetch report"
+      );
+    }
+
+    setReportData(data);
+  } catch (error) {
+    console.error("Report Error:", error);
+    setReportError(
+      error.message || "Failed to load report"
+    );
+  } finally {
+    setReportLoading(false);
+  }
+};
 const searchDecisions = async () => {
   if (!searchQuery.trim() && selectedCategory === "All") {
     setSearchResults([]);
@@ -250,9 +311,374 @@ const searchDecisions = async () => {
   fetchDiscussions();
   fetchNotifications();
 }, []);
+// =====================================================
+// FETCH REPORT WHEN REPORT TYPE CHANGES
+// =====================================================
+
+useEffect(() => {
+  fetchReport(activeReport);
+}, [activeReport]);
   // ============================================================
   // AUDIT HISTORY
-  // ============================================================
+ // ============================================================
+// PDF EXPORT
+// ============================================================
+
+const exportPDF = () => {
+  if (!reportData) {
+    alert("No report data available.");
+    return;
+  }
+
+  const doc = new jsPDF("landscape");
+
+  const reportTitles = {
+    decisions: "Decision Report",
+    approvals: "Approval Report",
+    teams: "Team Performance Report",
+    audit: "Audit Activity Report",
+  };
+
+  const title = reportTitles[activeReport];
+
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, 14, 18);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    `Generated: ${new Date().toLocaleString()}`,
+    14,
+    26
+  );
+
+  let columns = [];
+  let rows = [];
+
+  // ----------------------------------------------------------
+  // DECISION REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "decisions") {
+    columns = [
+      "Decision",
+      "Category",
+      "Created By",
+      "Status",
+      "Created",
+    ];
+
+    rows = (reportData.decisions || []).map((decision) => [
+      decision.title || "Untitled Decision",
+      decision.category || "—",
+      decision.createdBy?.name || "Unknown",
+      decision.status || "Unknown",
+      decision.createdAt
+        ? new Date(
+            decision.createdAt
+          ).toLocaleDateString()
+        : "—",
+    ]);
+  }
+
+  // ----------------------------------------------------------
+  // APPROVAL REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "approvals") {
+    const approvals =
+      reportData.approvals ||
+      reportData.decisions ||
+      [];
+
+    columns = [
+      "Decision",
+      "Created By",
+      "Status",
+      "Reviewed By",
+      "Approved By",
+    ];
+
+    rows = approvals.map((decision) => [
+      decision.title || "Untitled Decision",
+      decision.createdBy?.name || "Unknown",
+      decision.status || "Unknown",
+      decision.reviewedBy?.name || "Not reviewed",
+      decision.approvedBy?.name || "Not approved",
+    ]);
+  }
+
+  // ----------------------------------------------------------
+  // TEAM REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "teams") {
+    columns = [
+      "Team",
+      "Manager",
+      "Members",
+      "Decisions",
+      "Approved",
+      "Pending",
+      "Rejected",
+    ];
+
+    rows = (reportData.teams || []).map((team) => [
+      team.name || "Unnamed Team",
+      team.manager?.name || "No manager",
+      team.memberCount || 0,
+      team.decisionCount || 0,
+      team.approved || 0,
+      team.pendingReview || 0,
+      team.rejected || 0,
+    ]);
+  }
+
+  // ----------------------------------------------------------
+  // AUDIT REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "audit") {
+    columns = [
+      "Action",
+      "User",
+      "Decision",
+      "Category",
+      "Date & Time",
+    ];
+
+    rows = (reportData.logs || []).map((log) => [
+      log.action || log.event || "Action",
+      log.performedBy?.name || "Unknown",
+      log.decision?.title || "No decision",
+      log.decision?.category || "—",
+      log.createdAt
+        ? new Date(log.createdAt).toLocaleString()
+        : "—",
+    ]);
+  }
+
+  autoTable(doc, {
+    head: [columns],
+    body: rows,
+    startY: 34,
+    theme: "grid",
+    styles: {
+      fontSize: 8,
+      cellPadding: 4,
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [79, 70, 229],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
+  });
+
+  doc.save(
+    `${activeReport}-report-${Date.now()}.pdf`
+  );
+};
+
+
+// ============================================================
+// EXCEL EXPORT
+// ============================================================
+
+const exportExcel = () => {
+  if (!reportData) {
+    alert("No report data available.");
+    return;
+  }
+
+  let rows = [];
+
+  // ----------------------------------------------------------
+  // DECISION REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "decisions") {
+    rows = (reportData.decisions || []).map(
+      (decision) => ({
+        Decision:
+          decision.title || "Untitled Decision",
+        Category:
+          decision.category || "—",
+        "Created By":
+          decision.createdBy?.name || "Unknown",
+        "Created By Email":
+          decision.createdBy?.email || "—",
+        Status:
+          decision.status || "Unknown",
+        "Reviewed By":
+          decision.reviewedBy?.name || "—",
+        "Approved By":
+          decision.approvedBy?.name || "—",
+        Created:
+          decision.createdAt
+            ? new Date(
+                decision.createdAt
+              ).toLocaleString()
+            : "—",
+      })
+    );
+  }
+
+  // ----------------------------------------------------------
+  // APPROVAL REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "approvals") {
+    const approvals =
+      reportData.approvals ||
+      reportData.decisions ||
+      [];
+
+    rows = approvals.map((decision) => ({
+      Decision:
+        decision.title || "Untitled Decision",
+      Category:
+        decision.category || "—",
+      "Created By":
+        decision.createdBy?.name || "Unknown",
+      "Created By Email":
+        decision.createdBy?.email || "—",
+      Status:
+        decision.status || "Unknown",
+      "Reviewed By":
+        decision.reviewedBy?.name || "Not reviewed",
+      "Reviewer Email":
+        decision.reviewedBy?.email || "—",
+      "Approved By":
+        decision.approvedBy?.name || "Not approved",
+      "Approver Email":
+        decision.approvedBy?.email || "—",
+      Updated:
+        decision.updatedAt
+          ? new Date(
+              decision.updatedAt
+            ).toLocaleString()
+          : "—",
+    }));
+  }
+
+  // ----------------------------------------------------------
+  // TEAM REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "teams") {
+    rows = (reportData.teams || []).map(
+      (team) => ({
+        Team:
+          team.name || "Unnamed Team",
+        Description:
+          team.description || "—",
+        Manager:
+          team.manager?.name || "No manager",
+        "Manager Email":
+          team.manager?.email || "—",
+        Members:
+          team.memberCount || 0,
+        Decisions:
+          team.decisionCount || 0,
+        Approved:
+          team.approved || 0,
+        "Pending Review":
+          team.pendingReview || 0,
+        "Under Review":
+          team.underReview || 0,
+        Rejected:
+          team.rejected || 0,
+        Created:
+          team.createdAt
+            ? new Date(
+                team.createdAt
+              ).toLocaleString()
+            : "—",
+      })
+    );
+  }
+
+  // ----------------------------------------------------------
+  // AUDIT REPORT
+  // ----------------------------------------------------------
+
+  if (activeReport === "audit") {
+    rows = (reportData.logs || []).map(
+      (log) => ({
+        Action:
+          log.action ||
+          log.event ||
+          "Action",
+        User:
+          log.performedBy?.name ||
+          "Unknown",
+        "User Email":
+          log.performedBy?.email || "—",
+        Decision:
+          log.decision?.title ||
+          "No decision",
+        Category:
+          log.decision?.category || "—",
+        Status:
+          log.decision?.status || "—",
+        "Date & Time":
+          log.createdAt
+            ? new Date(
+                log.createdAt
+              ).toLocaleString()
+            : "—",
+      })
+    );
+  }
+
+  if (rows.length === 0) {
+    alert("No report records available for export.");
+    return;
+  }
+
+  const worksheet =
+    XLSX.utils.json_to_sheet(rows);
+
+  // Make columns easier to read
+  const columnWidths = Object.keys(rows[0]).map(
+    (key) => {
+      const maxLength = Math.max(
+        key.length,
+        ...rows.map((row) =>
+          String(row[key] ?? "").length
+        )
+      );
+
+      return {
+        wch: Math.min(
+          Math.max(maxLength + 2, 12),
+          35
+        ),
+      };
+    }
+  );
+
+  worksheet["!cols"] = columnWidths;
+
+  const workbook =
+    XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Report"
+  );
+
+  XLSX.writeFile(
+    workbook,
+    `${activeReport}-report-${Date.now()}.xlsx`
+  );
+}; // ============================================================
 
   const fetchAuditHistory = async (decision) => {
     if (!decision?._id) return;
@@ -740,11 +1166,18 @@ const markAllNotificationsAsRead = async () => {
   // SCROLL
   // ============================================================
 
-  const scrollToSection = (id) => {
-    document.getElementById(id)?.scrollIntoView({
+ const scrollToSection = (sectionId) => {
+  setActiveSection(sectionId);
+
+  const section = document.getElementById(sectionId);
+
+  if (section) {
+    section.scrollIntoView({
       behavior: "smooth",
+      block: "start",
     });
-  };
+  }
+};
 
   // ============================================================
   // STATISTICS
@@ -858,7 +1291,59 @@ const fetchMyTeams = async () => {
   }
 };
 
+// =====================================================
+// FETCH COMPLETE TEAM DETAILS
+// =====================================================
 
+const fetchTeamDetails = async (teamId) => {
+  try {
+    setTeamDetailsLoading(true);
+    setTeamDetailsMessage("");
+
+    const response = await fetch(
+      `http://localhost:5173/api/teams/${teamId}/details`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to fetch team details"
+      );
+    }
+
+    setTeamDetails(data);
+    setSelectedTeam(teamId);
+
+  } catch (error) {
+    console.error(
+      "Fetch Team Details Error:",
+      error
+    );
+
+    setTeamDetailsMessage(
+      error.message ||
+      "Failed to load team details"
+    );
+
+  } finally {
+    setTeamDetailsLoading(false);
+  }
+};
+// =====================================================
+// CLOSE TEAM DETAILS
+// =====================================================
+
+const closeTeamDetails = () => {
+  setSelectedTeam(null);
+  setTeamDetails(null);
+  setTeamDetailsMessage("");
+};
 // Request to join a team
 const requestToJoinTeam = async (teamId) => {
     try {
@@ -933,95 +1418,138 @@ useEffect(() => {
           </div>
         </div>
 
-        <div style={styles.navSection}>
-          <button
-            style={styles.activeMenu}
-            onClick={() =>
-              window.scrollTo({
-                top: 0,
-                behavior: "smooth",
-              })
-            }
-          >
-            <span>⌂</span>
-            Dashboard
-          </button>
+       <div style={styles.navSection}>
 
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              scrollToSection("new-decision")
-            }
-          >
-            <span>＋</span>
-            New Decision
-          </button>
+  {/* DASHBOARD */}
+  <button
+    style={
+      activeSection === "dashboard"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => {
+      setActiveSection("dashboard");
 
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              scrollToSection("my-decisions")
-            }
-          >
-            <span>▣</span>
-            My Decisions
-          </button>
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }}
+  >
+    <span>⌂</span>
+    Dashboard
+  </button>
 
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              scrollToSection("my-decisions")
-            }
-          >
-            <span>◷</span>
-            Decision History
-          </button>
+  {/* NEW DECISION */}
+  <button
+    style={
+      activeSection === "new-decision"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => scrollToSection("new-decision")}
+  >
+    <span>＋</span>
+    New Decision
+  </button>
 
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              scrollToSection("documents")
-            }
-          >
-            📎 Documents
-          </button>
+  {/* MY DECISIONS */}
+  <button
+    style={
+      activeSection === "my-decisions"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => scrollToSection("my-decisions")}
+  >
+    <span>▣</span>
+    My Decisions
+  </button>
 
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              scrollToSection("discussions")
-            }
-          >
-            💬 Discussions
-          </button>
+  {/* DECISION HISTORY */}
+  <button
+    style={
+      activeSection === "my-decisions"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => scrollToSection("my-decisions")}
+  >
+    <span>◷</span>
+    Decision History
+  </button>
 
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              scrollToSection("alternatives")
-            }
-          >
-            📊 Compare Alternatives
-          </button>
-          <button
-  style={styles.menuButton}
-  onClick={() =>
-    scrollToSection("repository")
+  {/* DOCUMENTS */}
+  <button
+    style={
+      activeSection === "documents"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => scrollToSection("documents")}
+  >
+    📎 Documents
+  </button>
+
+  {/* DISCUSSIONS */}
+  <button
+    style={
+      activeSection === "discussions"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => scrollToSection("discussions")}
+  >
+    💬 Discussions
+  </button>
+
+  {/* COMPARE ALTERNATIVES */}
+  <button
+    style={
+      activeSection === "alternatives"
+        ? styles.activeMenu
+        : styles.menuButton
+    }
+    onClick={() => scrollToSection("alternatives")}
+  >
+    📊 Compare Alternatives
+  </button>
+
+  {/* KNOWLEDGE REPOSITORY */}
+<button
+  style={
+    activeSection === "repository"
+      ? styles.activeMenu
+      : styles.menuButton
   }
+  onClick={() => scrollToSection("repository")}
 >
   <span>🔍</span>
   Knowledge Repository
 </button>
 
-        </div>
+{/* REPORTS & EXPORT */}
+<button
+  style={
+    activeSection === "reports"
+      ? styles.activeMenu
+      : styles.menuButton
+  }
+  onClick={() => scrollToSection("reports")}
+>
+  <span>📈</span>
+  Reports & Export
+</button>
 
-        <button
-          style={styles.logoutButton}
-          onClick={handleLogout}
-        >
-          <span>⇥</span>
-          Logout
-        </button>
+</div>
+
+<button
+  style={styles.logoutButton}
+  onClick={handleLogout}
+>
+  <span>⇥</span>
+  Logout
+</button>
       </aside>
   
 
@@ -1176,8 +1704,7 @@ useEffect(() => {
           <section style={styles.welcome}>
             <div>
               <h1 style={styles.welcomeTitle}>
-                Welcome back,{" "}
-                {user?.name || "Employee"}!
+                Welcome back, {user?.name || "Employee"}! 👋
               </h1>
 
               <p style={styles.welcomeText}>
@@ -1305,7 +1832,7 @@ useEffect(() => {
             <div style={styles.chartContainer}>
               <ResponsiveContainer
                 width="100%"
-                height={300}
+                height={210}
               >
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -1693,13 +2220,16 @@ useEffect(() => {
               )}
             </div>
           </section>
- <section
+<section
   id="repository"
   style={{
     ...styles.section,
     paddingBottom: "40px",
   }}
 >
+  {/* ==============================
+      SECTION HEADER
+  ============================== */}
   <div style={styles.sectionHeader}>
     <div>
       <h2 style={styles.sectionTitle}>
@@ -1712,98 +2242,151 @@ useEffect(() => {
     </div>
   </div>
 
+  {/* ==============================
+      REPOSITORY CARD
+  ============================== */}
   <div
     style={{
       ...styles.tableCard,
       padding: "24px",
     }}
   >
-    {/* Search Area */}
-    {/* Search Area */}
-<div
-  style={{
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    marginBottom: searchResults.length > 0 ? "24px" : "0",
-  }}
->
-  <div
-    style={{
-      position: "relative",
-      flex: 1,
-    }}
-  >
-    <span
+    {/* ==============================
+        SEARCH AREA
+    ============================== */}
+    <div
       style={{
-        position: "absolute",
-        left: "15px",
-        top: "50%",
-        transform: "translateY(-50%)",
-        fontSize: "17px",
-        color: "#6b7280",
+        display: "flex",
+        gap: "12px",
+        alignItems: "center",
+        marginBottom:
+          searchResults.length > 0 ? "24px" : "0",
       }}
     >
-      🔍
-    </span>
+      {/* SEARCH INPUT */}
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            left: "15px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            fontSize: "16px",
+            color: "#64748b",
+            pointerEvents: "none",
+          }}
+        >
+          🔍
+        </span>
 
-    <input
-      type="text"
-      placeholder="Search decisions by title or description..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          searchDecisions();
+        <input
+          type="text"
+          placeholder="Search decisions by title or description..."
+          value={searchQuery}
+          onChange={(e) =>
+            setSearchQuery(e.target.value)
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              searchDecisions();
+            }
+          }}
+          style={{
+            width: "100%",
+            height: "46px",
+            boxSizing: "border-box",
+            padding: "0 15px 0 44px",
+            border: "1px solid #d1d5db",
+            borderRadius: "10px",
+            background: "#ffffff",
+            color: "#111827",
+            fontSize: "14px",
+            outline: "none",
+          }}
+        />
+      </div>
+
+      {/* CATEGORY FILTER */}
+      <select
+        value={selectedCategory}
+        onChange={(e) =>
+          setSelectedCategory(e.target.value)
         }
-      }}
-    />
-  </div>
+        style={{
+          width: "180px",
+          height: "46px",
+          padding: "0 12px",
+          border: "1px solid #d1d5db",
+          borderRadius: "10px",
+          backgroundColor: "#ffffff",
+          color: "#111827",
+          fontSize: "14px",
+          cursor: "pointer",
+          outline: "none",
+        }}
+      >
+        <option value="All">
+          All Categories
+        </option>
 
-  {/* CATEGORY FILTER — PUT IT HERE */}
-  <select
-    value={selectedCategory}
-    onChange={(e) => setSelectedCategory(e.target.value)}
-    style={{
-      width: "180px",
-      height: "46px",
-      padding: "0 12px",
-      border: "1px solid #d1d5db",
-      borderRadius: "10px",
-      backgroundColor: "#ffffff",
-      color: "#111827",
-      fontSize: "14px",
-      cursor: "pointer",
-    }}
-  >
-    <option value="All">All Categories</option>
-    <option value="Technical">Technical</option>
-    <option value="Business">Business</option>
-    <option value="Financial">Financial</option>
-    <option value="HR">HR</option>
-    <option value="Operational">Operational</option>
-    <option value="General">General</option>
-  </select>
+        <option value="Technical">
+          Technical
+        </option>
 
-  <button
-    type="button"
-    onClick={searchDecisions}
-    style={{
-      ...styles.searchButton,
-      height: "46px",
-      padding: "0 24px",
-      borderRadius: "10px",
-      fontWeight: "600",
-      cursor: "pointer",
-    }}
-  >
-    Search
-  </button>
-</div>
+        <option value="Business">
+          Business
+        </option>
 
-    {/* Search Results */}
+        <option value="Financial">
+          Financial
+        </option>
+
+        <option value="HR">
+          HR
+        </option>
+
+        <option value="Operational">
+          Operational
+        </option>
+
+        <option value="General">
+          General
+        </option>
+      </select>
+
+      {/* SEARCH BUTTON */}
+      <button
+        type="button"
+        onClick={searchDecisions}
+        style={{
+          ...styles.searchButton,
+          height: "46px",
+          padding: "0 24px",
+          borderRadius: "10px",
+          fontWeight: "600",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Search
+      </button>
+    </div>
+
+    {/* ==============================
+        SEARCH RESULTS
+    ============================== */}
     {searchResults.length > 0 && (
-      <div>
+      <div
+        style={{
+          marginTop: "24px",
+        }}
+      >
+        {/* RESULTS HEADER */}
         <div
           style={{
             display: "flex",
@@ -1837,6 +2420,7 @@ useEffect(() => {
           </span>
         </div>
 
+        {/* RESULT CARDS */}
         <div
           style={{
             display: "grid",
@@ -1863,7 +2447,12 @@ useEffect(() => {
                   gap: "15px",
                 }}
               >
-                <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
                   <h3
                     style={{
                       margin: "0 0 8px",
@@ -1877,39 +2466,44 @@ useEffect(() => {
 
                   <p
                     style={{
-                      margin: "0",
+                      margin: 0,
                       color: "#6b7280",
                       lineHeight: "1.6",
                       fontSize: "14px",
                     }}
                   >
-                    {decision.description}
+                    {decision.description ||
+                      "No description available."}
                   </p>
                 </div>
 
+                {/* STATUS */}
                 <span
                   style={{
                     display: "inline-block",
                     padding: "6px 12px",
                     borderRadius: "20px",
+
                     background:
                       decision.status === "Approved"
                         ? "#dcfce7"
                         : decision.status === "Rejected"
                         ? "#fee2e2"
                         : "#fef3c7",
+
                     color:
                       decision.status === "Approved"
                         ? "#166534"
                         : decision.status === "Rejected"
                         ? "#991b1b"
                         : "#92400e",
+
                     fontSize: "12px",
                     fontWeight: "600",
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {decision.status}
+                  {decision.status || "Pending"}
                 </span>
               </div>
             </div>
@@ -1918,37 +2512,1707 @@ useEffect(() => {
       </div>
     )}
 
-    {/* No Results */}
-    {searchQuery && searchResults.length === 0 && (
+    {/* ==============================
+        NO RESULTS
+    ============================== */}
+    {searchQuery.trim() &&
+      searchResults.length === 0 && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "35px 20px",
+            color: "#6b7280",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "30px",
+              marginBottom: "10px",
+            }}
+          >
+            🔎
+          </div>
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14px",
+            }}
+          >
+            No decisions found for "
+            {searchQuery}"
+          </p>
+        </div>
+      )}
+
+    {/* ==============================
+        KNOWLEDGE GRAPH
+    ============================== */}
+    <div
+      style={{
+        marginTop:
+          searchResults.length > 0 ||
+          searchQuery.trim()
+            ? "28px"
+            : "0",
+      }}
+    >
+      <DecisionKnowledgeGraph allDecisions={decisions} />
+    </div>
+  </div>
+</section>
+{/* ============================================================
+    REPORTS & EXPORT
+============================================================ */}
+
+<section
+  id="reports"
+  style={{
+    ...styles.section,
+    paddingBottom: "60px",
+  }}
+>
+  {/* HEADER */}
+  <div
+    style={{
+      marginBottom: "26px",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-end",
+        gap: "20px",
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "26px",
+            fontWeight: "800",
+            color: "#172033",
+            letterSpacing: "-0.4px",
+          }}
+        >
+          Reports & Export
+        </h2>
+
+        <p
+          style={{
+            margin: "7px 0 0",
+            color: "#64748b",
+            fontSize: "14px",
+          }}
+        >
+          Analyze organizational decisions, approvals, teams, and
+          system activity.
+        </p>
+      </div>
+
       <div
         style={{
-          textAlign: "center",
-          padding: "35px 20px",
-          color: "#6b7280",
+          padding: "7px 12px",
+          borderRadius: "20px",
+          background: "#f1f5f9",
+          color: "#475569",
+          fontSize: "12px",
+          fontWeight: "600",
+        }}
+      >
+        Live Report Data
+      </div>
+    </div>
+  </div>
+
+  {/* REPORT NAVIGATION */}
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(4, 1fr)",
+      gap: "10px",
+      padding: "8px",
+      marginBottom: "24px",
+      background: "#ffffff",
+      border: "1px solid #e2e8f0",
+      borderRadius: "14px",
+      boxShadow: "0 2px 8px rgba(15, 23, 42, 0.03)",
+    }}
+  >
+    {[
+      {
+        id: "decisions",
+        icon: "📋",
+        label: "Decision Reports",
+        description: "Decision overview",
+      },
+      {
+        id: "approvals",
+        icon: "✓",
+        label: "Approval Reports",
+        description: "Approval activity",
+      },
+      {
+        id: "teams",
+        icon: "👥",
+        label: "Team Reports",
+        description: "Team performance",
+      },
+      {
+        id: "audit",
+        icon: "◉",
+        label: "Audit Reports",
+        description: "System activity",
+      },
+    ].map((report) => {
+      const active = activeReport === report.id;
+
+      return (
+        <button
+          key={report.id}
+          type="button"
+          onClick={() => setActiveReport(report.id)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "11px",
+            padding: "14px 15px",
+            borderRadius: "10px",
+            border: active
+              ? "1px solid #c7d2fe"
+              : "1px solid transparent",
+            background: active ? "#eef2ff" : "transparent",
+            cursor: "pointer",
+            textAlign: "left",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              borderRadius: "9px",
+              background: active ? "#4f46e5" : "#f1f5f9",
+              color: active ? "#ffffff" : "#64748b",
+              fontSize: "16px",
+              fontWeight: "700",
+            }}
+          >
+            {report.icon}
+          </div>
+
+          <div>
+            <div
+              style={{
+                color: active ? "#3730a3" : "#334155",
+                fontSize: "13px",
+                fontWeight: "700",
+              }}
+            >
+              {report.label}
+            </div>
+
+            <div
+              style={{
+                marginTop: "3px",
+                color: "#94a3b8",
+                fontSize: "11px",
+              }}
+            >
+              {report.description}
+            </div>
+          </div>
+        </button>
+      );
+    })}
+  </div>
+
+  {/* REPORT BODY */}
+  <div
+    style={{
+      background: "#f8fafc",
+      border: "1px solid #e2e8f0",
+      borderRadius: "16px",
+      padding: "24px",
+    }}
+  >
+    {/* REPORT TITLE + EXPORT */}
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "20px",
+        paddingBottom: "22px",
+        marginBottom: "24px",
+        borderBottom: "1px solid #e2e8f0",
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <h3
+          style={{
+            margin: 0,
+            color: "#172033",
+            fontSize: "20px",
+            fontWeight: "800",
+          }}
+        >
+          {activeReport === "decisions" && "Decision Report"}
+
+          {activeReport === "approvals" && "Approval Report"}
+
+          {activeReport === "teams" && "Team Performance Report"}
+
+          {activeReport === "audit" && "Audit Activity Report"}
+        </h3>
+
+        <p
+          style={{
+            margin: "6px 0 0",
+            color: "#64748b",
+            fontSize: "13px",
+          }}
+        >
+          {activeReport === "decisions" &&
+            "Overview of all organizational decisions and their current status."}
+
+          {activeReport === "approvals" &&
+            "Track decisions that have moved through the review and approval process."}
+
+          {activeReport === "teams" &&
+            "Monitor team membership and decision activity across the organization."}
+
+          {activeReport === "audit" &&
+            "Review important actions and activity recorded across the platform."}
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "9px",
+        }}
+      >
+        <button
+  type="button"
+  onClick={exportPDF}
+  style={{
+    padding: "10px 15px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#4f46e5",
+    color: "#ffffff",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  }}
+>
+  📄 Export PDF
+</button>
+
+<button
+  type="button"
+  onClick={exportExcel}
+  style={{
+    padding: "10px 15px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#059669",
+    color: "#ffffff",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  }}
+>
+  📊 Export Excel
+</button>
+      </div>
+    </div>
+
+    {/* LOADING */}
+    {reportLoading ? (
+      <div
+        style={{
+          minHeight: "280px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#64748b",
         }}
       >
         <div
           style={{
-            fontSize: "30px",
-            marginBottom: "10px",
+            width: "38px",
+            height: "38px",
+            border: "4px solid #e2e8f0",
+            borderTop: "4px solid #4f46e5",
+            borderRadius: "50%",
+            marginBottom: "14px",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "600",
           }}
         >
-          🔎
+          Generating report...
+        </div>
+      </div>
+    ) : reportError ? (
+      /* ERROR */
+      <div
+        style={{
+          padding: "18px",
+          borderRadius: "10px",
+          background: "#fef2f2",
+          border: "1px solid #fecaca",
+          color: "#b91c1c",
+          fontSize: "13px",
+        }}
+      >
+        {reportError}
+      </div>
+    ) : reportData ? (
+      <>
+        {/* =====================================================
+            DECISION REPORT
+        ===================================================== */}
+
+        {activeReport === "decisions" && (
+          <>
+            {/* KPI CARDS */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(5, minmax(0, 1fr))",
+                gap: "14px",
+                marginBottom: "26px",
+              }}
+            >
+              {[
+                [
+                  "Total Decisions",
+                  reportData.statistics?.total || 0,
+                  "#4f46e5",
+                  "All decisions",
+                ],
+                [
+                  "Pending Review",
+                  reportData.statistics?.pendingReview || 0,
+                  "#d97706",
+                  "Awaiting review",
+                ],
+                [
+                  "Under Review",
+                  reportData.statistics?.underReview || 0,
+                  "#2563eb",
+                  "Currently reviewed",
+                ],
+                [
+                  "Approved",
+                  reportData.statistics?.approved || 0,
+                  "#059669",
+                  "Successfully approved",
+                ],
+                [
+                  "Rejected",
+                  reportData.statistics?.rejected || 0,
+                  "#dc2626",
+                  "Not approved",
+                ],
+              ].map(([label, value, color, subtitle]) => (
+                <div
+                  key={label}
+                  style={{
+                    padding: "20px",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    boxShadow:
+                      "0 2px 6px rgba(15,23,42,0.03)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: color,
+                      marginBottom: "13px",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      color: "#64748b",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {label}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "7px",
+                      color: color,
+                      fontSize: "27px",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {value}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "5px",
+                      color: "#94a3b8",
+                      fontSize: "10px",
+                    }}
+                  >
+                    {subtitle}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* DECISION TABLE */}
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "18px 20px",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#172033",
+                    fontSize: "15px",
+                    fontWeight: "800",
+                  }}
+                >
+                  Decision Overview
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "4px",
+                    color: "#94a3b8",
+                    fontSize: "12px",
+                  }}
+                >
+                  Complete list of organizational decisions
+                </div>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.tableHeader}>
+                        Decision
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        Category
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        Owner
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        Status
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        Created
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {reportData.decisions?.map((decision) => (
+                      <tr key={decision._id}>
+                        <td style={styles.tableCell}>
+                          <strong>
+                            {decision.title}
+                          </strong>
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          {decision.category || "General"}
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          {decision.createdBy?.name ||
+                            "Unknown"}
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              padding: "5px 10px",
+                              borderRadius: "20px",
+                              background:
+                                decision.status ===
+                                "Approved"
+                                  ? "#dcfce7"
+                                  : decision.status ===
+                                    "Rejected"
+                                  ? "#fee2e2"
+                                  : decision.status ===
+                                    "Under Review"
+                                  ? "#dbeafe"
+                                  : "#fef3c7",
+                              color:
+                                decision.status ===
+                                "Approved"
+                                  ? "#166534"
+                                  : decision.status ===
+                                    "Rejected"
+                                  ? "#991b1b"
+                                  : decision.status ===
+                                    "Under Review"
+                                  ? "#1d4ed8"
+                                  : "#92400e",
+                              fontSize: "11px",
+                              fontWeight: "700",
+                            }}
+                          >
+                            {decision.status}
+                          </span>
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          {new Date(
+                            decision.createdAt
+                          ).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+     {/* =====================================================
+    APPROVAL REPORT
+===================================================== */}
+
+{activeReport === "approvals" && (
+  <>
+    {/* SUMMARY CARDS */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "repeat(4, minmax(0, 1fr))",
+        gap: "16px",
+        marginBottom: "26px",
+      }}
+    >
+      {[
+        [
+          "Total",
+          reportData.statistics?.total || 0,
+          "#4f46e5",
+        ],
+        [
+          "Approved",
+          reportData.statistics?.approved || 0,
+          "#059669",
+        ],
+        [
+          "Rejected",
+          reportData.statistics?.rejected || 0,
+          "#dc2626",
+        ],
+        [
+          "Under Review",
+          reportData.statistics?.underReview || 0,
+          "#d97706",
+        ],
+      ].map(([label, value, color]) => (
+        <div
+          key={label}
+          style={{
+            padding: "23px",
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "12px",
+          }}
+        >
+          <div
+            style={{
+              color: "#64748b",
+              fontSize: "12px",
+              fontWeight: "700",
+              textTransform: "uppercase",
+            }}
+          >
+            {label}
+          </div>
+
+          <div
+            style={{
+              marginTop: "8px",
+              color,
+              fontSize: "30px",
+              fontWeight: "800",
+            }}
+          >
+            {value}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* INFORMATION BAR */}
+    <div
+      style={{
+        padding: "17px 20px",
+        marginBottom: "22px",
+        background: "#ecfdf5",
+        border: "1px solid #bbf7d0",
+        borderRadius: "10px",
+        color: "#166534",
+        fontSize: "13px",
+      }}
+    >
+      <strong>Approval Workflow:</strong>{" "}
+      Decisions are tracked from review through final
+      approval or rejection.
+    </div>
+
+    {/* APPROVAL DETAILS */}
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "14px",
+        overflow: "hidden",
+      }}
+    >
+      {/* HEADER */}
+      <div
+        style={{
+          padding: "20px 22px",
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: "800",
+            color: "#172033",
+          }}
+        >
+          Approval Details
         </div>
 
-        <p
+        <div
           style={{
-            margin: 0,
-            fontSize: "14px",
+            marginTop: "5px",
+            color: "#94a3b8",
+            fontSize: "12px",
           }}
         >
-          No decisions found for "{searchQuery}"
-        </p>
+          Reviewers and approvers associated with each
+          decision
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div
+        style={{
+          width: "100%",
+          overflowX: "auto",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            minWidth: "1000px",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+          }}
+        >
+          <thead>
+            <tr>
+              <th
+                style={{
+                  width: "25%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                Decision
+              </th>
+
+              <th
+                style={{
+                  width: "18%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                Created By
+              </th>
+
+              <th
+                style={{
+                  width: "15%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                Status
+              </th>
+
+              <th
+                style={{
+                  width: "21%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                Reviewed By
+              </th>
+
+              <th
+                style={{
+                  width: "21%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                Approved By
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {(
+              reportData.approvals ||
+              reportData.decisions ||
+              []
+            ).length > 0 ? (
+              (
+                reportData.approvals ||
+                reportData.decisions ||
+                []
+              ).map((decision) => (
+                <tr
+                  key={decision._id}
+                  style={{
+                    borderBottom:
+                      "1px solid #f1f5f9",
+                  }}
+                >
+                  {/* DECISION */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        color: "#172033",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      {decision.title ||
+                        "Untitled Decision"}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        fontSize: "11px",
+                        color: "#94a3b8",
+                      }}
+                    >
+                      {decision.category ||
+                        "No category"}
+                    </div>
+                  </td>
+
+                  {/* CREATED BY */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    {decision.createdBy ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#334155",
+                          }}
+                        >
+                          {decision.createdBy.name ||
+                            "Unknown"}
+                        </div>
+
+                        {decision.createdBy.email && (
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              fontSize: "10px",
+                              color: "#94a3b8",
+                              wordBreak:
+                                "break-word",
+                            }}
+                          >
+                            {decision.createdBy.email}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span
+                        style={{
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Unknown
+                      </span>
+                    )}
+                  </td>
+
+                  {/* STATUS */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "6px 11px",
+                        borderRadius: "20px",
+                        background:
+                          decision.status ===
+                          "Approved"
+                            ? "#dcfce7"
+                            : decision.status ===
+                              "Rejected"
+                            ? "#fee2e2"
+                            : "#fef3c7",
+                        color:
+                          decision.status ===
+                          "Approved"
+                            ? "#166534"
+                            : decision.status ===
+                              "Rejected"
+                            ? "#991b1b"
+                            : "#92400e",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {decision.status ||
+                        "Unknown"}
+                    </span>
+                  </td>
+
+                  {/* REVIEWED BY */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    {decision.reviewedBy ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#334155",
+                          }}
+                        >
+                          {decision.reviewedBy.name ||
+                            "Unknown"}
+                        </div>
+
+                        {decision.reviewedBy.email && (
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              fontSize: "10px",
+                              color: "#94a3b8",
+                              wordBreak:
+                                "break-word",
+                            }}
+                          >
+                            {decision.reviewedBy.email}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span
+                        style={{
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Not reviewed
+                      </span>
+                    )}
+                  </td>
+
+                  {/* APPROVED BY */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    {decision.approvedBy ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#334155",
+                          }}
+                        >
+                          {decision.approvedBy.name ||
+                            "Unknown"}
+                        </div>
+
+                        {decision.approvedBy.email && (
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              fontSize: "10px",
+                              color: "#94a3b8",
+                              wordBreak:
+                                "break-word",
+                            }}
+                          >
+                            {decision.approvedBy.email}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span
+                        style={{
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Not approved
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan="5"
+                  style={{
+                    padding: "50px 20px",
+                    textAlign: "center",
+                    color: "#94a3b8",
+                    fontSize: "13px",
+                  }}
+                >
+                  No approval records found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </>
+)}
+        {/* =====================================================
+    TEAM REPORT
+===================================================== */}
+
+{activeReport === "teams" && (
+  <>
+    {/* SUMMARY CARDS */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "repeat(4, minmax(0, 1fr))",
+        gap: "16px",
+        marginBottom: "26px",
+      }}
+    >
+      {[
+        [
+          "Total Teams",
+          reportData.statistics?.totalTeams || 0,
+          "#4f46e5",
+        ],
+        [
+          "Total Members",
+          reportData.statistics?.totalMembers || 0,
+          "#2563eb",
+        ],
+        [
+          "Total Decisions",
+          reportData.statistics?.totalDecisions || 0,
+          "#d97706",
+        ],
+        [
+          "Approved",
+          reportData.statistics?.totalApproved || 0,
+          "#059669",
+        ],
+      ].map(([label, value, color]) => (
+        <div
+          key={label}
+          style={{
+            padding: "23px",
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "12px",
+          }}
+        >
+          <div
+            style={{
+              color: "#64748b",
+              fontSize: "12px",
+              fontWeight: "700",
+              textTransform: "uppercase",
+            }}
+          >
+            {label}
+          </div>
+
+          <div
+            style={{
+              marginTop: "8px",
+              color,
+              fontSize: "30px",
+              fontWeight: "800",
+            }}
+          >
+            {value}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* TEAM ACTIVITY */}
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "14px",
+        overflow: "hidden",
+      }}
+    >
+      {/* HEADER */}
+      <div
+        style={{
+          padding: "20px 22px",
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: "800",
+            color: "#172033",
+          }}
+        >
+          Team Activity
+        </div>
+
+        <div
+          style={{
+            marginTop: "5px",
+            color: "#94a3b8",
+            fontSize: "12px",
+          }}
+        >
+          Decision activity and membership by team
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div
+        style={{
+          width: "100%",
+          overflowX: "auto",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            minWidth: "1000px",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+          }}
+        >
+          <thead>
+            <tr>
+              <th
+                style={{
+                  width: "25%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom:
+                    "1px solid #e2e8f0",
+                }}
+              >
+                Team
+              </th>
+
+              <th
+                style={{
+                  width: "18%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom:
+                    "1px solid #e2e8f0",
+                }}
+              >
+                Manager
+              </th>
+
+              <th
+                style={{
+                  width: "14%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom:
+                    "1px solid #e2e8f0",
+                }}
+              >
+                Members
+              </th>
+
+              <th
+                style={{
+                  width: "14%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom:
+                    "1px solid #e2e8f0",
+                }}
+              >
+                Decisions
+              </th>
+
+              <th
+                style={{
+                  width: "14%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom:
+                    "1px solid #e2e8f0",
+                }}
+              >
+                Approved
+              </th>
+
+              <th
+                style={{
+                  width: "15%",
+                  padding: "15px 18px",
+                  textAlign: "left",
+                  background: "#f8fafc",
+                  color: "#475569",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  borderBottom:
+                    "1px solid #e2e8f0",
+                }}
+              >
+                Created
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {reportData.teams?.length > 0 ? (
+              reportData.teams.map((team) => (
+                <tr
+                  key={team._id}
+                  style={{
+                    borderBottom:
+                      "1px solid #f1f5f9",
+                  }}
+                >
+                  {/* TEAM */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        color: "#172033",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      {team.icon || "👥"}{" "}
+                      {team.name || "Unnamed Team"}
+                    </div>
+
+                    {team.description && (
+                      <div
+                        style={{
+                          marginTop: "4px",
+                          fontSize: "11px",
+                          color: "#94a3b8",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        {team.description}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* MANAGER */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    {team.manager ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#334155",
+                          }}
+                        >
+                          {team.manager.name ||
+                            "Unknown"}
+                        </div>
+
+                        {team.manager.email && (
+                          <div
+                            style={{
+                              marginTop: "4px",
+                              fontSize: "10px",
+                              color: "#94a3b8",
+                              wordBreak:
+                                "break-word",
+                            }}
+                          >
+                            {team.manager.email}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span
+                        style={{
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        No manager
+                      </span>
+                    )}
+                  </td>
+
+                  {/* MEMBERS */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        color: "#334155",
+                      }}
+                    >
+                      {team.memberCount || 0}
+                    </span>
+                  </td>
+
+                  {/* DECISIONS */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "700",
+                        color: "#334155",
+                      }}
+                    >
+                      {team.decisionCount || 0}
+                    </span>
+                  </td>
+
+                  {/* APPROVED */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "6px 11px",
+                        borderRadius: "20px",
+                        background: "#dcfce7",
+                        color: "#166534",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {team.approved || 0}
+                    </span>
+                  </td>
+
+                  {/* CREATED */}
+                  <td
+                    style={{
+                      padding: "17px 18px",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        color: "#64748b",
+                      }}
+                    >
+                      {team.createdAt
+                        ? new Date(
+                            team.createdAt
+                          ).toLocaleDateString()
+                        : "—"}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan="6"
+                  style={{
+                    padding: "50px 20px",
+                    textAlign: "center",
+                    color: "#94a3b8",
+                    fontSize: "13px",
+                  }}
+                >
+                  No team records found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </>
+)}
+
+        {/* =====================================================
+            AUDIT REPORT
+        ===================================================== */}
+
+        {activeReport === "audit" && (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(3, minmax(0, 1fr))",
+                gap: "16px",
+                marginBottom: "26px",
+              }}
+            >
+              {[
+                [
+                  "Total Actions",
+                  reportData.summary?.totalActions || 0,
+                  "#4f46e5",
+                ],
+                [
+                  "Unique Users",
+                  reportData.summary?.uniqueUsers || 0,
+                  "#2563eb",
+                ],
+                [
+                  "Unique Decisions",
+                  reportData.summary?.uniqueDecisions || 0,
+                  "#059669",
+                ],
+              ].map(([label, value, color]) => (
+                <div
+                  key={label}
+                  style={{
+                    padding: "23px",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#64748b",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {label}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      color,
+                      fontSize: "30px",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                padding: "17px 20px",
+                marginBottom: "22px",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: "10px",
+                color: "#1e40af",
+                fontSize: "13px",
+              }}
+            >
+              <strong>Audit Trail:</strong>{" "}
+              Every recorded action provides traceability for
+              decisions and system activity.
+            </div>
+
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "18px 20px",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: "800",
+                    color: "#172033",
+                  }}
+                >
+                  Recent Audit Activity
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "4px",
+                    color: "#94a3b8",
+                    fontSize: "12px",
+                  }}
+                >
+                  Latest actions recorded by the platform
+                </div>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.tableHeader}>
+                        Action
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        User
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        Decision
+                      </th>
+
+                      <th style={styles.tableHeader}>
+                        Date & Time
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {reportData.logs?.map((log) => (
+                      <tr key={log._id}>
+                        <td style={styles.tableCell}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              padding: "5px 10px",
+                              borderRadius: "20px",
+                              background: "#f1f5f9",
+                              color: "#475569",
+                              fontSize: "11px",
+                              fontWeight: "700",
+                            }}
+                          >
+                            {log.action ||
+                              log.event ||
+                              "Action"}
+                          </span>
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          <strong>
+                            {log.performedBy?.name ||
+                              "Unknown"}
+                          </strong>
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          {log.decision?.title || "—"}
+                        </td>
+
+                        <td style={styles.tableCell}>
+                          {new Date(
+                            log.createdAt
+                          ).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </>
+    ) : (
+      <div
+        style={{
+          minHeight: "250px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#64748b",
+          fontSize: "14px",
+        }}
+      >
+        Select a report to view its data.
       </div>
     )}
   </div>
 </section>
-
           {/* =====================================================
               DOCUMENTS
           ===================================================== */}
@@ -2643,7 +4907,7 @@ useEffect(() => {
             )}
           </section>
         </div>
-      </main>
+
 {/* ============================================================
     REVIEW + MANAGER FEEDBACK MODAL
 ============================================================ */}
@@ -3172,6 +5436,8 @@ useEffect(() => {
 <section
   id="teams"
   style={{
+    width: "100%",
+    boxSizing: "border-box",
     marginTop: "40px",
     padding: "30px",
     background: "#ffffff",
@@ -3179,7 +5445,6 @@ useEffect(() => {
     border: "1px solid #e5e7eb",
   }}
 >
-
   {/* HEADER */}
   <div
     style={{
@@ -3205,12 +5470,11 @@ useEffect(() => {
 
       <p
         style={{
-          marginTop: "6px",
+          margin: "6px 0 0",
           color: "#6b7280",
         }}
       >
-        Collaborate with teams and participate in
-        organizational decisions.
+        Collaborate with teams and participate in organizational decisions.
       </p>
     </div>
 
@@ -3231,7 +5495,6 @@ useEffect(() => {
     </button>
   </div>
 
-
   {/* MESSAGE */}
   {teamMessage && (
     <div
@@ -3248,135 +5511,199 @@ useEffect(() => {
     </div>
   )}
 
+ {/* ============================================================
+    MY CURRENT TEAMS
+============================================================ */}
 
-  {/* =====================================================
-      MY CURRENT TEAMS
-  ===================================================== */}
+<div style={styles.teamSection}>
 
-  <h3
-    style={{
-      fontSize: "18px",
-      marginBottom: "15px",
-      color: "#374151",
-    }}
-  >
-    My Current Teams
-  </h3>
+  {/* SECTION HEADER */}
+  <div style={styles.teamSectionHeader}>
+    <div>
+      <h2 style={styles.teamSectionTitle}>
+        My Current Teams
+      </h2>
 
-  {teamLoading ? (
-    <p>Loading teams...</p>
-  ) : myTeams.length === 0 ? (
-
-    <div
-      style={{
-        padding: "25px",
-        textAlign: "center",
-        background: "#f9fafb",
-        borderRadius: "10px",
-        color: "#6b7280",
-        marginBottom: "35px",
-      }}
-    >
-      You are not a member of any team yet.
+      <p style={styles.teamSectionSubtitle}>
+        Manage your teams, members, and collaborative decisions.
+      </p>
     </div>
 
-  ) : (
+    <div style={styles.teamCountBadge}>
+      {myTeams.length}{" "}
+      {myTeams.length === 1 ? "Team" : "Teams"}
+    </div>
+  </div>
 
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns:
-          "repeat(auto-fit, minmax(280px, 1fr))",
-        gap: "20px",
-        marginBottom: "35px",
-      }}
-    >
+
+  {/* LOADING */}
+  {teamLoading && (
+    <div style={styles.teamEmptyState}>
+      <div style={styles.teamLoadingIcon}>
+        ⟳
+      </div>
+
+      <h3>Loading your teams...</h3>
+
+      <p>
+        Please wait while we fetch your team information.
+      </p>
+    </div>
+  )}
+
+
+  {/* NO TEAMS */}
+  {!teamLoading && myTeams.length === 0 && (
+    <div style={styles.teamEmptyState}>
+
+      <div style={styles.teamEmptyIcon}>
+        👥
+      </div>
+
+      <h3>You haven't joined any teams yet</h3>
+
+      <p>
+        Browse the available teams below and request to
+        join a team that matches your work.
+      </p>
+
+      <button
+        style={styles.teamBrowseButton}
+        onClick={fetchTeams}
+      >
+        Browse Available Teams
+      </button>
+
+    </div>
+  )}
+
+
+  {/* TEAM CARDS */}
+  {!teamLoading && myTeams.length > 0 && (
+
+    <div style={styles.myTeamsGrid}>
 
       {myTeams.map((team) => (
 
         <div
           key={team._id}
-          style={{
-            padding: "22px",
-            borderRadius: "12px",
-            border: "1px solid #d1fae5",
-            background: "#f0fdf4",
-          }}
+          style={styles.myTeamCard}
         >
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "15px",
-            }}
-          >
+          {/* CARD TOP */}
+          <div style={styles.myTeamCardTop}>
 
-            <div
-              style={{
-                fontSize: "32px",
-              }}
-            >
-              {team.icon || "👥"}
+            <div style={styles.myTeamIdentity}>
+
+              <div style={styles.myTeamIcon}>
+                {team.icon || "👥"}
+              </div>
+
+              <div>
+                <h3 style={styles.myTeamName}>
+                  {team.name}
+                </h3>
+
+                <div style={styles.myTeamStatus}>
+                  <span
+                    style={
+                      styles.myTeamStatusDot
+                    }
+                  />
+
+                  Active
+                </div>
+              </div>
+
             </div>
-
-            <span
-              style={{
-                padding: "5px 10px",
-                borderRadius: "20px",
-                background: "#dcfce7",
-                color: "#15803d",
-                fontSize: "12px",
-                fontWeight: "600",
-              }}
-            >
-              ● Active
-            </span>
 
           </div>
 
-          <h4
-            style={{
-              margin: "0 0 8px",
-              fontSize: "18px",
-              color: "#1f2937",
-            }}
-          >
-            {team.name}
-          </h4>
 
-          <p
-            style={{
-              color: "#6b7280",
-              fontSize: "14px",
-              minHeight: "42px",
-            }}
-          >
-            {team.description}
+          {/* DESCRIPTION */}
+          <p style={styles.myTeamDescription}>
+            {team.description ||
+              "No team description available."}
           </p>
 
-          <div
-            style={{
-              marginTop: "15px",
-              color: "#4b5563",
-              fontSize: "14px",
-            }}
-          >
-            👤 {team.members?.length || 0} Members
+
+          {/* TEAM QUICK INFO */}
+          <div style={styles.myTeamInfoGrid}>
+
+            {/* MEMBERS */}
+            <div style={styles.myTeamInfoItem}>
+
+              <div style={styles.myTeamInfoIcon}>
+                👥
+              </div>
+
+              <div>
+                <span style={styles.myTeamInfoLabel}>
+                  Members
+                </span>
+
+                <strong style={styles.myTeamInfoValue}>
+                  {team.members?.length || 0}
+                </strong>
+              </div>
+
+            </div>
+
+
+            {/* MANAGER */}
+            <div style={styles.myTeamInfoItem}>
+
+              <div style={styles.myTeamInfoIcon}>
+                👤
+              </div>
+
+              <div>
+                <span style={styles.myTeamInfoLabel}>
+                  Manager
+                </span>
+
+                <strong style={styles.myTeamInfoValue}>
+                  {team.manager?.name ||
+                    "Not assigned"}
+                </strong>
+              </div>
+
+            </div>
+
           </div>
 
-          {team.manager && (
-            <div
-              style={{
-                marginTop: "8px",
-                color: "#6b7280",
-                fontSize: "13px",
-              }}
+
+          {/* CARD FOOTER */}
+          <div style={styles.myTeamCardFooter}>
+
+            <span style={styles.teamCreatedText}>
+              Created{" "}
+              {team.createdAt
+                ? new Date(
+                    team.createdAt
+                  ).toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }
+                  )
+                : "—"}
+            </span>
+
+
+            <button
+              style={styles.viewTeamButton}
+              onClick={() =>
+                fetchTeamDetails(team._id)
+              }
             >
-              Manager: {team.manager.name}
-            </div>
-          )}
+              View Team
+              <span>→</span>
+            </button>
+
+          </div>
 
         </div>
 
@@ -3386,236 +5713,882 @@ useEffect(() => {
 
   )}
 
+</div>
 
+
+{/* ============================================================
+    TEAM DETAILS / TEAM WORKSPACE
+============================================================ */}
+
+{selectedTeam && (
+  <div style={styles.teamDetailsOverlay}>
+    <div style={styles.teamDetailsModal}>
+
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
+
+      <div style={styles.teamDetailsHeader}>
+
+        <div style={styles.teamDetailsTitleArea}>
+
+          <div style={styles.teamDetailsIcon}>
+            {teamDetails?.team?.icon || "👥"}
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+
+            <div style={styles.teamWorkspaceLabel}>
+              TEAM WORKSPACE
+            </div>
+
+            <h2 style={styles.teamDetailsTitle}>
+              {teamDetails?.team?.name || "Team Details"}
+            </h2>
+
+            <p style={styles.teamDetailsSubtitle}>
+              {teamDetails?.team?.description ||
+                "Collaborative decision-making workspace"}
+            </p>
+
+          </div>
+
+        </div>
+
+        <button
+          style={styles.teamDetailsCloseButton}
+          onClick={closeTeamDetails}
+          aria-label="Close team details"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      {/* ======================================================
+          LOADING
+      ====================================================== */}
+
+      {teamDetailsLoading && (
+        <div style={styles.teamDetailsLoading}>
+
+          <div style={styles.teamLoadingIcon}>
+            ⟳
+          </div>
+
+          <h3>
+            Loading team workspace...
+          </h3>
+
+          <p>
+            Fetching members, decisions and team activity.
+          </p>
+
+        </div>
+      )}
+
+
+      {/* ======================================================
+          ERROR
+      ====================================================== */}
+
+      {!teamDetailsLoading && teamDetailsMessage && (
+        <div style={styles.teamDetailsError}>
+          {teamDetailsMessage}
+        </div>
+      )}
+
+
+      {/* ======================================================
+          MAIN TEAM WORKSPACE
+      ====================================================== */}
+
+      {!teamDetailsLoading &&
+        teamDetails &&
+        !teamDetailsMessage && (
+
+          <div style={styles.teamDetailsContent}>
+
+            {/* ==================================================
+                TEAM SUMMARY
+            ================================================== */}
+
+            <div style={styles.teamOverviewCard}>
+
+              <div style={styles.teamOverviewHeader}>
+
+                <div>
+                  <div style={styles.teamOverviewLabel}>
+                    TEAM OVERVIEW
+                  </div>
+
+                  <h3 style={styles.teamOverviewTitle}>
+                    {teamDetails.team.name}
+                  </h3>
+                </div>
+
+                <div style={styles.activeTeamBadge}>
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: "#10B981",
+                      display: "inline-block"
+                    }}
+                  />
+                  Active
+                </div>
+
+              </div>
+
+
+              <p style={styles.teamOverviewDescription}>
+                {teamDetails.team.description ||
+                  "No team description available."}
+              </p>
+
+
+              <div style={styles.teamMetaRow}>
+
+                <div>
+                  <span>TEAM MANAGER: </span>
+                  <strong>
+                    {teamDetails.team.manager?.name ||
+                      "Not assigned"}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>MANAGER EMAIL: </span>
+                  <strong>
+                    {teamDetails.team.manager?.email ||
+                      "—"}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>TEAM MEMBERS: </span>
+                  <strong>
+                    {teamDetails.team.members?.length || 0}
+                  </strong>
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* ==================================================
+                DECISION STATISTICS
+            ================================================== */}
+
+            <div style={styles.teamStatsGrid}>
+
+              <div style={styles.teamStatCard}>
+                <div style={styles.teamStatIcon}>
+                  📊
+                </div>
+
+                <div>
+                  <span style={styles.teamStatLabel}>
+                    Total Decisions
+                  </span>
+
+                  <strong style={styles.teamStatValue}>
+                    {teamDetails.statistics?.total || 0}
+                  </strong>
+                </div>
+              </div>
+
+
+              <div style={styles.teamStatCard}>
+                <div style={styles.teamStatIcon}>
+                  ✓
+                </div>
+
+                <div>
+                  <span style={styles.teamStatLabel}>
+                    Approved
+                  </span>
+
+                  <strong style={styles.teamStatValue}>
+                    {teamDetails.statistics?.approved || 0}
+                  </strong>
+                </div>
+              </div>
+
+
+              <div style={styles.teamStatCard}>
+                <div style={styles.teamStatIcon}>
+                  🔍
+                </div>
+
+                <div>
+                  <span style={styles.teamStatLabel}>
+                    Under Review
+                  </span>
+
+                  <strong style={styles.teamStatValue}>
+                    {teamDetails.statistics?.underReview || 0}
+                  </strong>
+                </div>
+              </div>
+
+
+              <div style={styles.teamStatCard}>
+                <div style={styles.teamStatIcon}>
+                  ⏳
+                </div>
+
+                <div>
+                  <span style={styles.teamStatLabel}>
+                    Pending
+                  </span>
+
+                  <strong style={styles.teamStatValue}>
+                    {teamDetails.statistics?.pendingReview || 0}
+                  </strong>
+                </div>
+              </div>
+
+
+              <div style={styles.teamStatCard}>
+                <div style={styles.teamStatIcon}>
+                  ✕
+                </div>
+
+                <div>
+                  <span style={styles.teamStatLabel}>
+                    Rejected
+                  </span>
+
+                  <strong style={styles.teamStatValue}>
+                    {teamDetails.statistics?.rejected || 0}
+                  </strong>
+                </div>
+              </div>
+
+            </div>
+
+
+            {/* ==================================================
+                TWO COLUMN WORKSPACE
+            ================================================== */}
+
+            <div style={styles.teamWorkspaceGrid}>
+
+              {/* =================================================
+                  LEFT — TEAM MEMBERS
+              ================================================= */}
+
+              <div style={styles.teamWorkspaceSection}>
+
+                <div style={styles.teamWorkspaceSectionHeader}>
+
+                  <div>
+                    <h3>
+                      Team Members
+                    </h3>
+
+                    <p>
+                      People working in this team
+                    </p>
+                  </div>
+
+                  <span style={styles.sectionCountBadge}>
+                    {teamDetails.team.members?.length || 0}
+                  </span>
+
+                </div>
+
+
+                <div style={styles.teamMembersList}>
+
+                  {teamDetails.team.members?.length > 0 ? (
+
+                    teamDetails.team.members.map((member) => (
+
+                      <div
+                        key={member._id}
+                        style={styles.teamMemberRow}
+                      >
+
+                        {/* Avatar */}
+
+                        <div style={styles.teamMemberAvatar}>
+                          {member.name
+                            ?.charAt(0)
+                            ?.toUpperCase() || "U"}
+                        </div>
+
+
+                        {/* Member information */}
+
+                        <div style={styles.teamMemberInfo}>
+
+                          <strong>
+                            {member.name || "Unknown User"}
+                          </strong>
+
+                          <span>
+                            {member.email || "No email available"}
+                          </span>
+
+                        </div>
+
+
+                        {/* Role */}
+
+                        <span style={styles.memberRoleBadge}>
+                          {member.role || "Employee"}
+                        </span>
+
+
+                        {/* Decision count */}
+
+                        <div style={styles.memberDecisionCount}>
+
+                          <strong>
+                            {member.decisionCount || 0}
+                          </strong>
+
+                          <span>
+                            decisions
+                          </span>
+
+                        </div>
+
+                      </div>
+
+                    ))
+
+                  ) : (
+
+                    <div style={styles.noTeamData}>
+
+                      <div style={styles.noTeamDataIcon}>
+                        👥
+                      </div>
+
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: "#475569",
+                          fontSize: "13px"
+                        }}
+                      >
+                        No team members
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "4px",
+                          color: "#94A3B8",
+                          fontSize: "11px"
+                        }}
+                      >
+                        No members are currently assigned.
+                      </div>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* =================================================
+                  RIGHT — RECENT DECISIONS
+              ================================================= */}
+
+              <div style={styles.teamWorkspaceSection}>
+
+                <div style={styles.teamWorkspaceSectionHeader}>
+
+                  <div>
+                    <h3>
+                      Decision Activity
+                    </h3>
+
+                    <p>
+                      Latest decisions by team members
+                    </p>
+                  </div>
+
+                  <span style={styles.sectionCountBadge}>
+                    {teamDetails.decisions?.length || 0}
+                  </span>
+
+                </div>
+
+
+                <div style={styles.teamDecisionsList}>
+
+                  {teamDetails.decisions?.length > 0 ? (
+
+                    teamDetails.decisions.map((decision) => (
+
+                      <div
+                        key={decision._id}
+                        style={styles.teamDecisionRow}
+                      >
+
+                        <div style={styles.teamDecisionMain}>
+
+                          <h4
+                            style={{
+                              margin: 0,
+                              color: "#1E293B",
+                              fontSize: "14px",
+                              fontWeight: 700
+                            }}
+                          >
+                            {decision.title}
+                          </h4>
+
+                          <p
+                            style={{
+                              margin: "5px 0 9px",
+                              color: "#64748B",
+                              fontSize: "12px",
+                              lineHeight: 1.5
+                            }}
+                          >
+                            {decision.description ||
+                              "No description available."}
+                          </p>
+
+
+                          <div style={styles.teamDecisionMeta}>
+
+                            <span>
+                              {decision.category || "General"}
+                            </span>
+
+                            <span>
+                              By{" "}
+                              {decision.createdBy?.name ||
+                                "Unknown"}
+                            </span>
+
+                            <span>
+                              {decision.createdAt
+                                ? new Date(
+                                    decision.createdAt
+                                  ).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric"
+                                    }
+                                  )
+                                : "—"}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+
+                        {/* STATUS */}
+
+                        <span
+                          style={{
+                            ...styles.teamDecisionStatus,
+
+                            ...(decision.status === "Approved"
+                              ? styles.statusApproved
+                              : decision.status === "Rejected"
+                              ? styles.statusRejected
+                              : decision.status === "Under Review"
+                              ? styles.statusUnderReview
+                              : styles.statusPending)
+                          }}
+                        >
+                          {decision.status || "Pending Review"}
+                        </span>
+
+                      </div>
+
+                    ))
+
+                  ) : (
+
+                    <div style={styles.noTeamData}>
+
+                      <div style={styles.noTeamDataIcon}>
+                        📋
+                      </div>
+
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: "#475569",
+                          fontSize: "13px"
+                        }}
+                      >
+                        No decisions yet
+                      </div>
+
+                      <div
+                        style={{
+                          marginTop: "4px",
+                          color: "#94A3B8",
+                          fontSize: "11px"
+                        }}
+                      >
+                        Team decisions will appear here.
+                      </div>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* ==================================================
+                FOOTER INFORMATION
+            ================================================== */}
+
+            <div style={styles.teamWorkspaceFooter}>
+
+              <div>
+                <span style={styles.teamFooterLabel}>
+                  TEAM CREATED
+                </span>
+
+                <strong style={styles.teamFooterValue}>
+                  {teamDetails.team.createdAt
+                    ? new Date(
+                        teamDetails.team.createdAt
+                      ).toLocaleDateString(
+                        "en-IN",
+                        {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric"
+                        }
+                      )
+                    : "—"}
+                </strong>
+              </div>
+
+
+              <div>
+                <span style={styles.teamFooterLabel}>
+                  TEAM STATUS
+                </span>
+
+                <strong
+                  style={{
+                    ...styles.teamFooterValue,
+                    color: "#059669"
+                  }}
+                >
+                  Active
+                </strong>
+              </div>
+
+
+              <button
+                style={styles.teamFooterCloseButton}
+                onClick={closeTeamDetails}
+              >
+                Close Workspace
+              </button>
+
+            </div>
+
+          </div>
+        )}
+
+    </div>
+  </div>
+)}
   {/* =====================================================
       AVAILABLE TEAMS
   ===================================================== */}
 
   <div
     style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "15px",
-      gap: "15px",
-      flexWrap: "wrap",
+      borderTop: "1px solid #e5e7eb",
+      paddingTop: "25px",
     }}
   >
-
-    <h3
-      style={{
-        fontSize: "18px",
-        margin: 0,
-        color: "#374151",
-      }}
-    >
-      Available Teams
-    </h3>
-
-    <input
-      type="text"
-      placeholder="Search teams..."
-      value={teamSearch}
-      onChange={(e) =>
-        setTeamSearch(e.target.value)
-      }
-      style={{
-        padding: "10px 14px",
-        borderRadius: "8px",
-        border: "1px solid #d1d5db",
-        outline: "none",
-        width: "220px",
-      }}
-    />
-
-  </div>
-
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns:
-        "repeat(auto-fit, minmax(280px, 1fr))",
-      gap: "20px",
-    }}
-  >
-
-    {teams
-      .filter((team) =>
-        team.name
-          .toLowerCase()
-          .includes(teamSearch.toLowerCase())
-      )
-      .map((team) => {
-
-        const alreadyMember = myTeams.some(
-          (myTeam) =>
-            String(myTeam._id) ===
-            String(team._id)
-        );
-
-        const requestSent =
-          requestedTeams.includes(team._id);
-
-        return (
-
-          <div
-            key={team._id}
-            style={{
-              padding: "22px",
-              borderRadius: "12px",
-              border: "1px solid #e5e7eb",
-              background: "#ffffff",
-            }}
-          >
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "15px",
-              }}
-            >
-
-              <div
-                style={{
-                  fontSize: "32px",
-                }}
-              >
-                {team.icon || "👥"}
-              </div>
-
-              <span
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: "20px",
-                  background: "#ecfdf5",
-                  color: "#15803d",
-                  fontSize: "12px",
-                  fontWeight: "600",
-                }}
-              >
-                ● Active
-              </span>
-
-            </div>
-
-
-            <h4
-              style={{
-                margin: "0 0 8px",
-                fontSize: "18px",
-                color: "#1f2937",
-              }}
-            >
-              {team.name}
-            </h4>
-
-
-            <p
-              style={{
-                color: "#6b7280",
-                fontSize: "14px",
-                minHeight: "42px",
-              }}
-            >
-              {team.description}
-            </p>
-
-
-            <div
-              style={{
-                marginTop: "15px",
-                color: "#4b5563",
-                fontSize: "14px",
-              }}
-            >
-              👤 {team.members?.length || 0} Members
-            </div>
-
-
-            <button
-              type="button"
-              disabled={
-                alreadyMember || requestSent
-              }
-              onClick={() =>
-                requestToJoinTeam(team._id)
-              }
-              style={{
-                marginTop: "18px",
-                width: "100%",
-                padding: "11px",
-                borderRadius: "8px",
-                border: "none",
-                cursor:
-                  alreadyMember || requestSent
-                    ? "default"
-                    : "pointer",
-                background:
-                  alreadyMember || requestSent
-                    ? "#e5e7eb"
-                    : "#166534",
-                color:
-                  alreadyMember || requestSent
-                    ? "#6b7280"
-                    : "#ffffff",
-                fontWeight: "600",
-              }}
-            >
-              {alreadyMember
-                ? "✓ Already a Member"
-                : requestSent
-                ? "✓ Request Pending"
-                : "＋ Request to Join"}
-            </button>
-
-          </div>
-
-        );
-      })}
-
-  </div>
-
-
-  {teams.length === 0 && !teamLoading && (
     <div
       style={{
-        padding: "30px",
-        textAlign: "center",
-        color: "#6b7280",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "18px",
+        gap: "15px",
+        flexWrap: "wrap",
       }}
     >
-      No teams are currently available.
-    </div>
-  )}
+      <div>
+        <h3
+          style={{
+            fontSize: "18px",
+            margin: 0,
+            color: "#374151",
+          }}
+        >
+          Available Teams
+        </h3>
 
+        <p
+          style={{
+            margin: "5px 0 0",
+            fontSize: "13px",
+            color: "#9ca3af",
+          }}
+        >
+          Request to join a team
+        </p>
+      </div>
+
+      <input
+        type="text"
+        placeholder="Search teams..."
+        value={teamSearch}
+        onChange={(e) => setTeamSearch(e.target.value)}
+        style={{
+          padding: "10px 14px",
+          borderRadius: "8px",
+          border: "1px solid #d1d5db",
+          outline: "none",
+          width: "220px",
+          fontSize: "14px",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+
+    {/* AVAILABLE TEAMS */}
+
+    {teams.filter((team) =>
+      team.name
+        .toLowerCase()
+        .includes(teamSearch.toLowerCase())
+    ).length === 0 ? (
+      <div
+        style={{
+          padding: "30px",
+          textAlign: "center",
+          background: "#f9fafb",
+          borderRadius: "10px",
+          color: "#6b7280",
+        }}
+      >
+        No matching teams found.
+      </div>
+    ) : (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "18px",
+          width: "100%",
+        }}
+      >
+        {teams
+          .filter((team) =>
+            team.name
+              .toLowerCase()
+              .includes(teamSearch.toLowerCase())
+          )
+          .map((team) => {
+            const alreadyMember = myTeams.some(
+              (myTeam) =>
+                String(myTeam._id) === String(team._id)
+            );
+
+            const requestSent =
+              requestedTeams.includes(team._id);
+
+            return (
+              <div
+                key={team._id}
+                style={{
+                  padding: "18px",
+                  borderRadius: "12px",
+                  border: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* ICON + STATUS */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "10px",
+                      background: "#f0fdf4",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "22px",
+                    }}
+                  >
+                    {team.icon || "👥"}
+                  </div>
+
+                  <span
+                    style={{
+                      padding: "4px 9px",
+                      borderRadius: "20px",
+                      background: "#ecfdf5",
+                      color: "#15803d",
+                      fontSize: "11px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    ● Active
+                  </span>
+                </div>
+
+                {/* NAME */}
+                <h4
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "17px",
+                    color: "#1f2937",
+                  }}
+                >
+                  {team.name}
+                </h4>
+
+                {/* DESCRIPTION */}
+                <p
+                  style={{
+                    color: "#6b7280",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    margin: "0 0 12px",
+                    minHeight: "40px",
+                  }}
+                >
+                  {team.description || "No description available."}
+                </p>
+
+                {/* MEMBERS */}
+                <div
+                  style={{
+                    color: "#4b5563",
+                    fontSize: "13px",
+                  }}
+                >
+                  👤 {team.members?.length || 0} Members
+                </div>
+
+                {/* JOIN BUTTON */}
+                <button
+                  type="button"
+                  disabled={alreadyMember || requestSent}
+                  onClick={() =>
+                    requestToJoinTeam(team._id)
+                  }
+                  style={{
+                    marginTop: "16px",
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor:
+                      alreadyMember || requestSent
+                        ? "default"
+                        : "pointer",
+                    background:
+                      alreadyMember || requestSent
+                        ? "#e5e7eb"
+                        : "#166534",
+                    color:
+                      alreadyMember || requestSent
+                        ? "#6b7280"
+                        : "#ffffff",
+                    fontWeight: "600",
+                    fontSize: "13px",
+                  }}
+                >
+                  {alreadyMember
+                    ? "✓ Already a Member"
+                    : requestSent
+                    ? "✓ Request Pending"
+                    : "＋ Request to Join"}
+                </button>
+              </div>
+            );
+          })}
+      </div>
+    )}
+
+    {/* NO TEAMS */}
+    {teams.length === 0 && !teamLoading && (
+      <div
+        style={{
+          marginTop: "15px",
+          padding: "30px",
+          textAlign: "center",
+          color: "#6b7280",
+          background: "#f9fafb",
+          borderRadius: "10px",
+        }}
+      >
+        No teams are currently available.
+      </div>
+    )}
+  </div>
 </section>
+      </main>
     </div>
   );
 }
 
 const styles = {
+  /* ============================================================
+     MAIN LAYOUT
+  ============================================================ */
+
   container: {
     display: "flex",
     minHeight: "100vh",
-    backgroundColor: "#f8fafc",
-    color: "#1e293b",
-    fontFamily:
-      "Inter, Arial, Helvetica, sans-serif",
+    width: "100%",
+    background: "#E8EEF6",
+    color: "#0F172A",
+    fontFamily: "Inter, Arial, Helvetica, sans-serif",
   },
 
   sidebar: {
-    width: "250px",
-    backgroundColor: "#ffffff",
-    borderRight: "1px solid #e2e8f0",
-    display: "flex",
-    flexDirection: "column",
+    width: "252px",
+    minWidth: "252px",
+    height: "100vh",
     position: "fixed",
     left: 0,
     top: 0,
-    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    background: "#0F172A",
+    borderRight: "1px solid #1E293B",
+    boxShadow: "4px 0 18px rgba(15, 23, 42, 0.12)",
     zIndex: 100,
   },
 
@@ -3623,102 +6596,121 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    padding: "25px 20px",
-    borderBottom: "1px solid #e2e8f0",
+    padding: "20px 18px",
+    borderBottom: "1px solid #1E293B",
   },
 
   logoIcon: {
-    width: "42px",
-    height: "42px",
-    borderRadius: "10px",
-    backgroundColor: "#4f46e5",
-    color: "white",
+    width: "38px",
+    height: "38px",
+    borderRadius: "9px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "22px",
-    fontWeight: "bold",
+    background: "#2563EB",
+    color: "#FFFFFF",
+    fontSize: "18px",
+    fontWeight: "800",
+    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.30)",
   },
 
   brandTitle: {
     margin: 0,
-    fontSize: "15px",
+    color: "#F8FAFC",
+    fontSize: "17px",
     fontWeight: "800",
-    color: "#1e293b",
+    letterSpacing: "-0.2px",
   },
 
   brandSub: {
-    margin: "3px 0 0",
-    fontSize: "11px",
-    color: "#64748b",
+    margin: "4px 0 0",
+    color: "#94A3B8",
+    fontSize: "12px",
+    fontWeight: "500",
   },
 
   navSection: {
-    padding: "20px 12px",
     display: "flex",
     flexDirection: "column",
     gap: "5px",
+    padding: "17px 10px",
+    flex: 1,
   },
 
   menuButton: {
-    border: "none",
-    backgroundColor: "transparent",
-    padding: "12px 14px",
-    borderRadius: "8px",
-    textAlign: "left",
-    color: "#64748b",
-    cursor: "pointer",
-    fontSize: "14px",
+    width: "100%",
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "11px",
+    padding: "12px 13px",
+    border: "1px solid transparent",
+    borderRadius: "7px",
+    background: "transparent",
+    color: "#B8C2D1",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    textAlign: "left",
   },
 
   activeMenu: {
-    border: "none",
-    backgroundColor: "#eef2ff",
-    padding: "12px 14px",
-    borderRadius: "8px",
-    textAlign: "left",
-    color: "#4338ca",
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    gap: "11px",
+    padding: "12px 13px",
+    border: "1px solid #334155",
+    borderRadius: "7px",
+    background: "#1E293B",
+    color: "#FFFFFF",
     cursor: "pointer",
     fontSize: "14px",
     fontWeight: "700",
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
+    textAlign: "left",
+    boxShadow: "inset 3px 0 0 #3B82F6",
   },
 
   logoutButton: {
-    margin: "auto 12px 20px",
-    border: "1px solid #e2e8f0",
-    backgroundColor: "#ffffff",
-    padding: "12px 14px",
-    borderRadius: "8px",
-    textAlign: "left",
-    color: "#dc2626",
-    cursor: "pointer",
-    fontSize: "14px",
+    margin: "0 10px 12px",
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "10px",
+    padding: "12px 13px",
+    border: "1px solid #334155",
+    borderRadius: "7px",
+    background: "#151F30",
+    color: "#FCA5A5",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "600",
+    textAlign: "left",
   },
 
   main: {
-    marginLeft: "250px",
-    width: "calc(100% - 250px)",
+    flex: 1,
+    marginLeft: "252px",
+    width: "calc(100% - 252px)",
+    minWidth: 0,
     minHeight: "100vh",
+    background: "#E8EEF6",
   },
 
+  /* ============================================================
+     TOPBAR
+  ============================================================ */
+
   topbar: {
-    height: "70px",
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
+    height: "62px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 30px",
-    boxSizing: "border-box",
+    justifyContent: "flex-end",
+    padding: "0 32px",
+    background: "#FFFFFF",
+    borderBottom: "1px solid #CBD5E1",
+    boxShadow: "0 1px 5px rgba(15, 23, 42, 0.05)",
+    position: "sticky",
+    top: 0,
+    zIndex: 50,
   },
 
   profileArea: {
@@ -3727,455 +6719,541 @@ const styles = {
     gap: "12px",
   },
 
- notificationWrapper: {
-  position: "relative",
-  cursor: "pointer",
-},
+  notificationWrapper: {
+    position: "relative",
+  },
 
-notification: {
-  width: "38px",
-  height: "38px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "21px",
-  color: "#64748b",
-  borderRadius: "50%",
-  transition: "background-color 0.2s",
-},
-
-notificationBadge: {
-  position: "absolute",
-  top: "-2px",
-  right: "-2px",
-  minWidth: "18px",
-  height: "18px",
-  padding: "0 4px",
-  borderRadius: "10px",
-  backgroundColor: "#ef4444",
-  color: "#ffffff",
-  fontSize: "10px",
-  fontWeight: "700",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  boxSizing: "border-box",
-  border: "2px solid #ffffff",
-},
-
-notificationDropdown: {
-  position: "absolute",
-  top: "48px",
-  right: "0",
-  width: "380px",
-  maxHeight: "480px",
-  backgroundColor: "#ffffff",
-  border: "1px solid #e2e8f0",
-  borderRadius: "12px",
-  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.15)",
-  zIndex: 1000,
-  overflow: "hidden",
-},
-
-notificationHeader: {
-  padding: "16px 18px",
-  borderBottom: "1px solid #e2e8f0",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "12px",
-},
-
-notificationUnreadText: {
-  display: "block",
-  marginTop: "3px",
-  fontSize: "12px",
-  color: "#64748b",
-  fontWeight: "400",
-},
-
-markAllButton: {
-  border: "none",
-  backgroundColor: "transparent",
-  color: "#4f46e5",
-  fontSize: "12px",
-  fontWeight: "600",
-  cursor: "pointer",
-  padding: "4px",
-},
-
-notificationList: {
-  maxHeight: "410px",
-  overflowY: "auto",
-},
-
-notificationItem: {
-  display: "flex",
-  gap: "12px",
-  padding: "14px 18px",
-  borderBottom: "1px solid #f1f5f9",
-  cursor: "pointer",
-  transition: "background-color 0.2s",
-},
-
-notificationItemIcon: {
-  width: "34px",
-  height: "34px",
-  minWidth: "34px",
-  borderRadius: "50%",
-  backgroundColor: "#eef2ff",
-  color: "#4f46e5",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "15px",
-  fontWeight: "700",
-},
-
-notificationItemContent: {
-  flex: 1,
-  minWidth: 0,
-},
-
-notificationItemTop: {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "8px",
-  fontSize: "13px",
-  color: "#1e293b",
-},
-
-notificationMessage: {
-  margin: "5px 0",
-  fontSize: "12px",
-  lineHeight: "1.5",
-  color: "#64748b",
-},
-
-notificationDate: {
-  fontSize: "10px",
-  color: "#94a3b8",
-},
-
-unreadDot: {
-  width: "7px",
-  height: "7px",
-  minWidth: "7px",
-  borderRadius: "50%",
-  backgroundColor: "#4f46e5",
-},
-
-notificationEmpty: {
-  padding: "40px 20px",
-  textAlign: "center",
-  color: "#64748b",
-  fontSize: "13px",
-},
-
-emptyNotificationIcon: {
-  fontSize: "28px",
-  marginBottom: "8px",
-},
-
-  avatar: {
+  notification: {
     width: "38px",
     height: "38px",
-    borderRadius: "50%",
-    backgroundColor: "#4f46e5",
-    color: "white",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "bold",
-  },
-
-  userName: {
-    display: "block",
-    fontSize: "14px",
-    color: "#1e293b",
-  },
-
-  userRole: {
-    margin: "2px 0 0",
-    fontSize: "12px",
-    color: "#64748b",
-  },
-
-  content: {
-    padding: "30px",
-    maxWidth: "1500px",
-    margin: "0 auto",
-  },
-
-  welcome: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: "25px",
-  },
-
-  welcomeTitle: {
-    margin: 0,
-    fontSize: "30px",
-    color: "#0f172a",
-  },
-
-  welcomeText: {
-    margin: "8px 0 0",
-    color: "#64748b",
-    fontSize: "15px",
-  },
-
-  date: {
-    margin: 0,
-    color: "#64748b",
-    fontSize: "13px",
-  },
-
-  stats: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(210px, 1fr))",
-    gap: "18px",
-    marginBottom: "25px",
-  },
-
-  statCard: {
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    padding: "20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-    boxSizing: "border-box",
-  },
-
-  totalCard: {
-    borderTop: "4px solid #4f46e5",
-  },
-
-  pendingCard: {
-    borderTop: "4px solid #f59e0b",
-  },
-
-  approvedCard: {
-    borderTop: "4px solid #16a34a",
-  },
-
-  rejectedCard: {
-    borderTop: "4px solid #dc2626",
-  },
-
-  statIcon: {
-    width: "45px",
-    height: "45px",
-    borderRadius: "10px",
-    backgroundColor: "#f1f5f9",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "20px",
-    color: "#475569",
-  },
-
-  statNumber: {
-    margin: 0,
-    fontSize: "25px",
-    color: "#0f172a",
-  },
-
-  statLabel: {
-    margin: "2px 0 0",
-    fontWeight: "700",
-    fontSize: "14px",
-    color: "#334155",
-  },
-
-  smallText: {
-    margin: "4px 0 0",
-    color: "#94a3b8",
-    fontSize: "11px",
-  },
-
-  section: {
-    marginBottom: "30px",
-    scrollMarginTop: "25px",
-  },
-
-  sectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "15px",
-  },
-
-  sectionTitle: {
-    margin: 0,
-    fontSize: "21px",
-    color: "#1e293b",
-  },
-
-  sectionSubtitle: {
-    margin: "5px 0 0",
-    color: "#64748b",
-    fontSize: "13px",
-  },
-
-  chartContainer: {
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    padding: "20px",
-    boxSizing: "border-box",
-  },
-
-  quickPanel: {
-    backgroundColor: "#eef2ff",
-    border: "1px solid #c7d2fe",
-    borderRadius: "12px",
-    padding: "22px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "20px",
-    marginBottom: "30px",
-  },
-
-  panelTitle: {
-    margin: 0,
-    fontSize: "19px",
-    color: "#312e81",
-  },
-
-  panelText: {
-    margin: "5px 0 0",
-    color: "#4f46e5",
-    fontSize: "13px",
-  },
-
-  primaryButton: {
-    padding: "11px 18px",
-    border: "none",
+    border: "1px solid #D1D9E6",
     borderRadius: "8px",
-    backgroundColor: "#4f46e5",
-    color: "white",
+    background: "#FFFFFF",
+    color: "#475569",
     cursor: "pointer",
-    fontWeight: "700",
-    fontSize: "14px",
-    whiteSpace: "nowrap",
+    position: "relative",
+    fontSize: "16px",
   },
 
-  formCard: {
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    padding: "22px",
-    boxSizing: "border-box",
-  },
-
-  formGroup: {
-    marginBottom: "18px",
-  },
-
-  label: {
-    display: "block",
-    marginBottom: "7px",
-    fontSize: "13px",
-    fontWeight: "700",
-    color: "#334155",
-  },
-
-  input: {
-    width: "100%",
-    padding: "11px 13px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "7px",
-    fontSize: "14px",
-    color: "#1e293b",
-    backgroundColor: "white",
-    boxSizing: "border-box",
-    outline: "none",
-  },
-
-  textarea: {
-    width: "100%",
-    padding: "11px 13px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "7px",
-    fontSize: "14px",
-    color: "#1e293b",
-    backgroundColor: "white",
-    boxSizing: "border-box",
-    resize: "vertical",
-    fontFamily:
-      "Inter, Arial, Helvetica, sans-serif",
-    outline: "none",
-  },
-
-  fileInput: {
-    width: "100%",
-    padding: "10px",
-    border: "1px dashed #94a3b8",
-    borderRadius: "7px",
-    backgroundColor: "#f8fafc",
-    boxSizing: "border-box",
-    fontSize: "13px",
-  },
-
-  helperText: {
-    margin: "7px 0 0",
-    fontSize: "11px",
-    color: "#64748b",
-  },
-
-  selectedFilesContainer: {
-    marginTop: "12px",
-    padding: "12px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "8px",
-    border: "1px solid #e2e8f0",
-  },
-
-  selectedFilesTitle: {
-    margin: "0 0 8px",
-    fontWeight: "700",
-    fontSize: "12px",
-    color: "#475569",
-  },
-
-  selectedFileItem: {
+  notificationBadge: {
+    position: "absolute",
+    top: "-5px",
+    right: "-5px",
+    minWidth: "18px",
+    height: "18px",
+    padding: "0 5px",
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    gap: "10px",
-    padding: "7px 0",
-    borderBottom: "1px solid #e2e8f0",
-    fontSize: "12px",
-    color: "#334155",
+    justifyContent: "center",
+    borderRadius: "999px",
+    background: "#DC2626",
+    color: "#FFFFFF",
+    fontSize: "10px",
+    fontWeight: "800",
+    border: "2px solid #FFFFFF",
   },
 
-  fileSize: {
-    color: "#64748b",
-    whiteSpace: "nowrap",
+  notificationDropdown: {
+    position: "absolute",
+    top: "48px",
+    right: 0,
+    width: "370px",
+    maxHeight: "440px",
+    overflowY: "auto",
+    background: "#FFFFFF",
+    border: "1px solid #D1D9E6",
+    borderRadius: "10px",
+    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.16)",
+    zIndex: 200,
   },
 
-  successMessage: {
-    padding: "11px 13px",
-    marginBottom: "15px",
-    backgroundColor: "#dcfce7",
-    border: "1px solid #bbf7d0",
-    color: "#166534",
-    borderRadius: "7px",
+  notificationHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "15px 17px",
+    borderBottom: "1px solid #E2E8F0",
+  },
+
+  notificationUnreadText: {
+    color: "#475569",
     fontSize: "13px",
     fontWeight: "600",
   },
 
+  markAllButton: {
+    border: "none",
+    background: "transparent",
+    color: "#2563EB",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "700",
+  },
+
+  notificationList: {
+    display: "flex",
+    flexDirection: "column",
+  },
+
+  notificationItem: {
+    display: "flex",
+    gap: "11px",
+    padding: "13px 17px",
+    borderBottom: "1px solid #F1F5F9",
+    cursor: "pointer",
+  },
+
+  notificationItemIcon: {
+    width: "32px",
+    height: "32px",
+    minWidth: "32px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "7px",
+    background: "#EFF6FF",
+    color: "#2563EB",
+    fontSize: "14px",
+  },
+
+  notificationItemContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  notificationItemTop: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+  },
+
+  notificationMessage: {
+    margin: 0,
+    color: "#1E293B",
+    fontSize: "13px",
+    lineHeight: "1.5",
+  },
+
+  notificationDate: {
+    marginTop: "5px",
+    color: "#94A3B8",
+    fontSize: "11px",
+  },
+
+  unreadDot: {
+    width: "7px",
+    height: "7px",
+    minWidth: "7px",
+    borderRadius: "50%",
+    background: "#2563EB",
+  },
+
+  notificationEmpty: {
+    padding: "35px 20px",
+    textAlign: "center",
+    color: "#64748B",
+    fontSize: "13px",
+  },
+
+  emptyNotificationIcon: {
+    width: "40px",
+    height: "40px",
+    margin: "0 auto 10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    background: "#F1F5F9",
+    color: "#94A3B8",
+  },
+
+  avatar: {
+    width: "36px",
+    height: "36px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "8px",
+    background: "#1D4ED8",
+    color: "#FFFFFF",
+    fontSize: "14px",
+    fontWeight: "800",
+  },
+
+  userName: {
+    margin: 0,
+    color: "#172033",
+    fontSize: "13px",
+    fontWeight: "700",
+  },
+
+  userRole: {
+    margin: "3px 0 0",
+    color: "#64748B",
+    fontSize: "11px",
+    fontWeight: "500",
+  },
+
+  /* ============================================================
+     MAIN CONTENT
+  ============================================================ */
+
+  content: {
+    width: "100%",
+    maxWidth: "none",
+    boxSizing: "border-box",
+    margin: 0,
+    padding: "32px 38px 60px",
+  },
+
+  welcome: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "25px",
+    paddingBottom: "22px",
+    marginBottom: "22px",
+    borderBottom: "1px solid #CBD5E1",
+  },
+
+  welcomeTitle: {
+    margin: 0,
+    color: "#0F172A",
+    fontSize: "31px",
+    lineHeight: "1.25",
+    fontWeight: "800",
+    letterSpacing: "-0.7px",
+  },
+
+  welcomeText: {
+    margin: "9px 0 0",
+    color: "#52647A",
+    fontSize: "15px",
+    lineHeight: "1.55",
+  },
+
+  date: {
+    padding: "10px 14px",
+    border: "1px solid #CBD5E1",
+    borderRadius: "8px",
+    background: "#F8FAFC",
+    color: "#475569",
+    fontSize: "12px",
+    fontWeight: "700",
+    whiteSpace: "nowrap",
+  },
+
+  /* ============================================================
+     KPI / STATS
+  ============================================================ */
+
+  stats: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "17px",
+    marginBottom: "27px",
+  },
+
+  statCard: {
+    position: "relative",
+    minHeight: "105px",
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+    padding: "19px 20px",
+    background: "#FFFFFF",
+    border: "1px solid #CBD5E1",
+    borderRadius: "10px",
+    boxShadow: "0 3px 10px rgba(15, 23, 42, 0.05)",
+    overflow: "hidden",
+  },
+
+  totalCard: {
+    borderTop: "3px solid #2563EB",
+  },
+
+  pendingCard: {
+    borderTop: "3px solid #D97706",
+  },
+
+  approvedCard: {
+    borderTop: "3px solid #059669",
+  },
+
+  rejectedCard: {
+    borderTop: "3px solid #DC2626",
+  },
+
+  statIcon: {
+    width: "42px",
+    height: "42px",
+    minWidth: "42px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "9px",
+    background: "#EFF6FF",
+    color: "#2563EB",
+    fontSize: "17px",
+  },
+
+  statNumber: {
+    margin: 0,
+    color: "#0F172A",
+    fontSize: "29px",
+    lineHeight: "1",
+    fontWeight: "800",
+    letterSpacing: "-0.5px",
+  },
+
+  statLabel: {
+    margin: "7px 0 0",
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: "700",
+  },
+
+  smallText: {
+    margin: "5px 0 0",
+    color: "#64748B",
+    fontSize: "11px",
+    fontWeight: "500",
+  },
+
+  /* ============================================================
+     SECTIONS
+  ============================================================ */
+
+  section: {
+    marginBottom: "28px",
+  },
+
+  sectionHeader: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: "15px",
+    marginBottom: "13px",
+  },
+
+  sectionTitle: {
+    margin: 0,
+    color: "#172033",
+    fontSize: "22px",
+    fontWeight: "800",
+    letterSpacing: "-0.25px",
+  },
+
+  sectionSubtitle: {
+    margin: "6px 0 0",
+    color: "#52647A",
+    fontSize: "14px",
+    lineHeight: "1.55",
+  },
+
+  /* ============================================================
+     ANALYTICS
+  ============================================================ */
+
+  chartContainer: {
+    width: "100%",
+    minHeight: "260px",
+    boxSizing: "border-box",
+    padding: "22px 24px",
+    background: "#FFFFFF",
+    border: "1px solid #CBD5E1",
+    borderRadius: "10px",
+    boxShadow: "0 3px 10px rgba(15, 23, 42, 0.05)",
+    overflow: "hidden",
+  },
+
+  /* ============================================================
+     QUICK ACTION
+  ============================================================ */
+
+  quickPanel: {
+    position: "relative",
+    width: "100%",
+    boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "30px",
+    padding: "27px 29px",
+    marginBottom: "28px",
+    background:
+      "linear-gradient(105deg, #0F172A 0%, #172554 65%, #1E3A5F 100%)",
+    border: "1px solid #263449",
+    borderRadius: "11px",
+    overflow: "hidden",
+    boxShadow: "0 9px 24px rgba(15, 23, 42, 0.14)",
+  },
+
+  panelTitle: {
+    margin: 0,
+    color: "#FFFFFF",
+    fontSize: "22px",
+    fontWeight: "800",
+    letterSpacing: "-0.3px",
+  },
+
+  panelText: {
+    margin: "9px 0 0",
+    maxWidth: "720px",
+    color: "#C3CEDD",
+    fontSize: "14px",
+    lineHeight: "1.65",
+  },
+
+  primaryButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    minWidth: "155px",
+    padding: "13px 21px",
+    border: "1px solid #60A5FA",
+    borderRadius: "8px",
+    background: "#2563EB",
+    color: "#FFFFFF",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "800",
+    whiteSpace: "nowrap",
+    boxShadow: "0 5px 14px rgba(37, 99, 235, 0.30)",
+  },
+
+  /* ============================================================
+     FORMS
+  ============================================================ */
+
+  formCard: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "25px",
+    background: "#FFFFFF",
+    border: "1px solid #CBD5E1",
+    borderRadius: "10px",
+    boxShadow: "0 3px 10px rgba(15, 23, 42, 0.05)",
+  },
+
+  formGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "7px",
+    marginBottom: "18px",
+  },
+
+  label: {
+    color: "#334155",
+    fontSize: "14px",
+    fontWeight: "700",
+  },
+
+  input: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "13px 14px",
+    border: "1px solid #C7D2E0",
+    borderRadius: "7px",
+    background: "#FFFFFF",
+    color: "#172033",
+    outline: "none",
+    fontSize: "14px",
+    lineHeight: "1.45",
+  },
+
+  textarea: {
+    width: "100%",
+    minHeight: "125px",
+    boxSizing: "border-box",
+    padding: "13px 14px",
+    border: "1px solid #C7D2E0",
+    borderRadius: "7px",
+    background: "#FFFFFF",
+    color: "#172033",
+    outline: "none",
+    resize: "vertical",
+    fontSize: "14px",
+    lineHeight: "1.55",
+    fontFamily: "inherit",
+  },
+
+  fileInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "10px",
+    border: "1px dashed #B8C5D6",
+    borderRadius: "7px",
+    background: "#F8FAFC",
+    color: "#475569",
+    fontSize: "13px",
+    cursor: "pointer",
+  },
+
+  helperText: {
+    margin: 0,
+    color: "#64748B",
+    fontSize: "12px",
+    lineHeight: "1.5",
+  },
+
+  selectedFilesContainer: {
+    marginTop: "13px",
+    padding: "13px",
+    border: "1px solid #DCE3EC",
+    borderRadius: "7px",
+    background: "#F8FAFC",
+  },
+
+  selectedFilesTitle: {
+    margin: "0 0 9px",
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: "700",
+  },
+
+  selectedFileItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    padding: "9px 0",
+    borderBottom: "1px solid #E2E8F0",
+    color: "#475569",
+    fontSize: "13px",
+  },
+
+  fileSize: {
+    color: "#64748B",
+    fontSize: "11px",
+  },
+
+  successMessage: {
+    marginTop: "13px",
+    padding: "11px 13px",
+    border: "1px solid #A7F3D0",
+    borderRadius: "7px",
+    background: "#ECFDF5",
+    color: "#047857",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+
+  /* ============================================================
+     TABLES
+  ============================================================ */
+
   tableCard: {
-    backgroundColor: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
+    width: "100%",
+    background: "#FFFFFF",
+    border: "1px solid #CBD5E1",
+    borderRadius: "10px",
+    boxShadow: "0 3px 10px rgba(15, 23, 42, 0.05)",
     overflow: "hidden",
   },
 
@@ -4187,155 +7265,223 @@ emptyNotificationIcon: {
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: "850px",
-  },
-
-  th: {
-    padding: "14px 16px",
-    textAlign: "left",
-    backgroundColor: "#f8fafc",
-    color: "#475569",
-    fontSize: "12px",
-    fontWeight: "800",
-    borderBottom: "1px solid #e2e8f0",
-    textTransform: "uppercase",
-    letterSpacing: "0.3px",
-  },
-
-  td: {
-    padding: "16px",
-    borderBottom: "1px solid #e2e8f0",
-    verticalAlign: "top",
-    fontSize: "13px",
-    color: "#475569",
-  },
-
-  decisionTitle: {
-    color: "#1e293b",
     fontSize: "14px",
   },
 
-  decisionDescription: {
-    margin: "5px 0 0",
-    maxWidth: "400px",
-    color: "#64748b",
-    lineHeight: "1.5",
-    fontSize: "12px",
+  th: {
+    padding: "16px 17px",
+    background: "#F8FAFC",
+    borderBottom: "1px solid #DCE3EC",
+    color: "#475569",
+    fontSize: "13px",
+    fontWeight: "800",
+    textAlign: "left",
+    whiteSpace: "nowrap",
   },
 
-  statusBadge: {
-    display: "inline-block",
-    padding: "6px 10px",
-    borderRadius: "20px",
-    fontSize: "11px",
+  td: {
+    padding: "19px 17px",
+    borderBottom: "1px solid #E5EAF1",
+    color: "#334155",
+    fontSize: "14px",
+    verticalAlign: "middle",
+  },
+
+  decisionTitle: {
+    margin: 0,
+    color: "#172033",
+    fontSize: "15px",
     fontWeight: "700",
+    lineHeight: "1.45",
+  },
+
+  decisionDescription: {
+    margin: "6px 0 0",
+    color: "#52647A",
+    fontSize: "13px",
+    lineHeight: "1.6",
+  },
+
+  /* ============================================================
+     STATUS
+  ============================================================ */
+
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "7px 12px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: "800",
     whiteSpace: "nowrap",
   },
 
   approvedBadge: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-  },
-
-  rejectedBadge: {
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "7px 12px",
+    borderRadius: "999px",
+    background: "#ECFDF5",
+    color: "#047857",
+    border: "1px solid #A7F3D0",
+    fontSize: "12px",
+    fontWeight: "800",
+    whiteSpace: "nowrap",
   },
 
   reviewBadge: {
-    backgroundColor: "#e0e7ff",
-    color: "#3730a3",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "7px 12px",
+    borderRadius: "999px",
+    background: "#FFF7ED",
+    color: "#C2410C",
+    border: "1px solid #FED7AA",
+    fontSize: "12px",
+    fontWeight: "800",
+    whiteSpace: "nowrap",
   },
 
   pendingBadge: {
-    backgroundColor: "#fef3c7",
-    color: "#92400e",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "7px 12px",
+    borderRadius: "999px",
+    background: "#EFF6FF",
+    color: "#1D4ED8",
+    border: "1px solid #BFDBFE",
+    fontSize: "12px",
+    fontWeight: "800",
+    whiteSpace: "nowrap",
+  },
+
+  rejectedBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "7px 12px",
+    borderRadius: "999px",
+    background: "#FEF2F2",
+    color: "#B91C1C",
+    border: "1px solid #FECACA",
+    fontSize: "12px",
+    fontWeight: "800",
+    whiteSpace: "nowrap",
   },
 
   historyButton: {
     padding: "9px 13px",
-    backgroundColor: "#eef2ff",
-    color: "#4338ca",
-    border: "1px solid #c7d2fe",
+    border: "1px solid #CBD5E1",
     borderRadius: "7px",
+    background: "#FFFFFF",
+    color: "#334155",
     cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "bold",
-    whiteSpace: "nowrap",
+    fontSize: "12px",
+    fontWeight: "700",
   },
+
+  feedbackButton: {
+    padding: "9px 13px",
+    border: "1px solid #BFDBFE",
+    borderRadius: "7px",
+    background: "#EFF6FF",
+    color: "#1D4ED8",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "700",
+  },
+
+  /* ============================================================
+     LOADING / EMPTY
+  ============================================================ */
 
   loading: {
-    padding: "50px",
-    textAlign: "center",
-    color: "#64748b",
-    fontSize: "14px",
-  },
-
-  emptyState: {
-    padding: "55px 30px",
-    textAlign: "center",
-  },
-
-  emptyIcon: {
-    width: "55px",
-    height: "55px",
-    borderRadius: "50%",
-    margin: "0 auto 15px",
-    backgroundColor: "#f1f5f9",
+    minHeight: "190px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "24px",
+    color: "#64748B",
+    fontSize: "14px",
+    fontWeight: "600",
+  },
+
+  emptyState: {
+    padding: "48px 26px",
+    textAlign: "center",
+    background: "#FFFFFF",
+    border: "1px solid #CBD5E1",
+    borderRadius: "10px",
+  },
+
+  emptyIcon: {
+    width: "46px",
+    height: "46px",
+    margin: "0 auto 13px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    background: "#F1F5F9",
+    color: "#64748B",
+    fontSize: "18px",
   },
 
   emptyTitle: {
     margin: 0,
-    fontSize: "17px",
     color: "#334155",
+    fontSize: "16px",
+    fontWeight: "800",
   },
 
   emptyText: {
+    maxWidth: "450px",
     margin: "7px auto 0",
-    maxWidth: "400px",
-    color: "#64748b",
+    color: "#64748B",
     fontSize: "13px",
+    lineHeight: "1.55",
   },
+
+  /* ============================================================
+     GRIDS / CARDS
+  ============================================================ */
 
   twoColumnGrid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(320px, 1fr))",
-    gap: "20px",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "21px",
   },
 
   cardTitle: {
-    margin: "0 0 18px",
+    margin: "0 0 15px",
+    color: "#172033",
     fontSize: "17px",
-    color: "#1e293b",
+    fontWeight: "800",
   },
 
   selectedFileBox: {
-    padding: "10px 12px",
-    marginBottom: "15px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
+    padding: "11px 13px",
+    border: "1px solid #DCE3EC",
     borderRadius: "7px",
-    fontSize: "13px",
-    color: "#475569",
+    background: "#F8FAFC",
   },
 
   mutedText: {
-    color: "#64748b",
-    fontSize: "13px",
-    margin: 0,
+    color: "#64748B",
+    fontSize: "12px",
   },
+
+  /* ============================================================
+     DOCUMENTS
+  ============================================================ */
 
   documentList: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
-    maxHeight: "400px",
-    overflowY: "auto",
+    gap: "9px",
   },
 
   documentItem: {
@@ -4343,682 +7489,1672 @@ emptyNotificationIcon: {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "15px",
-    padding: "12px",
-    border: "1px solid #e2e8f0",
+    padding: "13px",
+    border: "1px solid #E2E8F0",
     borderRadius: "8px",
-    backgroundColor: "#f8fafc",
+    background: "#FFFFFF",
   },
 
   documentInfo: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "11px",
     minWidth: 0,
   },
 
   documentIcon: {
-    width: "35px",
-    height: "35px",
-    borderRadius: "7px",
-    backgroundColor: "#e0e7ff",
+    width: "34px",
+    height: "34px",
+    minWidth: "34px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+    borderRadius: "7px",
+    background: "#EFF6FF",
+    color: "#2563EB",
+    fontSize: "14px",
   },
 
   documentName: {
-    display: "block",
+    margin: 0,
     color: "#334155",
     fontSize: "13px",
-    wordBreak: "break-word",
+    fontWeight: "700",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
 
   documentDate: {
-    margin: "3px 0 0",
-    color: "#94a3b8",
+    marginTop: "4px",
+    color: "#64748B",
     fontSize: "11px",
   },
 
   documentActions: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    justifyContent: "flex-start",
+    gap: "8px",
     flexShrink: 0,
   },
 
   viewButton: {
-    padding: "7px 9px",
+    padding: "7px 10px",
+    border: "1px solid #BFDBFE",
     borderRadius: "6px",
-    backgroundColor: "#e0e7ff",
-    color: "#3730a3",
-    textDecoration: "none",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-
-  downloadButton: {
-    padding: "7px 9px",
-    borderRadius: "6px",
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-    textDecoration: "none",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-
-  deleteButton: {
-    padding: "7px 9px",
-    borderRadius: "6px",
-    border: "none",
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
+    background: "#EFF6FF",
+    color: "#1D4ED8",
     cursor: "pointer",
     fontSize: "11px",
     fontWeight: "700",
   },
 
+  downloadButton: {
+    padding: "7px 10px",
+    border: "1px solid #A7F3D0",
+    borderRadius: "6px",
+    background: "#ECFDF5",
+    color: "#047857",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+
+  deleteButton: {
+    padding: "7px 10px",
+    border: "1px solid #FECACA",
+    borderRadius: "6px",
+    background: "#FEF2F2",
+    color: "#B91C1C",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+
+  /* ============================================================
+     DISCUSSIONS
+  ============================================================ */
+
   discussionList: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
-    maxHeight: "450px",
-    overflowY: "auto",
+    gap: "11px",
   },
 
   discussionItem: {
-    padding: "13px",
-    border: "1px solid #e2e8f0",
+    padding: "15px",
+    border: "1px solid #E2E8F0",
     borderRadius: "8px",
-    backgroundColor: "#f8fafc",
+    background: "#FFFFFF",
   },
 
   discussionHeader: {
     display: "flex",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-start",
     gap: "10px",
-    marginBottom: "8px",
+    marginBottom: "9px",
   },
 
   discussionUser: {
-    color: "#334155",
-    fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   },
 
   discussionRole: {
-    marginLeft: "7px",
-    padding: "3px 6px",
-    borderRadius: "10px",
-    backgroundColor: "#e0e7ff",
-    color: "#3730a3",
-    fontSize: "9px",
+    padding: "4px 7px",
+    borderRadius: "4px",
+    background: "#F1F5F9",
+    color: "#64748B",
+    fontSize: "10px",
     fontWeight: "700",
   },
 
   discussionDate: {
-    color: "#94a3b8",
-    fontSize: "10px",
-    whiteSpace: "nowrap",
+    color: "#64748B",
+    fontSize: "11px",
   },
 
   discussionText: {
     margin: 0,
     color: "#475569",
     fontSize: "13px",
-    lineHeight: "1.5",
-    whiteSpace: "pre-wrap",
+    lineHeight: "1.6",
   },
 
   emptyMiniState: {
-    padding: "35px 15px",
+    padding: "28px 16px",
     textAlign: "center",
+    border: "1px dashed #CBD5E1",
+    borderRadius: "8px",
+    background: "#F8FAFC",
   },
 
   emptyMiniIcon: {
-    fontSize: "28px",
-    marginBottom: "8px",
+    width: "34px",
+    height: "34px",
+    margin: "0 auto 9px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    background: "#E2E8F0",
+    color: "#64748B",
   },
+
+  /* ============================================================
+     ALTERNATIVES / COMPARISON
+  ============================================================ */
 
   alternativeLayout: {
     display: "grid",
-    gridTemplateColumns:
-      "minmax(300px, 0.8fr) minmax(500px, 1.2fr)",
-    gap: "20px",
+    gridTemplateColumns: "minmax(300px, 0.8fr) minmax(0, 1.5fr)",
+    gap: "21px",
     alignItems: "start",
   },
 
   formRow: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(2, minmax(0, 1fr))",
-    gap: "12px",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "16px",
   },
 
   comparisonTableWrapper: {
     width: "100%",
     overflowX: "auto",
+    border: "1px solid #DCE3EC",
+    borderRadius: "8px",
+    background: "#FFFFFF",
   },
 
   comparisonTable: {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: "600px",
+    fontSize: "13px",
   },
 
   comparisonTh: {
-    padding: "11px",
-    backgroundColor: "#f8fafc",
-    borderBottom: "1px solid #e2e8f0",
+    padding: "12px 13px",
+    background: "#F8FAFC",
+    borderBottom: "1px solid #DCE3EC",
     color: "#475569",
+    fontSize: "12px",
+    fontWeight: "800",
     textAlign: "left",
-    fontSize: "11px",
-    textTransform: "uppercase",
   },
 
   comparisonTd: {
-    padding: "12px 11px",
-    borderBottom: "1px solid #e2e8f0",
+    padding: "12px 13px",
+    borderBottom: "1px solid #EEF2F7",
     color: "#475569",
-    fontSize: "12px",
-    verticalAlign: "top",
+    fontSize: "13px",
   },
 
   alternativeDescription: {
-    margin: "4px 0 0",
-    color: "#64748b",
-    fontSize: "11px",
-    lineHeight: "1.4",
+    margin: "6px 0 0",
+    color: "#64748B",
+    fontSize: "12px",
+    lineHeight: "1.5",
   },
 
-  // ============================================================
-  // AUDIT HISTORY STYLES
-  // ============================================================
+  /* ============================================================
+     AUDIT HISTORY MODAL
+  ============================================================ */
 
   modalOverlay: {
     position: "fixed",
     inset: 0,
-    backgroundColor:
-      "rgba(15, 23, 42, 0.65)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "24px",
+    padding: "20px",
+    background: "rgba(15, 23, 42, 0.55)",
+    backdropFilter: "blur(3px)",
     zIndex: 1000,
-    boxSizing: "border-box",
   },
 
   auditModal: {
     width: "100%",
-    maxWidth: "850px",
-    maxHeight: "90vh",
-    backgroundColor: "white",
-    borderRadius: "14px",
-    boxShadow:
-      "0 20px 60px rgba(15, 23, 42, 0.25)",
+    maxWidth: "780px",
+    maxHeight: "85vh",
     display: "flex",
     flexDirection: "column",
+    background: "#FFFFFF",
+    border: "1px solid #DCE3EC",
+    borderRadius: "11px",
+    boxShadow: "0 24px 60px rgba(15, 23, 42, 0.20)",
     overflow: "hidden",
   },
 
   auditModalHeader: {
     display: "flex",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "20px",
-    padding: "24px 26px",
-    borderBottom: "1px solid #e2e8f0",
+    gap: "15px",
+    padding: "19px 22px",
+    borderBottom: "1px solid #E2E8F0",
   },
 
   auditModalTitle: {
     margin: 0,
-    fontSize: "23px",
-    color: "#1e293b",
+    color: "#172033",
+    fontSize: "19px",
+    fontWeight: "800",
   },
 
   auditDecisionTitle: {
-    margin: "8px 0 0",
-    color: "#475569",
-    fontSize: "15px",
-    fontWeight: "bold",
+    margin: "5px 0 0",
+    color: "#64748B",
+    fontSize: "13px",
   },
 
   closeModalButton: {
-    border: "none",
-    backgroundColor: "#f1f5f9",
-    color: "#475569",
     width: "36px",
     height: "36px",
-    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #CBD5E1",
+    borderRadius: "7px",
+    background: "#FFFFFF",
+    color: "#475569",
     cursor: "pointer",
-    fontSize: "18px",
-    flexShrink: 0,
+    fontSize: "16px",
   },
 
   auditModalBody: {
-    padding: "24px 26px",
+    padding: "22px",
     overflowY: "auto",
   },
 
   auditLoading: {
     padding: "40px",
     textAlign: "center",
-    color: "#64748b",
-    fontSize: "15px",
+    color: "#64748B",
+    fontSize: "13px",
   },
 
   auditError: {
-    padding: "15px",
-    borderRadius: "8px",
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
-    fontWeight: "bold",
+    padding: "13px",
+    border: "1px solid #FECACA",
+    borderRadius: "7px",
+    background: "#FEF2F2",
+    color: "#B91C1C",
+    fontSize: "13px",
   },
 
   auditEmpty: {
-    padding: "40px",
+    padding: "35px",
     textAlign: "center",
-    color: "#64748b",
-    backgroundColor: "#f8fafc",
-    borderRadius: "10px",
+    color: "#64748B",
+    fontSize: "13px",
   },
 
   auditTimeline: {
+    position: "relative",
     display: "flex",
     flexDirection: "column",
+    gap: "13px",
   },
 
   auditTimelineItem: {
+    position: "relative",
     display: "flex",
-    gap: "16px",
-    minHeight: "130px",
+    gap: "13px",
   },
 
   auditTimelineMarker: {
-    width: "22px",
+    position: "relative",
+    width: "17px",
+    minWidth: "17px",
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    flexShrink: 0,
+    justifyContent: "center",
   },
 
   auditDot: {
-    width: "22px",
-    height: "22px",
+    width: "10px",
+    height: "10px",
+    marginTop: "7px",
     borderRadius: "50%",
-    backgroundColor: "#4f46e5",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "10px",
-    flexShrink: 0,
+    background: "#2563EB",
+    border: "2px solid #DBEAFE",
+    zIndex: 2,
   },
 
   auditLine: {
-    width: "2px",
-    flex: 1,
-    backgroundColor: "#cbd5e1",
-    marginTop: "4px",
-    marginBottom: "-1px",
+    position: "absolute",
+    top: "16px",
+    bottom: "-19px",
+    width: "1px",
+    background: "#DCE3EC",
   },
 
   auditCard: {
     flex: 1,
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    padding: "17px",
-    marginBottom: "18px",
-    backgroundColor: "#f8fafc",
-    boxSizing: "border-box",
+    padding: "15px",
+    border: "1px solid #E2E8F0",
+    borderRadius: "8px",
+    background: "#F8FAFC",
   },
 
   auditCardHeader: {
     display: "flex",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "15px",
-    flexWrap: "wrap",
-    marginBottom: "15px",
+    gap: "10px",
+    marginBottom: "9px",
   },
 
   auditAction: {
-    margin: 0,
-    color: "#1e293b",
-    fontSize: "17px",
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: "800",
   },
 
   auditDate: {
-    color: "#64748b",
-    fontSize: "12px",
-    whiteSpace: "nowrap",
+    color: "#64748B",
+    fontSize: "11px",
   },
 
   auditInfoGrid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "15px",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "9px",
+    marginBottom: "9px",
   },
 
   auditLabel: {
-    display: "block",
-    marginBottom: "5px",
-    color: "#64748b",
-    fontSize: "12px",
-    fontWeight: "bold",
-    textTransform: "uppercase",
-    letterSpacing: "0.3px",
+    color: "#64748B",
+    fontSize: "11px",
+    fontWeight: "600",
   },
 
   auditValue: {
-    display: "block",
-    color: "#334155",
-    fontSize: "14px",
+    marginTop: "3px",
+    color: "#475569",
+    fontSize: "12px",
+    fontWeight: "600",
   },
 
   auditDetails: {
-    marginTop: "16px",
-    paddingTop: "14px",
-    borderTop: "1px solid #e2e8f0",
+    marginTop: "9px",
+    paddingTop: "9px",
+    borderTop: "1px solid #E2E8F0",
   },
 
   auditDetailsText: {
     margin: 0,
-    color: "#475569",
-    fontSize: "14px",
-    lineHeight: "1.5",
-    whiteSpace: "pre-wrap",
+    color: "#52647A",
+    fontSize: "12px",
+    lineHeight: "1.6",
   },
 
   auditModalFooter: {
     display: "flex",
     justifyContent: "flex-end",
-    padding: "16px 26px",
-    borderTop: "1px solid #e2e8f0",
-    backgroundColor: "#f8fafc",
+    padding: "14px 22px",
+    borderTop: "1px solid #E2E8F0",
+    background: "#F8FAFC",
   },
 
   closeAuditButton: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: "8px",
-    backgroundColor: "#334155",
-    color: "white",
+    padding: "10px 17px",
+    border: "1px solid #CBD5E1",
+    borderRadius: "7px",
+    background: "#FFFFFF",
+    color: "#334155",
     cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "14px",
+    fontSize: "12px",
+    fontWeight: "700",
   },
-    // ============================================================
-  // REVIEW + FEEDBACK STYLES
-  // ============================================================
+
+  /* ============================================================
+     REVIEW / FEEDBACK
+  ============================================================ */
 
   decisionActionButtons: {
     display: "flex",
-    flexDirection: "column",
-    gap: "7px",
-    alignItems: "flex-start",
-  },
-
-  feedbackButton: {
-    padding: "9px 13px",
-    backgroundColor: "#f0fdf4",
-    color: "#166534",
-    border: "1px solid #bbf7d0",
-    borderRadius: "7px",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontWeight: "bold",
-    whiteSpace: "nowrap",
+    alignItems: "center",
+    gap: "8px",
   },
 
   feedbackModal: {
     width: "100%",
-    maxWidth: "800px",
-    maxHeight: "90vh",
-    backgroundColor: "white",
-    borderRadius: "14px",
-    boxShadow:
-      "0 20px 60px rgba(15, 23, 42, 0.25)",
+    maxWidth: "840px",
+    maxHeight: "88vh",
     display: "flex",
     flexDirection: "column",
+    background: "#FFFFFF",
+    border: "1px solid #DCE3EC",
+    borderRadius: "12px",
+    boxShadow: "0 24px 60px rgba(15, 23, 42, 0.20)",
     overflow: "hidden",
   },
 
   feedbackModalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "20px",
-    padding: "24px 26px",
-    borderBottom: "1px solid #e2e8f0",
+    padding: "21px 25px",
+    borderBottom: "1px solid #E2E8F0",
   },
 
   feedbackModalTitle: {
     margin: 0,
-    fontSize: "23px",
-    color: "#1e293b",
+    color: "#172033",
+    fontSize: "21px",
+    fontWeight: "800",
   },
 
   feedbackDecisionTitle: {
-    margin: "8px 0 0",
-    color: "#475569",
-    fontSize: "15px",
-    fontWeight: "bold",
+    margin: "6px 0 0",
+    color: "#64748B",
+    fontSize: "13px",
   },
 
   feedbackModalBody: {
-    padding: "24px 26px",
+    padding: "25px",
     overflowY: "auto",
   },
 
   feedbackStatusBox: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "15px",
-    padding: "15px 17px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    marginBottom: "20px",
+    padding: "16px 17px",
+    marginBottom: "21px",
+    border: "1px solid #BFDBFE",
+    borderRadius: "8px",
+    background: "#EFF6FF",
+    color: "#1E40AF",
+    fontSize: "14px",
+    fontWeight: "600",
   },
 
   feedbackLabel: {
-    fontSize: "13px",
-    fontWeight: "800",
+    display: "block",
+    marginBottom: "8px",
     color: "#475569",
-    textTransform: "uppercase",
-    letterSpacing: "0.3px",
+    fontSize: "13px",
+    fontWeight: "700",
   },
 
   feedbackSection: {
-    marginBottom: "20px",
+    marginBottom: "23px",
   },
 
   feedbackSectionHeader: {
-    marginBottom: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    marginBottom: "11px",
   },
 
   feedbackSectionTitle: {
     margin: 0,
-    fontSize: "17px",
-    color: "#1e293b",
+    color: "#334155",
+    fontSize: "15px",
+    fontWeight: "800",
   },
 
   feedbackSectionSubtitle: {
-    margin: "4px 0 0",
-    color: "#64748b",
+    margin: "5px 0 0",
+    color: "#64748B",
     fontSize: "12px",
   },
 
   feedbackContentBox: {
     padding: "17px",
-    backgroundColor: "#f0fdf4",
-    border: "1px solid #bbf7d0",
-    borderRadius: "10px",
+    border: "1px solid #DCE3EC",
+    borderRadius: "9px",
+    background: "#F8FAFC",
   },
 
   managerFeedbackContentBox: {
     padding: "17px",
-    backgroundColor: "#eef2ff",
-    border: "1px solid #c7d2fe",
-    borderRadius: "10px",
+    border: "1px solid #DCE3EC",
+    borderRadius: "9px",
+    background: "#F8FAFC",
   },
 
   feedbackText: {
     margin: 0,
     color: "#334155",
     fontSize: "14px",
-    lineHeight: "1.6",
+    lineHeight: "1.7",
     whiteSpace: "pre-wrap",
   },
 
   feedbackPerson: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    marginTop: "16px",
-    paddingTop: "14px",
-    borderTop: "1px solid #dbe4ea",
+    gap: "12px",
+    marginBottom: "12px",
   },
 
   feedbackAvatar: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    backgroundColor: "#dcfce7",
-    color: "#166534",
+    width: "40px",
+    height: "40px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "800",
+    borderRadius: "8px",
+    background: "#2563EB",
+    color: "#FFFFFF",
     fontSize: "14px",
-    flexShrink: 0,
+    fontWeight: "800",
   },
 
   managerFeedbackAvatar: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    backgroundColor: "#e0e7ff",
-    color: "#3730a3",
+    width: "40px",
+    height: "40px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "800",
+    borderRadius: "8px",
+    background: "#059669",
+    color: "#FFFFFF",
     fontSize: "14px",
-    flexShrink: 0,
+    fontWeight: "800",
   },
 
   feedbackPersonName: {
-    display: "block",
+    margin: 0,
     color: "#334155",
-    fontSize: "13px",
+    fontSize: "14px",
+    fontWeight: "800",
   },
 
   feedbackPersonRole: {
-    display: "inline-block",
-    marginTop: "2px",
-    color: "#64748b",
+    margin: "3px 0 0",
+    color: "#64748B",
     fontSize: "11px",
   },
 
   feedbackPersonEmail: {
-    display: "block",
-    marginTop: "2px",
-    color: "#94a3b8",
-    fontSize: "10px",
+    margin: "3px 0 0",
+    color: "#64748B",
+    fontSize: "11px",
   },
 
   noFeedbackBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "16px",
-    backgroundColor: "#f8fafc",
-    border: "1px dashed #cbd5e1",
-    borderRadius: "10px",
+    padding: "34px 25px",
+    textAlign: "center",
+    border: "1px dashed #CBD5E1",
+    borderRadius: "9px",
+    background: "#F8FAFC",
   },
 
   noFeedbackIcon: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    backgroundColor: "#e2e8f0",
-    color: "#64748b",
+    width: "42px",
+    height: "42px",
+    margin: "0 auto 11px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "18px",
-    flexShrink: 0,
+    borderRadius: "50%",
+    background: "#E2E8F0",
+    color: "#64748B",
+    fontSize: "16px",
   },
 
   noFeedbackTitle: {
-    display: "block",
-    color: "#475569",
-    fontSize: "13px",
+    margin: 0,
+    color: "#334155",
+    fontSize: "14px",
+    fontWeight: "800",
   },
 
   noFeedbackText: {
-    margin: "4px 0 0",
-    color: "#94a3b8",
-    fontSize: "11px",
-    lineHeight: "1.4",
+    margin: "6px 0 0",
+    color: "#64748B",
+    fontSize: "12px",
+    lineHeight: "1.55",
   },
 
   finalResultBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-    padding: "17px",
-    borderRadius: "10px",
-    marginTop: "5px",
+    padding: "18px",
+    borderRadius: "9px",
+    marginTop: "19px",
   },
 
   finalApprovedBox: {
-    backgroundColor: "#dcfce7",
-    border: "1px solid #bbf7d0",
+    padding: "18px",
+    border: "1px solid #A7F3D0",
+    borderRadius: "9px",
+    background: "#ECFDF5",
+    marginTop: "19px",
   },
 
   finalRejectedBox: {
-    backgroundColor: "#fee2e2",
-    border: "1px solid #fecaca",
+    padding: "18px",
+    border: "1px solid #FECACA",
+    borderRadius: "9px",
+    background: "#FEF2F2",
+    marginTop: "19px",
   },
 
   finalResultIcon: {
-    width: "42px",
-    height: "42px",
-    borderRadius: "50%",
-    backgroundColor: "white",
+    width: "38px",
+    height: "38px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "20px",
-    fontWeight: "bold",
-    flexShrink: 0,
+    borderRadius: "8px",
+    marginBottom: "10px",
+    fontSize: "17px",
   },
 
   finalResultTitle: {
-    display: "block",
-    color: "#1e293b",
+    margin: 0,
+    color: "#334155",
     fontSize: "15px",
+    fontWeight: "800",
   },
 
   finalResultText: {
-    margin: "4px 0 0",
-    color: "#475569",
-    fontSize: "12px",
-    lineHeight: "1.4",
+    margin: "6px 0 0",
+    color: "#52647A",
+    fontSize: "13px",
+    lineHeight: "1.6",
   },
 
   feedbackModalFooter: {
     display: "flex",
     justifyContent: "flex-end",
-    padding: "16px 26px",
-    borderTop: "1px solid #e2e8f0",
-    backgroundColor: "#f8fafc",
+    gap: "9px",
+    padding: "16px 25px",
+    borderTop: "1px solid #E2E8F0",
+    background: "#F8FAFC",
   },
-};
+  // ============================================================
+/* TEAM WORKSPACE STYLES */
+// ============================================================
 
+// ============================================================
+/* PREMIUM TEAM WORKSPACE STYLES */
+// ============================================================
+
+teamSection: {
+  marginTop: "28px",
+},
+
+teamSectionHeader: {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-end",
+  marginBottom: "18px",
+  gap: "20px",
+},
+
+teamSectionTitle: {
+  margin: 0,
+  fontSize: "22px",
+  fontWeight: 750,
+  color: "#0F172A",
+},
+
+teamSectionSubtitle: {
+  margin: "6px 0 0",
+  color: "#64748B",
+  fontSize: "14px",
+},
+
+teamCountBadge: {
+  background: "#EEF2FF",
+  color: "#4338CA",
+  border: "1px solid #C7D2FE",
+  borderRadius: "999px",
+  padding: "7px 13px",
+  fontSize: "12px",
+  fontWeight: 750,
+  whiteSpace: "nowrap",
+},
+
+/* ============================================================
+   MY TEAM CARDS
+============================================================ */
+
+myTeamsGrid: {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(340px, 1fr))",
+  gap: "18px",
+},
+myTeamsSection: {
+  width: "100%",
+  maxWidth: "1570px",
+  margin: "0 auto",
+  padding: "0 24px 32px",
+  boxSizing: "border-box",
+},
+
+myTeamCard: {
+  position: "relative",
+  background:
+    "linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%)",
+  border: "1px solid #E2E8F0",
+  borderRadius: "16px",
+  padding: "20px",
+  boxShadow:
+    "0 5px 20px rgba(15, 23, 42, 0.055)",
+  transition:
+    "transform 0.2s ease, box-shadow 0.2s ease",
+},
+
+myTeamCardTop: {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
+myTeamIdentity: {
+  display: "flex",
+  alignItems: "center",
+  gap: "13px",
+},
+
+myTeamIcon: {
+  width: "52px",
+  height: "52px",
+  borderRadius: "15px",
+  background:
+    "linear-gradient(135deg, #EEF2FF, #E0E7FF)",
+  border: "1px solid #C7D2FE",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "25px",
+  boxShadow:
+    "0 4px 10px rgba(79, 70, 229, 0.08)",
+  flexShrink: 0,
+},
+
+myTeamName: {
+  margin: 0,
+  color: "#0F172A",
+  fontSize: "17px",
+  fontWeight: 750,
+},
+
+myTeamStatus: {
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  marginTop: "5px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#059669",
+},
+
+myTeamStatusDot: {
+  width: "7px",
+  height: "7px",
+  borderRadius: "50%",
+  background: "#10B981",
+  boxShadow:
+    "0 0 0 3px rgba(16, 185, 129, 0.12)",
+},
+
+myTeamDescription: {
+  margin: "17px 0 18px",
+  color: "#64748B",
+  fontSize: "13px",
+  lineHeight: 1.65,
+  minHeight: "43px",
+},
+
+myTeamInfoGrid: {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "10px",
+},
+
+myTeamInfoItem: {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  background: "#F8FAFC",
+  border: "1px solid #E2E8F0",
+  borderRadius: "11px",
+  padding: "11px",
+  minWidth: 0,
+},
+
+myTeamInfoIcon: {
+  width: "32px",
+  height: "32px",
+  borderRadius: "9px",
+  background: "#EEF2FF",
+  color: "#4F46E5",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "15px",
+  flexShrink: 0,
+},
+
+myTeamInfoLabel: {
+  display: "block",
+  color: "#94A3B8",
+  fontSize: "9px",
+  fontWeight: 750,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+},
+
+myTeamInfoValue: {
+  display: "block",
+  marginTop: "3px",
+  color: "#1E293B",
+  fontSize: "13px",
+  fontWeight: 750,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+},
+
+myTeamCardFooter: {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+  marginTop: "18px",
+  paddingTop: "15px",
+  borderTop: "1px solid #E2E8F0",
+},
+
+teamCreatedText: {
+  color: "#94A3B8",
+  fontSize: "10px",
+},
+
+viewTeamButton: {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  border: "none",
+  background:
+    "linear-gradient(135deg, #4F46E5, #4338CA)",
+  color: "#FFFFFF",
+  borderRadius: "9px",
+  padding: "9px 14px",
+  fontSize: "12px",
+  fontWeight: 750,
+  cursor: "pointer",
+  boxShadow:
+    "0 4px 10px rgba(79, 70, 229, 0.18)",
+},
+
+teamBrowseButton: {
+  marginTop: "12px",
+  border: "none",
+  background:
+    "linear-gradient(135deg, #4F46E5, #4338CA)",
+  color: "#FFFFFF",
+  borderRadius: "9px",
+  padding: "10px 16px",
+  fontSize: "13px",
+  fontWeight: 700,
+  cursor: "pointer",
+},
+
+/* ============================================================
+   EMPTY / LOADING
+============================================================ */
+
+teamEmptyState: {
+  background: "#FFFFFF",
+  border: "1px dashed #CBD5E1",
+  borderRadius: "16px",
+  padding: "42px 25px",
+  textAlign: "center",
+},
+
+teamEmptyIcon: {
+  width: "58px",
+  height: "58px",
+  margin: "0 auto 14px",
+  borderRadius: "16px",
+  background: "#EEF2FF",
+  color: "#4F46E5",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "26px",
+},
+
+teamLoadingIcon: {
+  width: "42px",
+  height: "42px",
+  margin: "0 auto 12px",
+  borderRadius: "50%",
+  background: "#EEF2FF",
+  color: "#4F46E5",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "22px",
+},
+
+/* ============================================================
+   TEAM WORKSPACE MODAL
+============================================================ */
+
+teamDetailsOverlay: {
+  position: "fixed",
+  inset: 0,
+  background:
+    "rgba(15, 23, 42, 0.64)",
+  backdropFilter: "blur(7px)",
+  zIndex: 1000,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "22px",
+},
+
+teamDetailsModal: {
+  width: "100%",
+  maxWidth: "1120px",
+  height: "92vh",
+  maxHeight: "900px",
+  background: "#F8FAFC",
+  borderRadius: "22px",
+  overflow: "hidden",
+  boxShadow:
+    "0 30px 80px rgba(15, 23, 42, 0.30)",
+  display: "flex",
+  flexDirection: "column",
+  border: "1px solid rgba(255,255,255,0.8)",
+},
+
+teamDetailsHeader: {
+  background:
+    "linear-gradient(135deg, #111827 0%, #1E1B4B 100%)",
+  color: "#FFFFFF",
+  padding: "21px 25px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "20px",
+  flexShrink: 0,
+},
+
+teamDetailsTitleArea: {
+  display: "flex",
+  alignItems: "center",
+  gap: "14px",
+  minWidth: 0,
+},
+
+teamDetailsIcon: {
+  width: "54px",
+  height: "54px",
+  borderRadius: "15px",
+  background:
+    "linear-gradient(135deg, #6366F1, #4F46E5)",
+  border: "1px solid rgba(255,255,255,0.2)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "25px",
+  boxShadow:
+    "0 7px 20px rgba(0,0,0,0.18)",
+  flexShrink: 0,
+},
+
+teamWorkspaceLabel: {
+  color: "#A5B4FC",
+  fontSize: "10px",
+  fontWeight: 800,
+  letterSpacing: "0.12em",
+  marginBottom: "4px",
+},
+
+teamDetailsTitle: {
+  margin: 0,
+  color: "#FFFFFF",
+  fontSize: "21px",
+  fontWeight: 750,
+},
+
+teamDetailsSubtitle: {
+  margin: "5px 0 0",
+  color: "#CBD5E1",
+  fontSize: "12px",
+  lineHeight: 1.5,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+},
+
+teamDetailsCloseButton: {
+  width: "36px",
+  height: "36px",
+  border: "1px solid rgba(255,255,255,0.16)",
+  background: "rgba(255,255,255,0.08)",
+  color: "#FFFFFF",
+  borderRadius: "9px",
+  fontSize: "22px",
+  lineHeight: 1,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+},
+
+teamDetailsContent: {
+  padding: "22px",
+  overflowY: "auto",
+  background:
+    "linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)",
+},
+
+teamDetailsLoading: {
+  padding: "70px 20px",
+  textAlign: "center",
+  background: "#FFFFFF",
+},
+
+teamDetailsError: {
+  margin: "20px",
+  padding: "13px 15px",
+  background: "#FEF2F2",
+  border: "1px solid #FECACA",
+  color: "#B91C1C",
+  borderRadius: "10px",
+  fontSize: "13px",
+  fontWeight: 600,
+},
+
+/* ============================================================
+   TEAM OVERVIEW
+============================================================ */
+
+teamOverviewCard: {
+  background:
+    "linear-gradient(135deg, #FFFFFF 0%, #F5F7FF 100%)",
+  border: "1px solid #D9DEFF",
+  borderRadius: "16px",
+  padding: "20px",
+  marginBottom: "18px",
+  boxShadow:
+    "0 4px 14px rgba(79, 70, 229, 0.04)",
+},
+
+teamOverviewHeader: {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: "20px",
+},
+
+teamOverviewLabel: {
+  display: "block",
+  color: "#4F46E5",
+  fontSize: "10px",
+  fontWeight: 800,
+  letterSpacing: "0.10em",
+  marginBottom: "5px",
+},
+
+teamOverviewTitle: {
+  margin: 0,
+  color: "#0F172A",
+  fontSize: "19px",
+  fontWeight: 750,
+},
+
+teamOverviewDescription: {
+  margin: "13px 0 18px",
+  color: "#64748B",
+  fontSize: "13px",
+  lineHeight: 1.6,
+},
+
+activeTeamBadge: {
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  padding: "7px 11px",
+  borderRadius: "999px",
+  background: "#ECFDF5",
+  color: "#047857",
+  border: "1px solid #A7F3D0",
+  fontSize: "10px",
+  fontWeight: 800,
+  whiteSpace: "nowrap",
+},
+
+teamMetaRow: {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: "12px",
+  paddingTop: "16px",
+  borderTop: "1px solid #E0E7FF",
+},
+
+/* ============================================================
+   STATISTICS
+============================================================ */
+
+teamStatsGrid: {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, 1fr)",
+  gap: "12px",
+  marginBottom: "20px",
+},
+
+teamStatCard: {
+  background: "#FFFFFF",
+  border: "1px solid #E2E8F0",
+  borderRadius: "14px",
+  padding: "15px",
+  display: "flex",
+  alignItems: "center",
+  gap: "11px",
+  boxShadow:
+    "0 3px 10px rgba(15, 23, 42, 0.035)",
+},
+
+teamStatIcon: {
+  width: "36px",
+  height: "36px",
+  borderRadius: "10px",
+  background: "#EEF2FF",
+  color: "#4F46E5",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "15px",
+  flexShrink: 0,
+},
+
+teamStatLabel: {
+  display: "block",
+  color: "#64748B",
+  fontSize: "9px",
+  fontWeight: 650,
+  lineHeight: 1.3,
+},
+
+teamStatValue: {
+  display: "block",
+  marginTop: "3px",
+  color: "#0F172A",
+  fontSize: "20px",
+  fontWeight: 800,
+},
+
+/* ============================================================
+   TWO COLUMN WORKSPACE
+============================================================ */
+
+teamWorkspaceGrid: {
+  display: "grid",
+  gridTemplateColumns: "0.9fr 1.1fr",
+  gap: "18px",
+  alignItems: "start",
+},
+
+teamWorkspaceSection: {
+  background: "#FFFFFF",
+  border: "1px solid #E2E8F0",
+  borderRadius: "16px",
+  overflow: "hidden",
+  boxShadow:
+    "0 4px 14px rgba(15, 23, 42, 0.035)",
+},
+
+teamWorkspaceSectionHeader: {
+  padding: "17px 19px",
+  borderBottom: "1px solid #E2E8F0",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "15px",
+  background: "#FFFFFF",
+},
+
+sectionCountBadge: {
+  minWidth: "28px",
+  height: "28px",
+  padding: "0 8px",
+  borderRadius: "8px",
+  background: "#EEF2FF",
+  color: "#4338CA",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "11px",
+  fontWeight: 800,
+},
+
+/* ============================================================
+   MEMBERS
+============================================================ */
+
+teamMembersList: {
+  padding: "5px 19px",
+},
+
+teamMemberRow: {
+  display: "flex",
+  alignItems: "center",
+  gap: "11px",
+  padding: "13px 0",
+  borderBottom: "1px solid #F1F5F9",
+},
+
+teamMemberAvatar: {
+  width: "38px",
+  height: "38px",
+  borderRadius: "11px",
+  background:
+    "linear-gradient(135deg, #E0E7FF, #C7D2FE)",
+  color: "#4338CA",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "12px",
+  fontWeight: 800,
+  flexShrink: 0,
+},
+
+teamMemberInfo: {
+  flex: 1,
+  minWidth: 0,
+},
+
+memberRoleBadge: {
+  background: "#F1F5F9",
+  color: "#475569",
+  border: "1px solid #E2E8F0",
+  borderRadius: "6px",
+  padding: "5px 8px",
+  fontSize: "9px",
+  fontWeight: 750,
+  whiteSpace: "nowrap",
+},
+
+memberDecisionCount: {
+  minWidth: "65px",
+  textAlign: "right",
+},
+
+/* ============================================================
+   DECISIONS
+============================================================ */
+
+teamDecisionsList: {
+  padding: "5px 19px",
+},
+
+teamDecisionRow: {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: "15px",
+  padding: "15px 0",
+  borderBottom: "1px solid #F1F5F9",
+},
+
+teamDecisionMain: {
+  flex: 1,
+  minWidth: 0,
+},
+
+teamDecisionMeta: {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "6px",
+},
+teamDecisionStatus: {
+  padding: "6px 9px",
+  borderRadius: "7px",
+  fontSize: "9px",
+  fontWeight: 800,
+  whiteSpace: "nowrap",
+},
+
+statusApproved: {
+  background: "#ECFDF5",
+  color: "#047857",
+  border: "1px solid #A7F3D0",
+},
+
+statusRejected: {
+  background: "#FEF2F2",
+  color: "#B91C1C",
+  border: "1px solid #FECACA",
+},
+
+statusUnderReview: {
+  background: "#F5F3FF",
+  color: "#6D28D9",
+  border: "1px solid #DDD6FE",
+},
+
+statusPending: {
+  background: "#FFFBEB",
+  color: "#B45309",
+  border: "1px solid #FDE68A",
+},
+
+/* ============================================================
+   FOOTER
+============================================================ */
+
+teamWorkspaceFooter: {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "20px",
+  background: "#FFFFFF",
+  border: "1px solid #E2E8F0",
+  borderRadius: "14px",
+  padding: "14px 18px",
+  marginTop: "2px",
+},
+
+teamFooterLabel: {
+  display: "block",
+  color: "#94A3B8",
+  fontSize: "9px",
+  fontWeight: 750,
+  letterSpacing: "0.06em",
+},
+
+teamFooterValue: {
+  display: "block",
+  marginTop: "3px",
+  color: "#334155",
+  fontSize: "12px",
+  fontWeight: 700,
+},
+
+teamFooterCloseButton: {
+  border: "1px solid #C7D2FE",
+  background: "#EEF2FF",
+  color: "#4338CA",
+  borderRadius: "8px",
+  padding: "8px 13px",
+  fontSize: "11px",
+  fontWeight: 750,
+  cursor: "pointer",
+},
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+
+noTeamData: {
+  padding: "32px 20px",
+  textAlign: "center",
+  color: "#64748B",
+  fontSize: "12px",
+},
+
+noTeamDataIcon: {
+  width: "40px",
+  height: "40px",
+  margin: "0 auto 9px",
+  borderRadius: "11px",
+  background: "#EEF2FF",
+  color: "#4F46E5",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "18px",
+},
+/* ============================================================
+   REPORTS & EXPORT
+============================================================ */
+
+/* ================= REPORTS ================= */
+
+reportsSection: {
+  marginTop: "24px",
+  padding: "24px",
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  backgroundColor: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: "16px",
+  boxShadow: "0 4px 16px rgba(15,23,42,0.04)",
+},
+
+reportsHeader: {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "16px",
+  marginBottom: "24px",
+  paddingBottom: "20px",
+  borderBottom: "1px solid #e2e8f0",
+},
+
+reportsTitle: {
+  margin: 0,
+  fontSize: "25px",
+  fontWeight: "800",
+  color: "#172033",
+  letterSpacing: "-0.5px",
+},
+
+reportsSubtitle: {
+  margin: "7px 0 0",
+  fontSize: "13px",
+  lineHeight: "1.6",
+  color: "#64748b",
+},
+
+reportTabs: {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "10px",
+  marginBottom: "24px",
+  padding: "5px 0 16px",
+  borderBottom: "1px solid #e2e8f0",
+},
+
+reportTab: {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  padding: "11px 17px",
+  border: "1px solid #e2e8f0",
+  borderRadius: "9px",
+  backgroundColor: "#ffffff",
+  color: "#475569",
+  fontSize: "13px",
+  fontWeight: "600",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  transition: "all 0.2s ease",
+},
+
+reportTabActive: {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  padding: "11px 17px",
+  border: "1px solid #4f46e5",
+  borderRadius: "9px",
+  backgroundColor: "#eef2ff",
+  color: "#4338ca",
+  fontSize: "13px",
+  fontWeight: "700",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  boxShadow: "0 2px 5px rgba(79,70,229,0.08)",
+},
+
+reportContent: {
+  width: "100%",
+  minWidth: 0,
+  padding: "24px",
+  boxSizing: "border-box",
+  backgroundColor: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: "14px",
+  overflowX: "auto",
+},
+
+reportStats: {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))",
+  gap: "16px",
+  marginBottom: "26px",
+  width: "100%",
+},
+
+reportStatCard: {
+  minWidth: 0,
+  padding: "22px",
+  backgroundColor: "#ffffff",
+  border: "1px solid #e2e8f0",
+  borderRadius: "12px",
+  boxShadow: "0 2px 7px rgba(15,23,42,0.03)",
+  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+},
+
+reportStatNumber: {
+  margin: "8px 0 0",
+  fontSize: "29px",
+  lineHeight: "1.2",
+  fontWeight: "800",
+  color: "#172033",
+},
+
+reportStatLabel: {
+  margin: "6px 0 0",
+  fontSize: "12px",
+  lineHeight: "1.5",
+  color: "#64748b",
+  fontWeight: "600",
+},
+
+exportActions: {
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: "10px",
+  marginBottom: "20px",
+},
+
+exportPdfButton: {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  padding: "11px 17px",
+  borderRadius: "9px",
+  border: "1px solid #4338ca",
+  backgroundColor: "#4f46e5",
+  color: "#ffffff",
+  fontSize: "12px",
+  fontWeight: "700",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  boxShadow: "0 2px 5px rgba(79,70,229,0.15)",
+},
+
+exportExcelButton: {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  padding: "11px 17px",
+  borderRadius: "9px",
+  border: "1px solid #047857",
+  backgroundColor: "#059669",
+  color: "#ffffff",
+  fontSize: "12px",
+  fontWeight: "700",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  boxShadow: "0 2px 5px rgba(5,150,105,0.12)",
+},
+
+reportError: {
+  padding: "16px 18px",
+  marginBottom: "20px",
+  borderRadius: "10px",
+  backgroundColor: "#fef2f2",
+  color: "#b91c1c",
+  border: "1px solid #fecaca",
+  fontSize: "13px",
+  lineHeight: "1.6",
+},
+
+reportLoading: {
+  minHeight: "260px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "30px",
+  textAlign: "center",
+  color: "#64748b",
+  fontSize: "14px",
+},
+
+reportEmpty: {
+  minHeight: "180px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "35px 20px",
+  textAlign: "center",
+  color: "#64748b",
+  backgroundColor: "#ffffff",
+  border: "1px dashed #cbd5e1",
+  borderRadius: "12px",
+},
+
+/* REPORT TABLE STYLES */
+
+table: {
+  width: "100%",
+  minWidth: "850px",
+  borderCollapse: "separate",
+  borderSpacing: 0,
+  tableLayout: "auto",
+  backgroundColor: "#ffffff",
+  fontSize: "13px",
+},
+
+tableHeader: {
+  padding: "15px 18px",
+  textAlign: "left",
+  verticalAlign: "middle",
+  backgroundColor: "#f1f5f9",
+  color: "#475569",
+  fontSize: "11px",
+  fontWeight: "800",
+  textTransform: "uppercase",
+  letterSpacing: "0.4px",
+  whiteSpace: "nowrap",
+  borderBottom: "1px solid #e2e8f0",
+},
+
+tableCell: {
+  padding: "16px 18px",
+  textAlign: "left",
+  verticalAlign: "middle",
+  color: "#334155",
+  fontSize: "13px",
+  lineHeight: "1.6",
+  borderBottom: "1px solid #f1f5f9",
+  overflowWrap: "break-word",
+},
+
+};
 export default EmployeeDashboard;
