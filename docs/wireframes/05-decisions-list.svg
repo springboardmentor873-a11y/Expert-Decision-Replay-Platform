@@ -1,0 +1,60 @@
+<svg viewBox="0 0 700 500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="500" fill="#f3f4f6"/>
+
+  <!-- sidebar -->
+  <rect x="0" y="0" width="160" height="500" fill="#111827"/>
+  <text x="20" y="40" font-family="Arial" font-size="13" font-weight="bold" fill="#ffffff">EDRP</text>
+  <text x="20" y="90" font-family="Arial" font-size="11" fill="#9ca3af">Profile</text>
+  <rect x="10" y="105" width="140" height="26" rx="4" fill="#4f46e5"/>
+  <text x="20" y="122" font-family="Arial" font-size="11" fill="#ffffff">Decisions</text>
+  <text x="20" y="155" font-family="Arial" font-size="11" fill="#9ca3af">Teams</text>
+  <text x="20" y="185" font-family="Arial" font-size="11" fill="#9ca3af">Admin (admin only)</text>
+
+  <!-- header -->
+  <text x="185" y="45" font-family="Arial" font-size="18" font-weight="bold" fill="#111827">Decisions</text>
+  <text x="185" y="65" font-family="Arial" font-size="10" fill="#6b7280">The organization's record of what was decided, why, and by whom.</text>
+  <rect x="580" y="30" width="100" height="32" rx="4" fill="#4f46e5"/>
+  <text x="600" y="51" font-family="Arial" font-size="11" fill="#ffffff">+ New decision</text>
+
+  <!-- filters -->
+  <rect x="185" y="85" width="130" height="28" rx="3" fill="none" stroke="#d1d5db"/>
+  <text x="195" y="103" font-family="Arial" font-size="10" fill="#6b7280">All categories ▾</text>
+  <rect x="325" y="85" width="120" height="28" rx="3" fill="none" stroke="#d1d5db"/>
+  <text x="335" y="103" font-family="Arial" font-size="10" fill="#6b7280">All statuses ▾</text>
+
+  <!-- table -->
+  <rect x="185" y="130" width="495" height="30" fill="#e5e7eb"/>
+  <text x="195" y="150" font-family="Arial" font-size="10" fill="#374151">Decision</text>
+  <text x="400" y="150" font-family="Arial" font-size="10" fill="#374151">Category</text>
+  <text x="490" y="150" font-family="Arial" font-size="10" fill="#374151">Status</text>
+  <text x="580" y="150" font-family="Arial" font-size="10" fill="#374151">Version</text>
+  <text x="650" y="150" font-family="Arial" font-size="10" fill="#374151">Owner</text>
+
+  <g font-family="Arial" font-size="10" fill="#374151">
+    <rect x="185" y="160" width="495" height="36" fill="#ffffff"/>
+    <text x="195" y="182">Migrate to microservices</text>
+    <text x="400" y="182">Architecture</text>
+    <rect x="480" y="169" width="70" height="18" rx="9" fill="#fef3c7"/>
+    <text x="490" y="182" fill="#92400e">Under Review</text>
+    <text x="580" y="182">v2</text>
+    <text x="650" y="182">J. Roy</text>
+
+    <rect x="185" y="196" width="495" height="36" fill="#f9fafb"/>
+    <text x="195" y="218">Adopt PostgreSQL for EDRP</text>
+    <text x="400" y="218">Infrastructure</text>
+    <rect x="480" y="205" width="60" height="18" rx="9" fill="#dcfce7"/>
+    <text x="490" y="218" fill="#166534">Approved</text>
+    <text x="580" y="218">v1</text>
+    <text x="650" y="218">S. Nair</text>
+
+    <rect x="185" y="232" width="495" height="36" fill="#ffffff"/>
+    <text x="195" y="254">Restrict prod DB access</text>
+    <text x="400" y="254">Security</text>
+    <rect x="480" y="241" width="55" height="18" rx="9" fill="#f3f4f6"/>
+    <text x="490" y="254" fill="#374151">Draft</text>
+    <text x="580" y="254">v1</text>
+    <text x="650" y="254">A. Kumar</text>
+  </g>
+
+  <text x="432" y="330" font-family="Arial" font-size="10" fill="#9ca3af" text-anchor="middle">Clicking a row opens the Decision Detail screen</text>
+</svg>

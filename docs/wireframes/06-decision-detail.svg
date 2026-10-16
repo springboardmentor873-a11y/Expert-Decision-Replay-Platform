@@ -1,0 +1,49 @@
+<svg viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="520" fill="#f3f4f6"/>
+
+  <!-- sidebar -->
+  <rect x="0" y="0" width="160" height="520" fill="#111827"/>
+  <text x="20" y="40" font-family="Arial" font-size="13" font-weight="bold" fill="#ffffff">EDRP</text>
+  <text x="20" y="90" font-family="Arial" font-size="11" fill="#9ca3af">Profile</text>
+  <text x="20" y="120" font-family="Arial" font-size="11" fill="#9ca3af">Decisions</text>
+  <text x="20" y="150" font-family="Arial" font-size="11" fill="#9ca3af">Teams</text>
+
+  <!-- back link + header -->
+  <text x="185" y="35" font-family="Arial" font-size="10" fill="#4f46e5">&#8592; Back to decisions</text>
+  <text x="185" y="65" font-family="Arial" font-size="17" font-weight="bold" fill="#111827">Migrate to microservices</text>
+  <rect x="480" y="48" width="70" height="18" rx="9" fill="#fef3c7"/>
+  <text x="490" y="61" font-family="Arial" font-size="10" fill="#92400e">Under Review</text>
+  <text x="185" y="85" font-family="Arial" font-size="10" fill="#6b7280">Architecture · v2 · owned by J. Roy</text>
+
+  <!-- tabs -->
+  <g font-family="Arial" font-size="11">
+    <rect x="185" y="105" width="95" height="30" fill="none" stroke="#4f46e5" stroke-width="2"/>
+    <text x="205" y="125" fill="#4f46e5">Overview</text>
+    <rect x="280" y="105" width="110" height="30" fill="none" stroke="#d1d5db"/>
+    <text x="298" y="125" fill="#6b7280">Alternatives</text>
+    <rect x="390" y="105" width="95" height="30" fill="none" stroke="#d1d5db"/>
+    <text x="408" y="125" fill="#6b7280">Comments</text>
+    <rect x="485" y="105" width="100" height="30" fill="none" stroke="#d1d5db"/>
+    <text x="500" y="125" fill="#6b7280">Attachments</text>
+    <rect x="585" y="105" width="90" height="30" fill="none" stroke="#d1d5db"/>
+    <text x="600" y="125" fill="#6b7280">Versions</text>
+  </g>
+
+  <!-- overview body -->
+  <rect x="185" y="150" width="495" height="150" rx="6" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="200" y="175" font-family="Arial" font-size="10" font-weight="bold" fill="#374151">Context</text>
+  <text x="200" y="192" font-family="Arial" font-size="9" fill="#6b7280">Monolith is slowing releases; team proposes splitting into services...</text>
+  <text x="200" y="220" font-family="Arial" font-size="10" font-weight="bold" fill="#374151">Decision</text>
+  <text x="200" y="237" font-family="Arial" font-size="9" fill="#6b7280">Adopt a service-per-domain split, starting with billing and auth.</text>
+  <text x="200" y="265" font-family="Arial" font-size="10" font-weight="bold" fill="#374151">Consequences</text>
+  <text x="200" y="282" font-family="Arial" font-size="9" fill="#6b7280">Higher ops overhead short-term; independent deploys long-term.</text>
+
+  <!-- action row -->
+  <rect x="185" y="315" width="110" height="30" rx="4" fill="#4f46e5"/>
+  <text x="205" y="335" font-family="Arial" font-size="10" fill="#ffffff">Edit decision</text>
+  <rect x="305" y="315" width="90" height="30" rx="4" fill="none" stroke="#dc2626"/>
+  <text x="322" y="335" font-family="Arial" font-size="10" fill="#dc2626">Delete</text>
+  <text x="410" y="335" font-family="Arial" font-size="9" fill="#9ca3af">(Edit: owner/manager/admin · Delete: admin only)</text>
+
+  <text x="432" y="400" font-family="Arial" font-size="10" fill="#9ca3af" text-anchor="middle">Alternatives/Comments/Attachments/Versions tabs each load their own list on click</text>
+</svg>
