@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Sidebar from "../Sidebar";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   API_BASE,
@@ -70,6 +71,7 @@ function ModulePage({ title }) {
   const [teamName, setTeamName] = useState(() => localStorage.getItem(teamNameStorageKey) || localStorage.getItem("workspace-team-name") || "My Team");
   const [documentTypeFilter, setDocumentTypeFilter] = useState("All Types");
   const [graphNodes, setGraphNodes] = useState([]);
+  const [graphEdges, setGraphEdges] = useState([]);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState(null);
   const [graphTypeFilter, setGraphTypeFilter] = useState("All");
   const [graphViewport, setGraphViewport] = useState({ x: 0, y: 0, width: 1880, height: 1200 });
@@ -90,775 +92,446 @@ function ModulePage({ title }) {
     localStorage.setItem(teamMembersStorageKey, JSON.stringify(selectedTeamIds));
   }, [teamMembersStorageKey, selectedTeamIds]);
 
-  /* =========================================================
-     LOAD GLOBAL DISCUSSIONS
-     ========================================================= */
+  // ---------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------
 
-  useEffect(() => {
-    if (title !== "Discussions") {
-      return;
-    }
-
-    if (!user?.id) {
-      setError("User session not found.");
-      return;
-    }
-
-    const loadDiscussions = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await fetch(
-          `${API_BASE}/discussions?user_id=${encodeURIComponent(
-            user.id
-          )}`
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(
-            data.detail ||
-              "Could not load discussions."
-          );
-
-          setLoading(false);
-          return;
-        }
-
-        setDiscussions(
-          Array.isArray(data)
-            ? data
-            : []
-        );
-
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          "Cannot connect to backend."
-        );
-
-        setLoading(false);
-      }
-    };
-
-    loadDiscussions();
-  }, [title, user?.id]);
-
-  useEffect(() => {
-    if (!user?.id || title === "Discussions" || title === "Profile" || title === "Settings") {
-      return;
-    }
-
-    const endpoint = {
-      Teams: `/teams?user_id=${user.id}`,
-      Documents: `/documents?user_id=${user.id}`,
-      "Knowledge Graph": `/documents?user_id=${user.id}`,
-      Analytics: `/analytics?user_id=${user.id}`,
-    }[title];
-
-    if (!endpoint) return;
-
-    const loadModule = async () => {
-      try {
-        setModuleLoading(true);
-        setError("");
-        const response = await fetch(`${API_BASE}${endpoint}`);
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.detail || `Could not load ${title.toLowerCase()}.`);
-        if (title === "Analytics") {
-          setModuleData(data);
-          setModuleItems([]);
-        } else {
-          setModuleItems(Array.isArray(data) ? data : []);
-          setModuleData(null);
-        }
-      } catch (err) {
-        console.error(`${title} load error:`, err);
-        setError(err.message || `Could not load ${title.toLowerCase()}.`);
-      } finally {
-        setModuleLoading(false);
-      }
-    };
-
-    loadModule();
-  }, [title, user?.id]);
-
-  const filteredModuleItems = moduleItems.filter((item) => {
-    const query = moduleSearch.trim().toLowerCase();
-    if (!query) return true;
-    return [
-      item.name,
-      item.email,
-      item.role,
-      item.filename,
-      item.decision_title,
-      item.uploader_name,
-    ].some((value) => String(value || "").toLowerCase().includes(query));
-  });
-
-  const updateSetting = (key, value) => {
-    const next = { ...settings, [key]: value };
-    setSettings(next);
-    localStorage.setItem("workspaceSettings", JSON.stringify(next));
-    if (key === "theme") {
-      applyTheme(value === "dark" ? "dark" : "light");
-    }
+  const formatDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
-  /* =========================================================
-     NOTIFICATIONS
-     ========================================================= */
+  const formatNotificationDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
 
-  const loadNotifications = async () => {
-    if (!user?.id) return;
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
 
-    try {
-      setNotificationLoading(true);
+    if (seconds < 60) return "just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
 
-      const response = await fetch(
-        `${API_BASE}/notifications?user_id=${encodeURIComponent(user.id)}`
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error(data.detail || "Could not load notifications.");
-        return;
-      }
-
-      const items = Array.isArray(data) ? data : [];
-      setNotifications(items);
-      setUnreadCount(
-        items.filter((item) => Number(item.is_read) === 0).length
-      );
-    } catch (err) {
-      console.error("Notification load error:", err);
-    } finally {
-      setNotificationLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!user?.id) return;
-
-    loadNotifications();
-
-    // Keep the bell count reasonably fresh.
-    const interval = setInterval(loadNotifications, 30000);
-
-    return () => clearInterval(interval);
-  }, [user?.id]);
-
-  const markNotificationRead = async (notificationId) => {
-    if (!user?.id) return;
-
-    try {
-      const response = await fetch(
-        `${API_BASE}/notifications/${notificationId}/read?user_id=${encodeURIComponent(
-          user.id
-        )}`,
-        {
-          method: "PUT",
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.error(data.detail || "Could not mark notification as read.");
-        return;
-      }
-
-      setNotifications((current) =>
-        current.map((item) =>
-          item.id === notificationId
-            ? { ...item, is_read: 1 }
-            : item
-        )
-      );
-
-      setUnreadCount((current) => Math.max(0, current - 1));
-    } catch (err) {
-      console.error("Mark notification read error:", err);
-    }
-  };
-
-  const markAllNotificationsRead = async () => {
-    if (!user?.id || unreadCount === 0) return;
-
-    try {
-      const response = await fetch(
-        `${API_BASE}/notifications/read-all?user_id=${encodeURIComponent(
-          user.id
-        )}`,
-        {
-          method: "PUT",
-        }
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.error(data.detail || "Could not mark notifications as read.");
-        return;
-      }
-
-      setNotifications((current) =>
-        current.map((item) => ({ ...item, is_read: 1 }))
-      );
-      setUnreadCount(0);
-    } catch (err) {
-      console.error("Mark all notifications error:", err);
-    }
+    return date.toLocaleDateString();
   };
 
   const notificationIcon = (type) => {
-    if (type === "success") return "✓";
-    if (type === "error") return "!";
-    if (type === "approval") return "↗";
-    return "i";
-  };
-
-  const formatNotificationDate = (date) => {
-    if (!date) return "";
-
-    try {
-      return new Date(date).toLocaleString([], {
-        dateStyle: "short",
-        timeStyle: "short",
-      });
-    } catch {
-      return "";
+    switch (String(type || "").toLowerCase()) {
+      case "approval":
+      case "approved":
+        return "✓";
+      case "rejection":
+      case "rejected":
+        return "✕";
+      case "comment":
+        return "💬";
+      case "upload":
+      case "document":
+        return "📄";
+      default:
+        return "🔔";
     }
   };
 
-  /* =========================================================
-     LOGOUT
-     ========================================================= */
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  /* =========================================================
-     SIDEBAR ITEM
-     ========================================================= */
-
-  const sidebarItem = (
-    path,
-    icon,
-    text
-  ) => {
-    const active =
-      location.pathname === path;
-
-    return (
-      <Link
-        to={path}
-        className={
-          active
-            ? "sidebar-link active"
-            : "sidebar-link"
-        }
-      >
-        <span className="sidebar-icon">
-          {icon}
-        </span>
-
-        <span>
-          {text}
-        </span>
-      </Link>
-    );
-  };
-
-  /* =========================================================
-     DISCUSSION ICON
-     ========================================================= */
-
-  const discussionIcon = (item) => {
-    if (item.is_meeting_note) {
-      return "📝";
-    }
-
-    return "💬";
-  };
-
-  /* =========================================================
-     FORMAT DATE
-     ========================================================= */
-
-  const formatDate = (date) => {
-    if (!date) {
-      return "";
-    }
-
-    try {
-      return new Date(
-        date
-      ).toLocaleString();
-    } catch {
-      return "";
-    }
-  };
+  const discussionIcon = (item) => (item?.is_meeting_note ? "🗒️" : "💬");
 
   const getFileType = (filename) => {
-    const extension = filename?.split(".").pop();
-    return extension ? extension.toUpperCase() : "FILE";
+    const ext = String(filename || "").split(".").pop();
+    if (!ext || ext === filename) return "FILE";
+    return ext.toUpperCase().slice(0, 5);
   };
 
-  const teamMembers = Array.isArray(moduleItems) ? moduleItems : [];
-  const documentTypes = [
-    "All Types",
-    ...new Set(
-      (Array.isArray(moduleItems) ? moduleItems : []).map((document) => getFileType(document.filename))
-    ),
-  ];
-  const documentTypeCounts = documentTypes.slice(1).map((type) => ({
+  const getGraphNodeColor = (type) => graphNodePalette[type] || "#64748b";
+
+  const legendItems = Object.entries(graphNodePalette).map(([type, color]) => ({
     type,
-    count: (Array.isArray(moduleItems) ? moduleItems : []).filter((document) => getFileType(document.filename) === type).length,
+    color,
   }));
+
+  // ---------------------------------------------------------
+  // DERIVED DATA
+  // ---------------------------------------------------------
+
+  const teamMembers = title === "Teams" ? moduleItems : [];
 
   const filteredTeamMembers = teamMembers.filter((member) => {
     const query = moduleSearch.trim().toLowerCase();
     if (!query) return true;
     return [member.name, member.email, member.role].some((value) =>
-      String(value || "").toLowerCase().includes(query)
+      String(value || "").toLowerCase().includes(query),
     );
   });
 
-  const filteredDocuments = (Array.isArray(moduleItems) ? moduleItems : []).filter((document) => {
+  const documentTypes = useMemo(() => {
+    const types = new Set(
+      moduleItems.map((item) => getFileType(item.filename)),
+    );
+    return ["All Types", ...Array.from(types).sort()];
+  }, [moduleItems]);
+
+  const filteredDocuments = moduleItems.filter((item) => {
     const query = moduleSearch.trim().toLowerCase();
     const matchesQuery =
       !query ||
-      [document.filename, document.decision_title, document.uploader_name, document.decision_id]
-        .some((value) => String(value || "").toLowerCase().includes(query));
+      [item.filename, item.decision_title, item.uploader_name].some((value) =>
+        String(value || "").toLowerCase().includes(query),
+      );
     const matchesType =
-      documentTypeFilter === "All Types" || getFileType(document.filename) === documentTypeFilter;
+      documentTypeFilter === "All Types" ||
+      getFileType(item.filename) === documentTypeFilter;
     return matchesQuery && matchesType;
   });
 
-  const knowledgeGraphData = useMemo(() => {
-    const safeDocuments = Array.isArray(moduleItems) ? moduleItems : [];
-    const uniquePeople = [...new Set(safeDocuments.map((document) => document.uploader_name).filter(Boolean))].slice(0, 4);
-    const topicKeywords = [
-      "Strategy",
-      "Operations",
-      "Research",
-      "Policy",
-      "Product",
-      "Compliance",
-      "Finance",
-      "Delivery",
-    ];
+  const visibleGraphNodes = useMemo(
+    () =>
+      graphTypeFilter === "All"
+        ? graphNodes
+        : graphNodes.filter((node) => node.type === graphTypeFilter),
+    [graphNodes, graphTypeFilter],
+  );
 
-    const nodes = [];
-    const edges = [];
+  const visibleGraphNodeIds = useMemo(
+    () => new Set(visibleGraphNodes.map((node) => node.id)),
+    [visibleGraphNodes],
+  );
 
-    const addNode = (id, type, label, x, y, color, metadata = []) => {
-      const existing = nodes.find((node) => node.id === id);
-      if (existing) {
-        return existing;
-      }
+  // ---------------------------------------------------------
+  // DATA LOADING
+  // ---------------------------------------------------------
 
-      const node = {
-        id,
-        type,
-        label,
-        x,
-        y,
-        baseX: x,
-        baseY: y,
-        color,
-        metadata,
-      };
-
-      nodes.push(node);
-      return node;
-    };
-
-    const teamLabel = user?.team || (isManager ? "Decision Strategy Team" : "Knowledge Team");
-    const currentUserLabel = user?.name || "Current User";
-
-    const teamNode = addNode(
-      "team-overview",
-      "Teams",
-      teamLabel,
-      540,
-      90,
-      graphNodePalette.Teams,
-      [
-        isManager ? "Manager access" : "Cross-functional collaboration",
-        `${safeDocuments.length} documents in scope`,
-      ]
-    );
-    const userNode = addNode(
-      "user-overview",
-      "People",
-      currentUserLabel,
-      170,
-      95,
-      graphNodePalette.People,
-      [
-        user?.role ? `${user.role[0].toUpperCase()}${user.role.slice(1)}` : "Employee",
-        "Workspace owner",
-      ]
-    );
-    edges.push({ source: userNode.id, target: teamNode.id });
-
-    const personNodes = uniquePeople.map((person, index) => {
-      const node = addNode(
-        `person-${index}` ,
-        "People",
-        person,
-        170 + (index % 2) * 140,
-        165 + Math.floor(index / 2) * 80,
-        graphNodePalette.People,
-        [
-          `Contributor in ${safeDocuments.filter((document) => document.uploader_name === person).length} document(s)`,
-          "Knowledge owner",
-        ]
+  const readJson = async (response) => {
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(
+        (data && (data.detail || data.message)) ||
+          `Request failed with status ${response.status}`,
       );
-      edges.push({ source: node.id, target: teamNode.id });
-      return node;
-    });
-
-    const statusNodes = [
-      { id: "status-draft", label: "Draft", x: 120, y: 260, color: "#60a5fa" },
-      { id: "status-review", label: "In Review", x: 310, y: 260, color: "#fbbf24" },
-      { id: "status-approved", label: "Approved", x: 500, y: 260, color: "#34d399" },
-    ].map((status) => addNode(status.id, "Status", status.label, status.x, status.y, graphNodePalette.Status, ["Knowledge workflow state", status.label]));
-
-    const topicNodes = topicKeywords.map((topic, index) => addNode(
-      `topic-${topic.toLowerCase()}` ,
-      "Topics",
-      topic,
-      515 + (index % 2) * 100,
-      160 + Math.floor(index / 2) * 62,
-      graphNodePalette.Topics,
-      [`Theme ${index + 1}`, "Repository topic"]
-    ));
-
-    if (!safeDocuments.length) {
-      const emptyStatus = addNode(
-        "status-empty",
-        "Status",
-        "Awaiting data",
-        322,
-        200,
-        graphNodePalette.Status,
-        ["No document records loaded yet", "Graph will populate as documents arrive"]
-      );
-      edges.push({ source: userNode.id, target: emptyStatus.id });
-      return { nodes: arrangeKnowledgeGraph(nodes), edges };
     }
-
-    safeDocuments.slice(0, 6).forEach((document, index) => {
-      const decisionLabel = document.decision_title || `Decision #${document.decision_id || index + 1}`;
-      const decisionNode = addNode(
-        `decision-${document.decision_id || index + 1}` ,
-        "Decision",
-        decisionLabel,
-        275 + (index % 3) * 110,
-        145 + Math.floor(index / 3) * 85,
-        graphNodePalette.Decision,
-        [
-          `Decision #${document.decision_id || index + 1}` ,
-          document.filename || "Linked document",
-        ]
-      );
-
-      const documentLabel = document.filename || `Document ${index + 1}`;
-      const documentNode = addNode(
-        `document-${document.id || index + 1}` ,
-        "Documents",
-        documentLabel,
-        300 + (index % 3) * 110,
-        185 + Math.floor(index / 3) * 80,
-        graphNodePalette.Documents,
-        [
-          document.decision_title || "Decision context",
-          document.uploaded_at ? new Date(document.uploaded_at).toLocaleString() : "Recently uploaded",
-        ]
-      );
-
-      const topicName = topicKeywords[index % topicKeywords.length];
-      const relatedTopic = topicNodes.find((node) => node.label === topicName) || topicNodes[0];
-      const status = statusNodes[index % statusNodes.length];
-
-      edges.push(
-        { source: decisionNode.id, target: documentNode.id },
-        { source: documentNode.id, target: relatedTopic.id },
-        { source: documentNode.id, target: status.id }
-      );
-
-      const uploaderName = document.uploader_name || currentUserLabel;
-      const uploaderNode = personNodes.find((node) => node.label === uploaderName) || userNode;
-      edges.push({ source: uploaderNode.id, target: decisionNode.id });
-    });
-
-    return { nodes: arrangeKnowledgeGraph(nodes), edges };
-  }, [isManager, moduleItems, user?.name, user?.role, user?.team]);
-
-  useEffect(() => {
-    const baseNodes = knowledgeGraphData.nodes.map((node) => ({ ...node }));
-    setGraphNodes(baseNodes);
-    setSelectedGraphNodeId((current) => {
-      if (current && baseNodes.some((node) => node.id === current)) {
-        return current;
-      }
-      return baseNodes[0]?.id || null;
-    });
-  }, [knowledgeGraphData]);
-
-  const resetGraphView = () => {
-    setGraphNodes(knowledgeGraphData.nodes.map((node) => ({ ...node, x: node.baseX, y: node.baseY })));
-    setGraphViewport({ x: 0, y: 0, width: 1880, height: 1200 });
+    return data;
   };
 
-  const zoomGraph = (direction) => {
+  const buildKnowledgeGraph = (payload) => {
+    const nodes = [];
+    const edges = [];
+    const seen = new Set();
+
+    const addNode = (type, key, label) => {
+      if (!label) return null;
+      const id = `${type}:${key}`;
+      if (seen.has(id)) return id;
+      seen.add(id);
+      nodes.push({ id, type, label: String(label) });
+      return id;
+    };
+
+    (payload.decisions || []).forEach((decision) => {
+      const decisionNode = addNode("Decision", decision.id, decision.title);
+      if (!decisionNode) return;
+
+      const ownerNode = addNode("People", decision.user_id, decision.user_name);
+      if (ownerNode) edges.push({ source: decisionNode, target: ownerNode });
+
+      const statusNode = addNode("Status", decision.status, decision.status);
+      if (statusNode) edges.push({ source: decisionNode, target: statusNode });
+
+      const topicNode = addNode("Topics", decision.category, decision.category);
+      if (topicNode) edges.push({ source: decisionNode, target: topicNode });
+    });
+
+    (payload.documents || []).forEach((document) => {
+      const documentNode = addNode(
+        "Documents",
+        document.id,
+        document.filename,
+      );
+      if (!documentNode) return;
+
+      const decisionNode = addNode(
+        "Decision",
+        document.decision_id,
+        document.decision_title,
+      );
+      if (decisionNode) edges.push({ source: documentNode, target: decisionNode });
+    });
+
+    (payload.teams || []).forEach((member) => {
+      const teamNode = addNode("Teams", member.id, member.name);
+      if (!teamNode) return;
+
+      (member.decisions || []).forEach((decision) => {
+        const decisionNode = addNode(
+          "Decision",
+          decision.id,
+          decision.title,
+        );
+        if (decisionNode) edges.push({ source: teamNode, target: decisionNode });
+      });
+    });
+
+    (payload.discussions || []).forEach((comment) => {
+      const decisionNode = addNode(
+        "Decision",
+        comment.decision_id,
+        comment.decision_title,
+      );
+      const personNode = addNode(
+        "People",
+        comment.user_id || comment.user_name,
+        comment.user_name,
+      );
+
+      if (decisionNode && personNode) {
+        edges.push({ source: decisionNode, target: personNode });
+      }
+    });
+
+    setGraphNodes(arrangeKnowledgeGraph(nodes));
+    setGraphEdges(edges);
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let cancelled = false;
+    const uid = encodeURIComponent(user.id);
+
+    const run = async () => {
+      setError("");
+      setModuleSearch("");
+
+      try {
+        if (title === "Discussions") {
+          setLoading(true);
+          const data = await readJson(
+            await fetch(`${API_BASE}/discussions?user_id=${uid}`),
+          );
+          if (!cancelled) setDiscussions(Array.isArray(data) ? data : []);
+          return;
+        }
+
+        if (title === "Teams") {
+          setModuleLoading(true);
+          const data = await readJson(
+            await fetch(`${API_BASE}/teams?user_id=${uid}`),
+          );
+          if (!cancelled) setModuleItems(Array.isArray(data) ? data : []);
+          return;
+        }
+
+        if (title === "Documents") {
+          setModuleLoading(true);
+          setDocumentTypeFilter("All Types");
+          const data = await readJson(
+            await fetch(`${API_BASE}/documents?user_id=${uid}`),
+          );
+          if (!cancelled) setModuleItems(Array.isArray(data) ? data : []);
+          return;
+        }
+
+        if (title === "Analytics") {
+          setModuleLoading(true);
+          const data = await readJson(
+            await fetch(`${API_BASE}/analytics?user_id=${uid}`),
+          );
+          if (!cancelled) setModuleData(data);
+          return;
+        }
+
+        if (title === "Knowledge Graph") {
+          setModuleLoading(true);
+          resetGraphView();
+
+          const [decisions, documents, discussions, teams] = await Promise.all([
+            readJson(await fetch(`${API_BASE}/decisions?user_id=${uid}`)),
+            readJson(await fetch(`${API_BASE}/documents?user_id=${uid}`)),
+            readJson(await fetch(`${API_BASE}/discussions?user_id=${uid}`)),
+            isManager
+              ? readJson(await fetch(`${API_BASE}/teams?user_id=${uid}`))
+              : Promise.resolve([]),
+          ]);
+
+          if (!cancelled) {
+            buildKnowledgeGraph({
+              decisions: Array.isArray(decisions) ? decisions : [],
+              documents: Array.isArray(documents) ? documents : [],
+              discussions: Array.isArray(discussions) ? discussions : [],
+              teams: Array.isArray(teams) ? teams : [],
+            });
+          }
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Something went wrong.");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setModuleLoading(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [title, user?.id, isManager]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const uid = encodeURIComponent(user.id);
+
+    readJson(
+      fetch(`${API_BASE}/notifications/unread-count?user_id=${uid}`),
+    )
+      .then((data) => setUnreadCount(Number(data?.unread_count || 0)))
+      .catch(() => {});
+  }, [user?.id, notifications]);
+
+  // ---------------------------------------------------------
+  // NOTIFICATIONS
+  // ---------------------------------------------------------
+
+  const loadNotifications = async () => {
+    if (!user?.id) return;
+
+    setNotificationLoading(true);
+
+    try {
+      const uid = encodeURIComponent(user.id);
+      const data = await readJson(
+        await fetch(`${API_BASE}/notifications?user_id=${uid}`),
+      );
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Notification fetch error:", err);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const markNotificationRead = async (notificationId) => {
+    if (!user?.id) return;
+
+    try {
+      const uid = encodeURIComponent(user.id);
+      await readJson(
+        await fetch(
+          `${API_BASE}/notifications/${notificationId}/read?user_id=${uid}`,
+          { method: "PUT" },
+        ),
+      );
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notificationId ? { ...item, is_read: 1 } : item,
+        ),
+      );
+      setUnreadCount((current) => Math.max(0, current - 1));
+    } catch (err) {
+      console.error("Notification read error:", err);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    if (!user?.id) return;
+
+    try {
+      const uid = encodeURIComponent(user.id);
+      await readJson(
+        await fetch(`${API_BASE}/notifications/read-all?user_id=${uid}`, {
+          method: "PUT",
+        }),
+      );
+      setNotifications((current) =>
+        current.map((item) => ({ ...item, is_read: 1 })),
+      );
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Notification read-all error:", err);
+    }
+  };
+
+  // ---------------------------------------------------------
+  // GRAPH CONTROLS
+  // ---------------------------------------------------------
+
+  function resetGraphView() {
+    setGraphViewport({ x: 0, y: 0, width: 1880, height: 1200 });
+    setSelectedGraphNodeId(null);
+    setGraphTypeFilter("All");
+  }
+
+  function zoomGraph(direction) {
     setGraphViewport((current) => {
       const factor = direction === "in" ? 0.8 : 1.25;
-      const width = Math.max(720, Math.min(1880, current.width * factor));
-      const height = (width / 1880) * 1200;
-      const centerX = current.x + current.width / 2;
-      const centerY = current.y + current.height / 2;
+      const width = Math.min(6000, Math.max(600, current.width * factor));
+      const height = Math.min(4000, Math.max(400, current.height * factor));
       return {
-        x: Math.max(0, Math.min(1880 - width, centerX - width / 2)),
-        y: Math.max(0, Math.min(1200 - height, centerY - height / 2)),
+        x: current.x + (current.width - width) / 2,
+        y: current.y + (current.height - height) / 2,
         width,
         height,
       };
     });
-  };
+  }
 
-  const graphEdges = knowledgeGraphData.edges;
-
-  const visibleGraphNodes = graphNodes.filter((node) => {
-    const matchesType = graphTypeFilter === "All" || node.type === graphTypeFilter;
-    return matchesType;
-  });
-  const visibleGraphNodeIds = new Set(visibleGraphNodes.map((node) => node.id));
-  const getGraphNodeColor = (type) => graphNodePalette[type] || "#64748b";
-
-  const legendItems = [
-    { type: "Decision", color: graphNodePalette.Decision },
-    { type: "People", color: graphNodePalette.People },
-    { type: "Teams", color: graphNodePalette.Teams },
-    { type: "Documents", color: graphNodePalette.Documents },
-    { type: "Topics", color: graphNodePalette.Topics },
-    { type: "Status", color: graphNodePalette.Status },
-  ];
+  // ---------------------------------------------------------
+  // TEAMS
+  // ---------------------------------------------------------
 
   const toggleTeamSelection = (memberId) => {
     setSelectedTeamIds((current) =>
       current.includes(memberId)
         ? current.filter((id) => id !== memberId)
-        : [...current, memberId]
+        : [...current, memberId],
     );
   };
 
   const addTeamMember = () => {
-    if (!teamCandidateId) return;
     const memberId = Number(teamCandidateId);
+    if (!memberId) return;
+
     setSelectedTeamIds((current) =>
-      current.includes(memberId) ? current : [...current, memberId]
+      current.includes(memberId) ? current : [...current, memberId],
     );
     setTeamCandidateId("");
   };
 
   const saveTeam = (event) => {
     event.preventDefault();
-    const nextName = teamName.trim();
-    if (!nextName) return;
-    setTeamName(nextName);
-    localStorage.setItem(teamNameStorageKey, nextName);
-    localStorage.setItem("workspace-team-name", nextName);
+    const name = teamName.trim() || "My Team";
+
+    localStorage.setItem(teamNameStorageKey, name);
+    localStorage.setItem("workspace-team-name", name);
+  };
+
+  // ---------------------------------------------------------
+  // SETTINGS
+  // ---------------------------------------------------------
+
+  const updateSetting = (key, value) => {
+    setSettings((current) => {
+      const next = { ...current, [key]: value };
+      localStorage.setItem("workspaceSettings", JSON.stringify(next));
+      return next;
+    });
+
+    if (key === "theme") {
+      applyTheme(value);
+    }
   };
 
   return (
     <div className="workspace dashboard-workspace">
 
-      {/* =====================================================
-          SIDEBAR
-          ===================================================== */}
-
-      <aside className="app-sidebar">
-
-        {/* BRAND */}
-        <div className="sidebar-brand">
-
-          <div className="sidebar-logo">
-            ED
-          </div>
-
-          <div className="sidebar-brand-text">
-
-            <strong>
-              Expert Decision
-            </strong>
-
-            <span>
-              Replay Platform
-            </span>
-
-          </div>
-
-        </div>
-
-        <div className="sidebar-divider"></div>
-
-        {/* =================================================
-            WORKSPACE
-            ================================================= */}
-
-        <div className="sidebar-section-title">
-          WORKSPACE
-        </div>
-
-        <nav className="sidebar-nav">
-
-          {/* Dashboard */}
-          {sidebarItem(
-            "/dashboard",
-            "◈",
-            "Dashboard"
-          )}
-
-          {/* My Decisions */}
-          {sidebarItem(
-            "/my-decisions",
-            "▣",
-            "My Decisions"
-          )}
-
-          {/* =================================================
-              NEW DECISION
-              EMPLOYEE ONLY
-              ================================================= */}
-
-          {!isManager && (
-            sidebarItem(
-              "/decisions/new",
-              "＋",
-              "New Decision"
-            )
-          )}
-
-          {/* Teams */}
-          {sidebarItem(
-            "/teams",
-            "♧",
-            "Teams"
-          )}
-
-          {/* Discussions */}
-          {sidebarItem(
-            "/discussions",
-            "◌",
-            "Discussions"
-          )}
-
-          {/* =================================================
-              APPROVALS
-              MANAGER / ADMIN ONLY
-              ================================================= */}
-
-          {sidebarItem("/approvals", "✓", "Approvals")}
-
-        </nav>
-
-        {/* =================================================
-            KNOWLEDGE
-            ================================================= */}
-
-        <div className="sidebar-section-title second-section">
-          KNOWLEDGE
-        </div>
-
-        <nav className="sidebar-nav">
-
-          {sidebarItem(
-            "/documents",
-            "▤",
-            "Documents"
-          )}
-
-          {sidebarItem("/knowledge-graph", "G", "Knowledge Graph")}
-
-          {sidebarItem(
-            "/analytics",
-            "◒",
-            "Analytics"
-          )}
-
-          {sidebarItem("/audit-logs", "📜", "Audit Logs")}
-
-          {sidebarItem(
-            "/profile",
-            "◎",
-            "Profile"
-          )}
-
-          {sidebarItem(
-            "/settings",
-            "⚙",
-            "Settings"
-          )}
-
-        </nav>
-
-        {/* =================================================
-            USER AREA
-            ================================================= */}
-
-        <div className="sidebar-bottom">
-
-          <div className="sidebar-role-card">
-
-            <div className="sidebar-role-avatar">
-
-              {user?.name
-                ?.charAt(0)
-                ?.toUpperCase() || "U"}
-
-            </div>
-
-            <div>
-
-              <strong>
-                {user?.name || "User"}
-              </strong>
-
-              <span>
-                {isManager
-                  ? "Manager"
-                  : "Employee"}
-              </span>
-
-            </div>
-
-          </div>
-
-          <button
-            className="sidebar-logout"
-            onClick={handleLogout}
-          >
-
-            <span>
-              ↪
-            </span>
-
-            Logout
-
-          </button>
-
-        </div>
-
-      </aside>
+      <Sidebar activePath={location.pathname} />
 
       {/* =====================================================
           MAIN AREA
@@ -914,8 +587,9 @@ function ModulePage({ title }) {
                   width: "42px",
                   height: "42px",
                   borderRadius: "12px",
-                  border: "1px solid rgba(15, 23, 42, 0.10)",
-                  background: "#ffffff",
+                  border: "1px solid var(--workspace-border)",
+                  background: "var(--workspace-surface)",
+                  color: "var(--workspace-text)",
                   cursor: "pointer",
                   fontSize: "20px",
                   display: "flex",
@@ -952,41 +626,15 @@ function ModulePage({ title }) {
 
               {showNotifications && (
                 <div
-                  style={{
-                    position: "absolute",
-                    top: "52px",
-                    right: "0",
-                    width: "390px",
-                    maxWidth: "calc(100vw - 32px)",
-                    background: "#ffffff",
-                    border: "1px solid rgba(15, 23, 42, 0.10)",
-                    borderRadius: "16px",
-                    boxShadow: "0 18px 45px rgba(15, 23, 42, 0.16)",
-                    zIndex: 1000,
-                    overflow: "hidden",
-                  }}
+                  className="notification-popover"
+                  style={{ top: "52px" }}
                 >
-                  <div
-                    style={{
-                      padding: "16px 18px",
-                      borderBottom: "1px solid #eef2f7",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "12px",
-                    }}
-                  >
+                  <div className="notification-popover-header">
                     <div>
-                      <strong style={{ fontSize: "16px", color: "#111827" }}>
+                      <strong className="notification-popover-title">
                         Notifications
                       </strong>
-                      <div
-                        style={{
-                          marginTop: "3px",
-                          fontSize: "12px",
-                          color: "#6b7280",
-                        }}
-                      >
+                      <div className="notification-popover-subtitle">
                         {unreadCount > 0
                           ? `${unreadCount} unread notification${
                               unreadCount === 1 ? "" : "s"
@@ -998,64 +646,28 @@ function ModulePage({ title }) {
                     {unreadCount > 0 && (
                       <button
                         type="button"
+                        className="notification-popover-action"
                         onClick={markAllNotificationsRead}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          color: "#2563eb",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          padding: "6px",
-                        }}
                       >
                         Mark all read
                       </button>
                     )}
                   </div>
 
-                  <div
-                    style={{
-                      maxHeight: "420px",
-                      overflowY: "auto",
-                    }}
-                  >
+                  <div className="notification-popover-list">
                     {notificationLoading ? (
-                      <div
-                        style={{
-                          padding: "34px 18px",
-                          textAlign: "center",
-                          color: "#6b7280",
-                          fontSize: "13px",
-                        }}
-                      >
+                      <div className="notification-popover-state">
                         Loading notifications...
                       </div>
                     ) : notifications.length === 0 ? (
-                      <div
-                        style={{
-                          padding: "38px 18px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div style={{ fontSize: "30px", marginBottom: "10px" }}>
+                      <div className="notification-popover-empty">
+                        <div className="notification-popover-empty-icon">
                           🔔
                         </div>
-                        <strong
-                          style={{
-                            display: "block",
-                            color: "#111827",
-                            marginBottom: "5px",
-                          }}
-                        >
+                        <strong>
                           No notifications
                         </strong>
-                        <span
-                          style={{
-                            color: "#6b7280",
-                            fontSize: "13px",
-                          }}
-                        >
+                        <span>
                           New approval updates will appear here.
                         </span>
                       </div>
@@ -1066,6 +678,8 @@ function ModulePage({ title }) {
                         return (
                           <div
                             key={item.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => {
                               if (unread) {
                                 markNotificationRead(item.id);
@@ -1078,96 +692,51 @@ function ModulePage({ title }) {
                                 setShowNotifications(false);
                               }
                             }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                if (unread) {
+                                  markNotificationRead(item.id);
+                                }
+                                if (item.decision_id) {
+                                  navigate(`/decisions/${item.decision_id}`);
+                                  setShowNotifications(false);
+                                }
+                              }
+                            }}
+                            className={`notification-item${
+                              unread ? " is-unread" : ""
+                            }`}
                             style={{
-                              padding: "14px 16px",
-                              borderBottom: "1px solid #f1f5f9",
-                              background: unread ? "#f8fbff" : "#ffffff",
                               cursor: item.decision_id
                                 ? "pointer"
                                 : "default",
-                              display: "flex",
-                              gap: "12px",
                             }}
                           >
                             <div
-                              style={{
-                                flex: "0 0 32px",
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "10px",
-                                background:
-                                  item.notification_type === "success"
-                                    ? "#ecfdf5"
-                                    : item.notification_type === "error"
-                                    ? "#fef2f2"
-                                    : item.notification_type === "approval"
-                                    ? "#eff6ff"
-                                    : "#f3f4f6",
-                                color:
-                                  item.notification_type === "success"
-                                    ? "#059669"
-                                    : item.notification_type === "error"
-                                    ? "#dc2626"
-                                    : item.notification_type === "approval"
-                                    ? "#2563eb"
-                                    : "#4b5563",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontWeight: 800,
-                              }}
+                              className={`notification-item-icon type-${(
+                                item.notification_type || "info"
+                              ).toLowerCase()}`}
                             >
                               {notificationIcon(item.notification_type)}
                             </div>
 
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "8px",
-                                }}
-                              >
-                                <strong
-                                  style={{
-                                    fontSize: "13px",
-                                    color: "#111827",
-                                  }}
-                                >
+                            <div className="notification-item-body">
+                              <div className="notification-item-head">
+                                <strong>
                                   {item.title}
                                 </strong>
 
                                 {unread && (
-                                  <span
-                                    style={{
-                                      width: "7px",
-                                      height: "7px",
-                                      borderRadius: "50%",
-                                      background: "#2563eb",
-                                      flex: "0 0 auto",
-                                    }}
-                                  />
+                                  <span className="notification-dot" />
                                 )}
                               </div>
 
-                              <p
-                                style={{
-                                  margin: "5px 0 6px",
-                                  fontSize: "12px",
-                                  lineHeight: 1.5,
-                                  color: "#4b5563",
-                                }}
-                              >
+                              <p className="notification-item-message">
                                 {item.message}
                               </p>
 
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "#9ca3af",
-                                }}
-                              >
+                              <span className="notification-item-time">
                                 {formatNotificationDate(item.created_at)}
                               </span>
                             </div>

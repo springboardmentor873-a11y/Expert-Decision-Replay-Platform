@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, getCurrentUser, logout } from "../API";
+import { API_BASE, getCurrentUser, logout } from "../api";
 import { ThemeToggle } from "../theme";
+import Sidebar from "../Sidebar";
 import "./Workspace.css";
 
 export default function AuditLogs() {
@@ -55,11 +56,6 @@ export default function AuditLogs() {
     };
   }, [currentUserId, user?.id, navigate, actionFilter, userFilter, search, reloadVersion]);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   const uniqueActions = useMemo(() => {
     const set = new Set(logs.map((l) => l.action).filter(Boolean));
     return ["All Actions", ...Array.from(set)];
@@ -112,105 +108,7 @@ export default function AuditLogs() {
   return (
     <div className="workspace dashboard-workspace">
       {/* SIDEBAR */}
-      <aside className="app-sidebar">
-        <div className="sidebar-brand">
-          <div className="sidebar-logo">ED</div>
-          <div className="sidebar-brand-text">
-            <strong>Expert Decision</strong>
-            <span>Replay Platform</span>
-          </div>
-        </div>
-
-        <div className="sidebar-divider"></div>
-        <div className="sidebar-section-title">WORKSPACE</div>
-
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="sidebar-link">
-            <span className="sidebar-icon">◈</span>
-            <span>Dashboard</span>
-          </Link>
-
-          <Link to="/my-decisions" className="sidebar-link">
-            <span className="sidebar-icon">▣</span>
-            <span>My Decisions</span>
-          </Link>
-
-          {!isManager && (
-            <Link to="/decisions/new" className="sidebar-link">
-              <span className="sidebar-icon">＋</span>
-              <span>New Decision</span>
-            </Link>
-          )}
-
-          <Link to="/teams" className="sidebar-link">
-            <span className="sidebar-icon">♧</span>
-            <span>Teams</span>
-          </Link>
-
-          <Link to="/discussions" className="sidebar-link">
-            <span className="sidebar-icon">◌</span>
-            <span>Discussions</span>
-          </Link>
-
-          {isManager && (
-            <Link to="/approvals" className="sidebar-link">
-              <span className="sidebar-icon">✓</span>
-              <span>Approvals</span>
-            </Link>
-          )}
-        </nav>
-
-        <div className="sidebar-section-title second-section">KNOWLEDGE</div>
-
-        <nav className="sidebar-nav">
-          <Link to="/documents" className="sidebar-link">
-            <span className="sidebar-icon">▤</span>
-            <span>Documents</span>
-          </Link>
-
-          <Link to="/knowledge-graph" className="sidebar-link">
-            <span className="sidebar-icon">?</span>
-            <span>Knowledge Graph</span>
-          </Link>
-
-          <Link to="/analytics" className="sidebar-link">
-            <span className="sidebar-icon">◒</span>
-            <span>Analytics</span>
-          </Link>
-
-          <Link to="/audit-logs" className="sidebar-link active">
-            <span className="sidebar-icon">📜</span>
-            <span>Audit Logs</span>
-          </Link>
-
-          <Link to="/profile" className="sidebar-link">
-            <span className="sidebar-icon">◎</span>
-            <span>Profile</span>
-          </Link>
-
-          <Link to="/settings" className="sidebar-link">
-            <span className="sidebar-icon">⚙</span>
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="sidebar-role-card">
-            <div className="sidebar-role-avatar">
-              {user?.name?.charAt(0)?.toUpperCase() || "U"}
-            </div>
-            <div>
-              <strong>{user?.name || "User"}</strong>
-              <span>{isManager ? "Manager" : "Employee"}</span>
-            </div>
-          </div>
-
-          <button className="sidebar-logout" onClick={handleLogout}>
-            <span>↪</span>
-            Logout
-          </button>
-        </div>
-      </aside>
+      <Sidebar activePath={"/audit-logs"} />
 
       {/* MAIN CONTENT */}
       <div className="dashboard-main">

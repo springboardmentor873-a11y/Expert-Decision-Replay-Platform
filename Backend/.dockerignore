@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local artefacts
+uploads/
+decision_platform.db
+*.sqlite3
+
+# Never copy secrets into the image
+.env
+.env.*

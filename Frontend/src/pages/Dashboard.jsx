@@ -6,6 +6,7 @@ import {
   logout,
 } from "../api";
 import { ThemeToggle } from "../theme";
+import Sidebar from "../Sidebar";
 import "./Workspace.css";
 
 function Dashboard() {
@@ -47,11 +48,14 @@ function Dashboard() {
         setError("");
 
         const response = await fetch(
-          `${API_BASE}/decisions`
+          `${API_BASE}/decisions?user_id=${encodeURIComponent(
+            user.id
+          )}`
         );
 
         if (!response.ok) {
-          throw new Error("Could not load decisions");
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.detail || "Could not load decisions");
         }
 
         const data = await response.json();
@@ -60,6 +64,8 @@ function Dashboard() {
           ? data
           : [];
 
+        // The API already scopes this list; the filter keeps the UI honest
+        // if it ever receives an unrestricted response.
         const visibleDecisions = isManager
           ? allDecisions
           : allDecisions.filter(
@@ -333,11 +339,6 @@ function Dashboard() {
     return "●";
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   const handleStatusCard = (status) => {
     setStatusFilter(status);
 
@@ -368,274 +369,7 @@ function Dashboard() {
   return (
     <div className="workspace dashboard-workspace">
 
-      {/* =====================================================
-          SIDEBAR
-          ===================================================== */}
-
-      <aside className="app-sidebar">
-
-        <div className="sidebar-brand">
-
-          <div className="sidebar-logo">
-            ED
-          </div>
-
-          <div className="sidebar-brand-text">
-
-            <strong>
-              Expert Decision
-            </strong>
-
-            <span>
-              Replay Platform
-            </span>
-
-          </div>
-
-        </div>
-
-
-        <div className="sidebar-divider"></div>
-
-
-        <div className="sidebar-section-title">
-          WORKSPACE
-        </div>
-
-
-        <nav className="sidebar-nav">
-
-          {/* DASHBOARD */}
-
-          <Link
-            to="/dashboard"
-            className="sidebar-link active"
-          >
-            <span className="sidebar-icon">
-              ◈
-            </span>
-
-            <span>
-              Dashboard
-            </span>
-          </Link>
-
-
-          {/* MY DECISIONS */}
-
-          <Link
-            to="/dashboard"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ▣
-            </span>
-
-            <span>
-              My Decisions
-            </span>
-          </Link>
-
-
-          {/* =================================================
-              IMPORTANT:
-              MANAGER DOES NOT HAVE NEW DISCUSSION
-              EMPLOYEE HAS NEW DECISION
-              ================================================= */}
-
-          {!isManager && (
-            <Link
-              to="/decisions/new"
-              className="sidebar-link"
-            >
-              <span className="sidebar-icon">
-                ＋
-              </span>
-
-              <span>
-                New Decision
-              </span>
-            </Link>
-          )}
-
-
-          {/* TEAMS */}
-
-          <Link
-            to="/teams"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ♧
-            </span>
-
-            <span>
-              Teams
-            </span>
-          </Link>
-
-
-          {/* DISCUSSIONS */}
-
-          <Link
-            to="/discussions"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◌
-            </span>
-
-            <span>
-              Discussions
-            </span>
-          </Link>
-
-          <Link
-            to="/approvals"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">✓</span>
-            <span>Approvals</span>
-          </Link>
-
-        </nav>
-
-
-        {/* =================================================
-            KNOWLEDGE
-            ================================================= */}
-
-        <div className="sidebar-section-title second-section">
-          KNOWLEDGE
-        </div>
-
-
-        <nav className="sidebar-nav">
-
-          {/* DOCUMENTS */}
-
-          <Link
-            to="/documents"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ▤
-            </span>
-
-            <span>
-              Documents
-            </span>
-          </Link>
-
-          <Link to="/knowledge-graph" className="sidebar-link">
-            <span className="sidebar-icon">?</span>
-            <span>Knowledge Graph</span>
-          </Link>
-
-
-          {/* ANALYTICS */}
-
-          <Link
-            to="/analytics"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◒
-            </span>
-
-            <span>
-              Analytics
-            </span>
-          </Link>
-
-          <Link
-            to="/audit-logs"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">📜</span>
-            <span>Audit Logs</span>
-          </Link>
-
-
-          {/* PROFILE */}
-
-          <Link
-            to="/profile"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◎
-            </span>
-
-            <span>
-              Profile
-            </span>
-          </Link>
-
-
-          {/* SETTINGS */}
-
-          <Link
-            to="/settings"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ⚙
-            </span>
-
-            <span>
-              Settings
-            </span>
-          </Link>
-
-        </nav>
-
-
-        {/* =================================================
-            USER / LOGOUT
-            ================================================= */}
-
-        <div className="sidebar-bottom">
-
-          <div className="sidebar-role-card">
-
-            <div className="sidebar-role-avatar">
-              {user?.name
-                ?.charAt(0)
-                ?.toUpperCase() || "U"}
-            </div>
-
-            <div>
-
-              <strong>
-                {user?.name || "User"}
-              </strong>
-
-              <span>
-                {isManager
-                  ? "Manager"
-                  : "Employee"}
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <button
-            className="sidebar-logout"
-            onClick={handleLogout}
-          >
-            <span>
-              ↪
-            </span>
-
-            Logout
-          </button>
-
-        </div>
-
-      </aside>
+      <Sidebar activePath={"/dashboard"} />
 
 
       {/* =====================================================
@@ -738,50 +472,15 @@ function Dashboard() {
                   />
 
                   <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 12px)",
-                      right: 0,
-                      width: "390px",
-                      maxWidth: "calc(100vw - 32px)",
-                      background: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "16px",
-                      boxShadow:
-                        "0 18px 50px rgba(15, 23, 42, 0.16)",
-                      overflow: "hidden",
-                      zIndex: 999,
-                    }}
+                    className="notification-popover"
                   >
-                    <div
-                      style={{
-                        padding: "16px 18px",
-                        borderBottom: "1px solid #eef0f4",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "12px",
-                      }}
-                    >
+                    <div className="notification-popover-header">
                       <div>
-                        <strong
-                          style={{
-                            display: "block",
-                            fontSize: "15px",
-                            color: "#111827",
-                          }}
-                        >
+                        <strong className="notification-popover-title">
                           Notifications
                         </strong>
 
-                        <span
-                          style={{
-                            display: "block",
-                            marginTop: "3px",
-                            fontSize: "12px",
-                            color: "#6b7280",
-                          }}
-                        >
+                        <span className="notification-popover-subtitle">
                           {unreadCount > 0
                             ? `${unreadCount} unread notification${
                                 unreadCount === 1 ? "" : "s"
@@ -792,92 +491,34 @@ function Dashboard() {
 
                       <button
                         type="button"
+                        className="notification-popover-action"
                         onClick={handleMarkAllNotificationsRead}
                         disabled={unreadCount === 0}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          color:
-                            unreadCount === 0
-                              ? "#9ca3af"
-                              : "#2563eb",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor:
-                            unreadCount === 0
-                              ? "default"
-                              : "pointer",
-                          padding: "6px 0",
-                        }}
                       >
                         Mark all read
                       </button>
                     </div>
 
                     {notificationError && (
-                      <div
-                        style={{
-                          padding: "10px 18px",
-                          background: "#fef2f2",
-                          color: "#b91c1c",
-                          fontSize: "12px",
-                        }}
-                      >
+                      <div className="notification-popover-error">
                         {notificationError}
                       </div>
                     )}
 
-                    <div
-                      style={{
-                        maxHeight: "390px",
-                        overflowY: "auto",
-                      }}
-                    >
+                    <div className="notification-popover-list">
                       {notificationLoading ? (
-                        <div
-                          style={{
-                            padding: "32px 18px",
-                            textAlign: "center",
-                            color: "#6b7280",
-                            fontSize: "13px",
-                          }}
-                        >
+                        <div className="notification-popover-state">
                           Loading notifications...
                         </div>
                       ) : notifications.length === 0 ? (
-                        <div
-                          style={{
-                            padding: "36px 18px",
-                            textAlign: "center",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: "30px",
-                              marginBottom: "10px",
-                            }}
-                          >
+                        <div className="notification-popover-empty">
+                          <div className="notification-popover-empty-icon">
                             🔔
                           </div>
 
-                          <strong
-                            style={{
-                              display: "block",
-                              color: "#111827",
-                              fontSize: "14px",
-                            }}
-                          >
-                            No notifications
-                          </strong>
+                          <strong>No notifications</strong>
 
-                          <span
-                            style={{
-                              display: "block",
-                              marginTop: "5px",
-                              color: "#6b7280",
-                              fontSize: "12px",
-                            }}
-                          >
+                          <span>
                             New updates will appear here.
                           </span>
                         </div>
@@ -902,106 +543,32 @@ function Dashboard() {
                                   notification
                                 )
                               }
-                              style={{
-                                width: "100%",
-                                border: "none",
-                                borderBottom:
-                                  "1px solid #f1f3f5",
-                                background: isUnread
-                                  ? "#f8fbff"
-                                  : "#fff",
-                                padding: "14px 18px",
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "12px",
-                                textAlign: "left",
-                                cursor: "pointer",
-                              }}
+                              className={`notification-item${
+                                isUnread ? " is-unread" : ""
+                              }`}
                             >
                               <span
-                                style={{
-                                  flex: "0 0 32px",
-                                  width: "32px",
-                                  height: "32px",
-                                  borderRadius: "10px",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  background:
-                                    type === "approved"
-                                      ? "#ecfdf3"
-                                      : type === "rejected"
-                                      ? "#fef2f2"
-                                      : "#eff6ff",
-                                  color:
-                                    type === "approved"
-                                      ? "#15803d"
-                                      : type === "rejected"
-                                      ? "#dc2626"
-                                      : "#2563eb",
-                                  fontSize: "14px",
-                                  fontWeight: 800,
-                                }}
+                                className={`notification-item-icon type-${type}`}
                               >
                                 {icon}
                               </span>
 
-                              <span
-                                style={{
-                                  minWidth: 0,
-                                  flex: 1,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "7px",
-                                  }}
-                                >
-                                  <strong
-                                    style={{
-                                      color: "#111827",
-                                      fontSize: "13px",
-                                      lineHeight: 1.35,
-                                    }}
-                                  >
+                              <span className="notification-item-body">
+                                <span className="notification-item-head">
+                                  <strong>
                                     {notification.title}
                                   </strong>
 
                                   {isUnread && (
-                                    <span
-                                      style={{
-                                        width: "6px",
-                                        height: "6px",
-                                        borderRadius: "50%",
-                                        background: "#2563eb",
-                                        flex: "0 0 6px",
-                                      }}
-                                    />
+                                    <span className="notification-dot" />
                                   )}
                                 </span>
 
-                                <span
-                                  style={{
-                                    display: "block",
-                                    marginTop: "4px",
-                                    color: "#4b5563",
-                                    fontSize: "12px",
-                                    lineHeight: 1.5,
-                                  }}
-                                >
+                                <span className="notification-item-message">
                                   {notification.message}
                                 </span>
 
-                                <span
-                                  style={{
-                                    display: "block",
-                                    marginTop: "6px",
-                                    color: "#9ca3af",
-                                    fontSize: "11px",
-                                  }}
-                                >
+                                <span className="notification-item-time">
                                   {formatNotificationTime(
                                     notification.created_at
                                   )}

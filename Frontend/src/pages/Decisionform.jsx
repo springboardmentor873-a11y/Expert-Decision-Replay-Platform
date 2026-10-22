@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_BASE, getCurrentUser, logout } from "../api";
 import { ThemeToggle } from "../theme";
+import Sidebar from "../Sidebar";
 import "./Workspace.css";
 
 const CATEGORY_OPTIONS = [
@@ -33,11 +34,6 @@ function DecisionForm() {
     role === "admin" ||
     role === "administrator";
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -50,26 +46,26 @@ function DecisionForm() {
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE}/decisions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${API_BASE}/decisions?user_id=${encodeURIComponent(user.id)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: title.trim(),
+            problem: problem.trim(),
+            reasoning: reasoning.trim(),
+            category: category || null,
+          }),
         },
-        body: JSON.stringify({
-          title: title.trim(),
-          problem: problem.trim(),
-          reasoning: reasoning.trim(),
-          category: category || null,
-          user_id: user.id,
-        }),
-      });
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(
-          data.detail || "Could not create decision."
-        );
+        setError(data.detail || "Could not create decision.");
         setSubmitting(false);
         return;
       }
@@ -89,246 +85,7 @@ function DecisionForm() {
   return (
     <div className="workspace dashboard-workspace">
 
-      {/* =====================================================
-          SIDEBAR
-          ===================================================== */}
-
-      <aside className="app-sidebar">
-
-        {/* LOGO */}
-
-        <div className="sidebar-brand">
-
-          <div className="sidebar-logo">
-            ED
-          </div>
-
-          <div className="sidebar-brand-text">
-
-            <strong>
-              Expert Decision
-            </strong>
-
-            <span>
-              Replay Platform
-            </span>
-
-          </div>
-
-        </div>
-
-
-        <div className="sidebar-divider"></div>
-
-
-        {/* WORKSPACE */}
-
-        <div className="sidebar-section-title">
-          WORKSPACE
-        </div>
-
-        <nav className="sidebar-nav">
-
-          <Link
-            to="/dashboard"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◈
-            </span>
-
-            <span>
-              Dashboard
-            </span>
-          </Link>
-
-
-          <Link
-            to="/dashboard"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ▣
-            </span>
-
-            <span>
-              My Decisions
-            </span>
-          </Link>
-
-
-          <Link
-            to="/decisions/new"
-            className="sidebar-link active"
-          >
-            <span className="sidebar-icon">
-              ＋
-            </span>
-
-            <span>
-              New Decision
-            </span>
-          </Link>
-
-
-          <Link
-            to="/teams"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ♧
-            </span>
-
-            <span>
-              Teams
-            </span>
-          </Link>
-
-
-          <Link
-            to="/discussions"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◌
-            </span>
-
-            <span>
-              Discussions
-            </span>
-          </Link>
-
-          <Link to="/approvals" className="sidebar-link">
-            <span className="sidebar-icon">✓</span>
-            <span>Approvals</span>
-          </Link>
-
-        </nav>
-
-
-        {/* KNOWLEDGE */}
-
-        <div className="sidebar-section-title second-section">
-          KNOWLEDGE
-        </div>
-
-        <nav className="sidebar-nav">
-
-          <Link
-            to="/documents"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ▤
-            </span>
-
-            <span>
-              Documents
-            </span>
-          </Link>
-
-          <Link to="/knowledge-graph" className="sidebar-link">
-            <span className="sidebar-icon">?</span>
-            <span>Knowledge Graph</span>
-          </Link>
-
-
-          <Link
-            to="/analytics"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◒
-            </span>
-
-            <span>
-              Analytics
-            </span>
-          </Link>
-
-          <Link to="/audit-logs" className="sidebar-link">
-            <span className="sidebar-icon">📜</span>
-            <span>Audit Logs</span>
-          </Link>
-
-
-          <Link
-            to="/profile"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ◎
-            </span>
-
-            <span>
-              Profile
-            </span>
-          </Link>
-
-
-          <Link
-            to="/settings"
-            className="sidebar-link"
-          >
-            <span className="sidebar-icon">
-              ⚙
-            </span>
-
-            <span>
-              Settings
-            </span>
-          </Link>
-
-        </nav>
-
-
-        {/* USER */}
-
-        <div className="sidebar-bottom">
-
-          <div className="sidebar-role-card">
-
-            <div className="sidebar-role-avatar">
-
-              {user?.name
-                ?.charAt(0)
-                ?.toUpperCase() || "U"}
-
-            </div>
-
-
-            <div>
-
-              <strong>
-                {user?.name || "User"}
-              </strong>
-
-              <span>
-                {isManager
-                  ? "Manager"
-                  : "Employee"}
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <button
-            className="sidebar-logout"
-            onClick={handleLogout}
-          >
-            <span>
-              ↪
-            </span>
-
-            Logout
-
-          </button>
-
-        </div>
-
-      </aside>
+      <Sidebar activePath={"/decisions/new"} />
 
 
       {/* =====================================================

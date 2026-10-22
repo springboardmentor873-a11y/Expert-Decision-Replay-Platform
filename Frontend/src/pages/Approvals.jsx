@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, getCurrentUser, logout } from "../API";
+import { API_BASE, getCurrentUser, logout } from "../api";
 import { ThemeToggle } from "../theme";
+import Sidebar from "../Sidebar";
 import "./Workspace.css";
 
 export default function Approvals() {
@@ -12,6 +13,12 @@ export default function Approvals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(null);
+  const [statusTab, setStatusTab] = useState("Pending");
+  const [counts, setCounts] = useState({
+    Pending: 0,
+    Approved: 0,
+    Rejected: 0,
+  });
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedApproval, setSelectedApproval] = useState(null);
@@ -27,7 +34,7 @@ export default function Approvals() {
   // ---------------------------------------------------------
   // Fetch approvals
   // ---------------------------------------------------------
-  const fetchApprovals = async () => {
+  const fetchApprovals = async (tab = statusTab) => {
     if (!user?.id) {
       setError("User information not found.");
       setLoading(false);
@@ -38,8 +45,13 @@ export default function Approvals() {
       setLoading(true);
       setError("");
 
+      const query = new URLSearchParams({
+        user_id: String(user.id),
+        status: tab,
+      });
+
       const response = await fetch(
-        `${API_BASE}/approvals?user_id=${encodeURIComponent(user.id)}`
+        `${API_BASE}/approvals?${query.toString()}`
       );
 
       if (!response.ok) {
@@ -58,9 +70,51 @@ export default function Approvals() {
     }
   };
 
+  // ---------------------------------------------------------
+  // Per-status counters for the tabs
+  // ---------------------------------------------------------
+  const refreshCounts = async () => {
+    if (!user?.id) return;
+
+    try {
+      const query = new URLSearchParams({
+        user_id: String(user.id),
+        status: "All",
+      });
+
+      const response = await fetch(
+        `${API_BASE}/approvals?${query.toString()}`
+      );
+
+      if (!response.ok) return;
+
+      const all = await response.json();
+
+      if (!Array.isArray(all)) return;
+
+      const next = { Pending: 0, Approved: 0, Rejected: 0 };
+
+      for (const item of all) {
+        const key = String(item.status || "").trim();
+        if (key in next) {
+          next[key] += 1;
+        }
+      }
+
+      setCounts(next);
+    } catch (err) {
+      console.error("Approval count error:", err);
+    }
+  };
+
   useEffect(() => {
-    fetchApprovals();
-  }, []);
+    fetchApprovals(statusTab);
+    refreshCounts();
+  }, [statusTab]);
+
+  const handleTabChange = (tab) => {
+    setStatusTab(tab);
+  };
 
   // ---------------------------------------------------------
   // Approve
@@ -93,7 +147,8 @@ export default function Approvals() {
         throw new Error(data.detail || "Failed to approve decision.");
       }
 
-      await fetchApprovals();
+      await fetchApprovals(statusTab);
+      await refreshCounts();
     } catch (err) {
       console.error("Approval error:", err);
       setError(err.message || "Failed to approve decision.");
@@ -151,7 +206,8 @@ export default function Approvals() {
       setSelectedApproval(null);
       setRejectComment("");
 
-      await fetchApprovals();
+      await fetchApprovals(statusTab);
+      await refreshCounts();
     } catch (err) {
       console.error("Reject error:", err);
       setError(err.message || "Failed to reject decision.");
@@ -189,18 +245,15 @@ export default function Approvals() {
     );
   }
 
-  if (!isManager) {
+  if (!user?.id) {
     return (
       <div style={styles.centerMessage}>
         <div style={styles.messageCard}>
           <div style={styles.lockIcon}>🔒</div>
 
-          <h2>Manager Access Only</h2>
+          <h2>Sign in required</h2>
 
-          <p>
-            The Approvals page is available only to managers and
-            administrators.
-          </p>
+          <p>You need to be signed in to view approval requests.</p>
         </div>
       </div>
     );
@@ -211,19 +264,27 @@ export default function Approvals() {
   // ---------------------------------------------------------
   if (loading) {
     return (
-      <div className="approvals-page" style={styles.page}>
-        <div className="approvals-header" style={styles.header}>
-          <div>
-            <h1 className="approvals-title" style={styles.title}>Approvals</h1>
-            <p className="approvals-subtitle" style={styles.subtitle}>
-              Review and manage pending decision requests.
-            </p>
-          </div>
-        </div>
+      <div className="workspace dashboard-workspace approvals-page-shell">
+        <Sidebar activePath="/approvals" />
 
-        <div className="approvals-loading-card" style={styles.loadingCard}>
-          <div className="approvals-spinner" style={styles.spinner}></div>
-          <p>Loading approvals...</p>
+        <div className="dashboard-main">
+          <div className="approvals-header" style={styles.header}>
+            <div>
+              <h1 className="approvals-title" style={styles.title}>
+                {isManager ? "Approvals" : "My Requests"}
+              </h1>
+              <p className="approvals-subtitle" style={styles.subtitle}>
+                {isManager
+                  ? "Review and manage pending decision requests."
+                  : "Track the status of the requests you submitted."}
+              </p>
+            </div>
+          </div>
+
+          <div className="approvals-loading-card" style={styles.loadingCard}>
+            <div className="approvals-spinner" style={styles.spinner}></div>
+            <p>Loading approvals...</p>
+          </div>
         </div>
       </div>
     );
@@ -240,105 +301,7 @@ export default function Approvals() {
   return (
     <div className="workspace dashboard-workspace approvals-page-shell">
       {/* SIDEBAR */}
-      <aside className="app-sidebar">
-        <div className="sidebar-brand">
-          <div className="sidebar-logo">ED</div>
-          <div className="sidebar-brand-text">
-            <strong>Expert Decision</strong>
-            <span>Replay Platform</span>
-          </div>
-        </div>
-
-        <div className="sidebar-divider"></div>
-        <div className="sidebar-section-title">WORKSPACE</div>
-
-        <nav className="sidebar-nav">
-          <Link to="/dashboard" className="sidebar-link">
-            <span className="sidebar-icon">◈</span>
-            <span>Dashboard</span>
-          </Link>
-
-          <Link to="/my-decisions" className="sidebar-link">
-            <span className="sidebar-icon">▣</span>
-            <span>My Decisions</span>
-          </Link>
-
-          {!isManager && (
-            <Link to="/decisions/new" className="sidebar-link">
-              <span className="sidebar-icon">＋</span>
-              <span>New Decision</span>
-            </Link>
-          )}
-
-          <Link to="/teams" className="sidebar-link">
-            <span className="sidebar-icon">♧</span>
-            <span>Teams</span>
-          </Link>
-
-          <Link to="/discussions" className="sidebar-link">
-            <span className="sidebar-icon">◌</span>
-            <span>Discussions</span>
-          </Link>
-
-          {isManager && (
-            <Link to="/approvals" className="sidebar-link active">
-              <span className="sidebar-icon">✓</span>
-              <span>Approvals</span>
-            </Link>
-          )}
-        </nav>
-
-        <div className="sidebar-section-title second-section">KNOWLEDGE</div>
-
-        <nav className="sidebar-nav">
-          <Link to="/documents" className="sidebar-link">
-            <span className="sidebar-icon">▤</span>
-            <span>Documents</span>
-          </Link>
-
-          <Link to="/knowledge-graph" className="sidebar-link">
-            <span className="sidebar-icon">?</span>
-            <span>Knowledge Graph</span>
-          </Link>
-
-          <Link to="/analytics" className="sidebar-link">
-            <span className="sidebar-icon">◒</span>
-            <span>Analytics</span>
-          </Link>
-
-          <Link to="/audit-logs" className="sidebar-link">
-            <span className="sidebar-icon">📜</span>
-            <span>Audit Logs</span>
-          </Link>
-
-          <Link to="/profile" className="sidebar-link">
-            <span className="sidebar-icon">◎</span>
-            <span>Profile</span>
-          </Link>
-
-          <Link to="/settings" className="sidebar-link">
-            <span className="sidebar-icon">⚙</span>
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="sidebar-role-card">
-            <div className="sidebar-role-avatar">
-              {user?.name?.charAt(0)?.toUpperCase() || "U"}
-            </div>
-            <div>
-              <strong>{user?.name || "User"}</strong>
-              <span>{isManager ? "Manager" : "Employee"}</span>
-            </div>
-          </div>
-
-          <button className="sidebar-logout" onClick={handleLogout}>
-            <span>↪</span>
-            Logout
-          </button>
-        </div>
-      </aside>
+      <Sidebar activePath={"/approvals"} />
 
       {/* MAIN CONTENT */}
       <div className="dashboard-main">
@@ -349,16 +312,21 @@ export default function Approvals() {
       {/* Header */}
       <div className="approvals-header" style={styles.header}>
         <div>
-          <h1 className="approvals-title" style={styles.title}>Approvals</h1>
+          <h1 className="approvals-title" style={styles.title}>{isManager ? "Approvals" : "My Requests"}</h1>
 
           <p className="approvals-subtitle" style={styles.subtitle}>
-            Review employee decisions submitted for management approval.
+            {isManager
+              ? "Review employee decisions submitted for management approval."
+              : "Track the status of the requests you submitted."}
           </p>
         </div>
 
         <button
           className="approvals-refresh-button"
-          onClick={fetchApprovals}
+          onClick={() => {
+            fetchApprovals(statusTab);
+            refreshCounts();
+          }}
           style={styles.refreshButton}
           disabled={loading}
         >
@@ -382,6 +350,23 @@ export default function Approvals() {
         </div>
       )}
 
+      {/* Status tabs */}
+      <div className="approvals-tabs" role="tablist" aria-label="Approval status">
+        {["Pending", "Approved", "Rejected"].map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={statusTab === tab}
+            className={`approvals-tab${statusTab === tab ? " active" : ""}`}
+            onClick={() => handleTabChange(tab)}
+          >
+            {tab}
+            <span className="approvals-tab-count">{counts[tab] ?? 0}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Statistics */}
       <div className="approvals-stats-grid" style={styles.statsGrid}>
         <div className="approvals-stat-card" style={styles.statCard}>
@@ -389,7 +374,7 @@ export default function Approvals() {
 
           <div>
             <div className="approvals-stat-number" style={styles.statNumber}>
-              {approvals.length}
+              {counts.Pending}
             </div>
 
             <div className="approvals-stat-label" style={styles.statLabel}>
@@ -423,11 +408,7 @@ export default function Approvals() {
 
           <div>
             <div className="approvals-stat-number" style={styles.statNumber}>
-              {approvals.filter(
-                (item) =>
-                  String(item.status || "").toLowerCase() ===
-                  "approved"
-              ).length}
+              {counts.Approved}
             </div>
 
             <div className="approvals-stat-label" style={styles.statLabel}>
@@ -456,12 +437,15 @@ export default function Approvals() {
             <div className="approvals-empty-icon" style={styles.emptyIcon}>✓</div>
 
             <h3 className="approvals-empty-title" style={styles.emptyTitle}>
-              No Pending Approvals
+              {statusTab === "Pending"
+                ? "No Pending Approvals"
+                : `No ${statusTab} Requests`}
             </h3>
 
             <p className="approvals-empty-text" style={styles.emptyText}>
-              There are currently no decision requests waiting
-              for your approval.
+              {statusTab === "Pending"
+                ? "There are currently no decision requests waiting for your approval."
+                : `No decision requests have been ${statusTab.toLowerCase()} yet.`}
             </p>
           </div>
         ) : (
@@ -581,33 +565,47 @@ export default function Approvals() {
                     Open Decision →
                   </Link>
 
-                  <button
-                    className="approvals-approve-button"
-                    onClick={() =>
-                      handleApprove(approval.id)
-                    }
-                    disabled={
-                      actionLoading === approval.id
-                    }
-                    style={styles.approveButton}
-                  >
-                    {actionLoading === approval.id
-                      ? "Processing..."
-                      : "✓ Approve"}
-                  </button>
+                  {isManager ? (
+                    <>
+                      <button
+                        className="approvals-approve-button"
+                        onClick={() =>
+                          handleApprove(approval.id)
+                        }
+                        disabled={
+                          actionLoading === approval.id
+                        }
+                        style={styles.approveButton}
+                      >
+                        {actionLoading === approval.id
+                          ? "Processing..."
+                          : "✓ Approve"}
+                      </button>
 
-                  <button
-                    className="approvals-reject-button"
-                    onClick={() =>
-                      openRejectModal(approval)
-                    }
-                    disabled={
-                      actionLoading === approval.id
-                    }
-                    style={styles.rejectButton}
-                  >
-                    ✕ Reject
-                  </button>
+                      <button
+                        className="approvals-reject-button"
+                        onClick={() =>
+                          openRejectModal(approval)
+                        }
+                        disabled={
+                          actionLoading === approval.id
+                        }
+                        style={styles.rejectButton}
+                      >
+                        ✕ Reject
+                      </button>
+                    </>
+                  ) : (
+                    <span
+                      style={{
+                        color: "#64748b",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Awaiting manager review
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE, setCurrentUser } from "../api";
+import { API_BASE, setSession } from "../api";
 import { ThemeToggle } from "../theme";
 import "./Login.css";
 
@@ -30,12 +30,15 @@ function Login() {
         return;
       }
 
-      setCurrentUser({
-        id: data.user_id,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      });
+      setSession(
+        {
+          id: data.user_id,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+        },
+        data.access_token,
+      );
 
       setMessage("Login successful!");
 

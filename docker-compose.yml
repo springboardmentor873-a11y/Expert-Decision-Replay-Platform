@@ -1,0 +1,90 @@
+# ============================================================
+# Expert Decision Replay Platform
+#
+#   docker compose up --build
+#
+# Frontend  http://localhost:5173
+# Backend   http://localhost:8000  (interactive API docs at /docs)
+# Postgres  localhost:5432
+# ============================================================
+
+name: expert-decision-replay
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: edrp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-decision_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-decision_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: edrp-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-decision_platform}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-26214400}
+      DB_WAIT_TIMEOUT: ${DB_WAIT_TIMEOUT:-90}
+      # Comma separated. The SPA is proxied through nginx, so CORS is only
+      # needed when the Vite dev server is used directly.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-false}
+      SEED_MANAGER_EMAIL: ${SEED_MANAGER_EMAIL:-manager@example.com}
+      SEED_MANAGER_PASSWORD: ${SEED_MANAGER_PASSWORD:-Manager@123}
+      SEED_EMPLOYEE_EMAIL: ${SEED_EMPLOYEE_EMAIL:-employee@example.com}
+      SEED_EMPLOYEE_PASSWORD: ${SEED_EMPLOYEE_PASSWORD:-Employee@123}
+      SEED_EMPLOYEE2_EMAIL: ${SEED_EMPLOYEE2_EMAIL:-employee2@example.com}
+      SEED_EMPLOYEE2_PASSWORD: ${SEED_EMPLOYEE2_PASSWORD:-Employee@123}
+      # Self-service signup can never create a manager, so the deployment needs
+      # one bootstrap manager. Set these before the first start.
+      BOOTSTRAP_MANAGER_EMAIL: ${BOOTSTRAP_MANAGER_EMAIL:-}
+      BOOTSTRAP_MANAGER_PASSWORD: ${BOOTSTRAP_MANAGER_PASSWORD:-}
+      BOOTSTRAP_MANAGER_NAME: ${BOOTSTRAP_MANAGER_NAME:-Platform Administrator}
+      # Session signing. Set APP_ENV=production and a strong JWT_SECRET before
+      # exposing the API; the service refuses to start in production without one.
+      APP_ENV: ${APP_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-480}
+      # Self-service signup always creates an employee. Only enable this for
+      # local demos that need a manager account created through the UI.
+      ALLOW_ROLE_ESCALATION_ON_REGISTER: ${ALLOW_ROLE_ESCALATION_ON_REGISTER:-false}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: edrp-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  postgres_data:
+  uploads_data:

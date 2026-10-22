@@ -9,3 +9,6 @@ Backend/uploads/
 node_modules/
 dist/
 .env
+
+# Test artefacts from tests/ui-e2e.mjs
+tests/screenshots/

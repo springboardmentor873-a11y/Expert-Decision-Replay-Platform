@@ -189,19 +189,27 @@ function DecisionDetail() {
         ),
 
         fetch(
-          `${API_BASE}/decisions/${id}/alternatives`
+          `${API_BASE}/decisions/${id}/alternatives?user_id=${encodeURIComponent(
+            user.id
+          )}`
         ),
 
         fetch(
-          `${API_BASE}/decisions/${id}/comments`
+          `${API_BASE}/decisions/${id}/comments?user_id=${encodeURIComponent(
+            user.id
+          )}`
         ),
 
         fetch(
-          `${API_BASE}/decisions/${id}/documents`
+          `${API_BASE}/decisions/${id}/documents?user_id=${encodeURIComponent(
+            user.id
+          )}`
         ),
 
         fetch(
-          `${API_BASE}/decisions/${id}/history`
+          `${API_BASE}/decisions/${id}/history?user_id=${encodeURIComponent(
+            user.id
+          )}`
         ),
 
       ]);
@@ -355,11 +363,23 @@ function DecisionDetail() {
       }
 
 
+      if (!user?.id) {
+
+        alert(
+          "User session not found. Please login again."
+        );
+
+        return;
+      }
+
+
       try {
 
         const response =
           await fetch(
-            `${API_BASE}/decisions/${id}/alternatives`,
+            `${API_BASE}/decisions/${id}/alternatives?user_id=${encodeURIComponent(
+              user.id
+            )}`,
             {
               method: "POST",
 
@@ -424,11 +444,23 @@ function DecisionDetail() {
       }
 
 
+      if (!user?.id) {
+
+        alert(
+          "User session not found. Please login again."
+        );
+
+        return;
+      }
+
+
       try {
 
         const response =
           await fetch(
-            `${API_BASE}/alternatives/${altId}`,
+            `${API_BASE}/alternatives/${altId}?user_id=${encodeURIComponent(
+              user.id
+            )}`,
             {
               method: "DELETE",
             }
@@ -478,18 +510,30 @@ function DecisionDetail() {
       e.preventDefault();
 
 
-      if (!commentText.trim()) {
-        return;
-      }
+if (!commentText.trim()) {
+      return;
+    }
 
 
-      try {
+    if (!user?.id) {
 
-        const response =
-          await fetch(
-            `${API_BASE}/decisions/${id}/comments`,
-            {
-              method: "POST",
+      alert(
+        "User session not found. Please login again."
+      );
+
+      return;
+    }
+
+
+    try {
+
+      const response =
+        await fetch(
+          `${API_BASE}/decisions/${id}/comments?user_id=${encodeURIComponent(
+            user.id
+          )}`,
+          {
+            method: "POST",
 
               headers: {
                 "Content-Type":
@@ -2659,7 +2703,9 @@ function DecisionDetail() {
 
                                   <a
                                     className="download-btn premium-download-btn"
-                                    href={`${API_BASE}/documents/${doc.id}/download`}
+                                    href={`${API_BASE}/documents/${doc.id}/download?user_id=${encodeURIComponent(
+                                    user?.id || ""
+                                  )}`}
                                     target="_blank"
                                     rel="noreferrer"
                                   >

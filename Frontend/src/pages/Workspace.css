@@ -7077,3 +7077,251 @@ body[data-theme="dark"] .knowledge-graph-page .knowledge-graph-panel {
 .knowledge-graph-page .graph-canvas-empty {
   color: var(--graph-text) !important;
 }
+
+/* ============================================================
+   NOTIFICATION POPOVER
+   Themed so the bell works in both light and dark mode.
+   ============================================================ */
+
+.notification-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 390px;
+  max-width: calc(100vw - 32px);
+  max-height: 460px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 999;
+  background: var(--workspace-surface);
+  border: 1px solid var(--workspace-border);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
+}
+
+.notification-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--workspace-border);
+}
+
+.notification-popover-title {
+  display: block;
+  font-size: 15px;
+  color: var(--workspace-text);
+}
+
+.notification-popover-subtitle {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--workspace-text-soft);
+}
+
+.notification-popover-action {
+  border: none;
+  background: transparent;
+  color: var(--workspace-blue);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.notification-popover-action:disabled {
+  color: var(--workspace-text-soft);
+  cursor: default;
+}
+
+.notification-popover-error {
+  padding: 10px 18px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--workspace-danger);
+  font-size: 12px;
+}
+
+.notification-popover-list {
+  overflow-y: auto;
+}
+
+.notification-popover-state {
+  padding: 32px 18px;
+  text-align: center;
+  color: var(--workspace-text-soft);
+  font-size: 13px;
+}
+
+.notification-popover-empty {
+  padding: 36px 18px;
+  text-align: center;
+}
+
+.notification-popover-empty-icon {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.notification-popover-empty strong {
+  display: block;
+  color: var(--workspace-text);
+  font-size: 14px;
+}
+
+.notification-popover-empty span {
+  display: block;
+  margin-top: 5px;
+  color: var(--workspace-text-soft);
+  font-size: 12px;
+}
+
+.notification-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  border-bottom: 1px solid var(--workspace-border);
+  background: var(--workspace-surface);
+  color: var(--workspace-text);
+}
+
+.notification-item:hover {
+  background: var(--workspace-surface-alt);
+}
+
+.notification-item.is-unread {
+  background: var(--workspace-blue-soft);
+}
+
+.notification-item-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  background: var(--workspace-surface-alt);
+  color: var(--workspace-text-muted);
+}
+
+.notification-item-icon.type-success,
+.notification-item-icon.type-approved {
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--workspace-success);
+}
+
+.notification-item-icon.type-error,
+.notification-item-icon.type-rejected {
+  background: rgba(239, 68, 68, 0.14);
+  color: var(--workspace-danger);
+}
+
+.notification-item-icon.type-approval {
+  background: var(--workspace-blue-soft);
+  color: var(--workspace-blue);
+}
+
+.notification-item-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.notification-item-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.notification-item-head strong {
+  color: var(--workspace-text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.notification-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 6px;
+  background: var(--workspace-blue);
+}
+
+.notification-item-message {
+  display: block;
+  margin-top: 4px;
+  color: var(--workspace-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.notification-item-time {
+  display: block;
+  margin-top: 6px;
+  color: var(--workspace-text-soft);
+  font-size: 11px;
+}
+
+/* ============================================================
+   APPROVAL STATUS TABS
+   ============================================================ */
+
+.approvals-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.approvals-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--workspace-border);
+  background: var(--workspace-surface);
+  color: var(--workspace-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.approvals-tab:hover {
+  background: var(--workspace-surface-alt);
+  color: var(--workspace-text);
+}
+
+.approvals-tab.active {
+  background: var(--workspace-blue);
+  border-color: var(--workspace-blue);
+  color: #ffffff;
+}
+
+.approvals-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--workspace-surface-alt);
+  color: var(--workspace-text);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.approvals-tab.active .approvals-tab-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
